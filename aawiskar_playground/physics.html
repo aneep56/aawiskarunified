@@ -7,32 +7,203 @@
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="stylesheet" href="style.css">
 <style>
+/* ── Core layout ── */
 html,body{height:100%;overflow:hidden}
-#app{height:100%;overflow:hidden}
-.lab-layout{display:grid;grid-template-columns:240px 1fr;flex:1;min-height:0;overflow:hidden}
-.lab-sidebar{background:var(--bg-card);border-right:1px solid var(--border-subtle);overflow-y:auto;display:flex;flex-direction:column}
-.lab-main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-deep)}
+#app{height:100%;overflow:hidden;display:flex;flex-direction:column}
+
+/* Desktop: sidebar + main side-by-side */
+.lab-layout{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr;flex:1;min-height:0;overflow:hidden}
+.sidebar-toggle-btn{grid-column:1/-1;display:none;}
+.lab-sidebar{background:var(--bg-card);border-right:1px solid var(--border-subtle);overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.lab-main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-deep);min-height:0}
+
+/* Canvas */
 .sim-canvas-area{flex:1;position:relative;overflow:hidden;background:#04040e;min-height:0}
 .sim-canvas-area canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
-.sim-controls{background:var(--bg-card);border-top:1px solid var(--border-subtle);padding:.55rem 1rem;display:flex;align-items:center;gap:.75rem;flex-shrink:0;overflow-x:auto;min-height:60px}
-.control-group{display:flex;flex-direction:column;gap:.15rem;width:160px;flex-shrink:0}
-.control-label{font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+
+/* ── Controls panel — responsive grid ── */
+.sim-controls{
+  background:var(--bg-card);
+  border-top:1px solid var(--border-subtle);
+  padding:.6rem 1rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:.55rem .75rem;
+  flex-shrink:0;
+}
+
+/* Single control group */
+.control-group{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.control-label{
+  font-family:var(--font-mono);
+  font-size:.58rem;
+  color:var(--text-dim);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .control-row{display:flex;align-items:center;gap:.45rem}
-.control-row input[type=range]{width:110px;flex-shrink:0}
-.control-value{font-family:var(--font-mono);font-size:.78rem;color:var(--neon-cyan);min-width:34px;text-align:right;flex-shrink:0}
-input[type=range]{height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.14);border-radius:2px;outline:none;border:none;cursor:pointer}
-input[type=range]::-webkit-slider-runnable-track{background:rgba(255,255,255,0.12);border-radius:2px;height:4px}
-input[type=range]::-moz-range-track{background:rgba(255,255,255,0.12);border-radius:2px;height:4px}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#00f5ff;cursor:pointer;box-shadow:0 0 8px #00f5ff;margin-top:-5px}
-input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#00f5ff;border:none;cursor:pointer}
+.control-row input[type=range]{flex:1;min-width:0}
+.control-value{
+  font-family:var(--font-mono);
+  font-size:.78rem;
+  color:var(--neon-cyan);
+  min-width:36px;
+  text-align:right;
+  flex-shrink:0;
+}
+
+/* ── Sliders — larger touch targets ── */
+input[type=range]{
+  height:6px;
+  -webkit-appearance:none;
+  appearance:none;
+  background:rgba(255,255,255,0.14);
+  border-radius:3px;
+  outline:none;
+  border:none;
+  cursor:pointer;
+  touch-action:pan-x;
+}
+input[type=range]::-webkit-slider-runnable-track{
+  background:rgba(255,255,255,0.12);
+  border-radius:3px;
+  height:6px;
+}
+input[type=range]::-moz-range-track{
+  background:rgba(255,255,255,0.12);
+  border-radius:3px;
+  height:6px;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:#00f5ff;
+  cursor:pointer;
+  box-shadow:0 0 8px #00f5ff;
+  margin-top:-7px;
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:#00f5ff;
+  border:none;
+  cursor:pointer;
+}
+
+/* ── Sim list items ── */
 .sim-item{display:flex;align-items:center;gap:.7rem;padding:.6rem .85rem;cursor:pointer;transition:var(--transition);border-left:3px solid transparent;font-family:var(--font-body);font-size:.85rem;color:var(--text-dim)}
 .sim-item:hover{background:rgba(255,255,255,.04);color:var(--text-primary)}
 .sim-item.active{background:rgba(57,255,20,.08);border-left-color:var(--neon-green);color:var(--neon-green)}
-.info-panel{background:var(--bg-panel);border-top:1px solid var(--border-subtle);padding:.6rem 1.25rem;font-family:var(--font-mono);font-size:.75rem;color:var(--text-dim);display:flex;gap:2rem;flex-wrap:wrap;min-height:44px}
-.info-stat{display:flex;gap:.4rem;align-items:center}
+
+/* ── Info panel ── */
+.info-panel{
+  background:var(--bg-panel);
+  border-top:1px solid var(--border-subtle);
+  padding:.45rem .85rem;
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  color:var(--text-dim);
+  display:flex;
+  flex-wrap:wrap;
+  gap:.3rem .9rem;
+  align-items:center;
+  flex-shrink:0;
+}
+.info-stat{display:flex;gap:.35rem;align-items:center}
 .info-key{color:var(--text-dim)}
 .info-val{color:var(--neon-green)}
-@media(max-width:800px){.lab-layout{grid-template-columns:1fr;height:auto}.lab-sidebar{max-height:200px}}
+
+/* ── Mobile sidebar toggle button ── */
+.sidebar-toggle-btn{
+  display:none;
+  width:100%;
+  background:rgba(57,255,20,.08);
+  border:none;
+  border-bottom:1px solid var(--border-subtle);
+  color:var(--neon-green);
+  font-family:var(--font-mono);
+  font-size:.7rem;
+  letter-spacing:.1em;
+  padding:.55rem 1rem;
+  text-align:left;
+  cursor:pointer;
+  flex-shrink:0;
+}
+
+/* ── Tablet (≤900px): sidebar becomes collapsible top drawer ── */
+@media(max-width:900px){
+  .lab-layout{
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto 1fr;
+    height:100%;
+  }
+  .lab-sidebar{
+    border-right:none;
+    border-bottom:1px solid var(--border-subtle);
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .3s ease;
+  }
+  .lab-sidebar.open{max-height:220px;overflow-y:auto}
+  .sidebar-toggle-btn{display:block}
+  .sim-controls{
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    padding:.55rem .75rem;
+  }
+}
+
+/* ── Mobile (≤600px): full-width stacked, bigger touch targets ── */
+@media(max-width:600px){
+  html,body{overflow:hidden}
+  .lab-layout{height:100%}
+
+  /* Sidebar as horizontal scroll strip */
+  .lab-sidebar.open{
+    max-height:180px;
+    overflow-y:auto;
+  }
+
+  /* Controls: 2 columns on portrait phone, scrollable if overflow */
+  .sim-controls{
+    grid-template-columns:repeat(2,1fr);
+    gap:.45rem .5rem;
+    padding:.5rem .6rem;
+    max-height:38vh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* Even wider thumb for finger-friendly swiping */
+  input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-9px}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px}
+  input[type=range]{height:6px}
+
+  /* Tighter info panel */
+  .info-panel{
+    font-size:.65rem;
+    gap:.25rem .6rem;
+    padding:.35rem .6rem;
+  }
+  .control-label{font-size:.56rem}
+  .control-value{font-size:.72rem;min-width:30px}
+}
+
+/* ── Smartboard / large tablet landscape (≥1100px wide, ≤850px tall) ── */
+@media(min-width:1100px) and (max-height:850px){
+  .sim-controls{
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    padding:.45rem 1rem;
+    gap:.4rem .6rem;
+  }
+  input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-8px}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px}
+}
 </style>
 </head>
 <body>
@@ -93,8 +264,10 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   </div>
 </div>
 
-<div class="lab-layout">
-  <div class="lab-sidebar">
+<div class="lab-layout" id="labLayout">
+  <!-- Mobile/tablet sidebar toggle — shown via CSS only on small screens -->
+  <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">☰ EXPERIMENTS ▾</button>
+  <div class="lab-sidebar" id="labSidebar">
     <div class="panel-label"><div class="status-dot" style="background:var(--neon-green);box-shadow:0 0 6px var(--neon-green)"></div>EXPERIMENTS</div>
     <div style="padding:.25rem 0">
       <div class="sidebar-section-title">// Mechanics</div>
@@ -1659,6 +1832,26 @@ document.getElementById('resetBtn').onclick=()=>{initSim();showToast('Reset!','i
 window.addEventListener('load', () => {
   requestAnimationFrame(ts => { lastTime = ts; loop(ts); });
 });
+
+// ── Mobile sidebar toggle ──────────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('labSidebar');
+  const btn = document.getElementById('sidebarToggle');
+  const isOpen = sb.classList.toggle('open');
+  btn.textContent = isOpen ? '✕ CLOSE ▴' : '☰ EXPERIMENTS ▾';
+}
+
+// Auto-close sidebar when a sim is picked on mobile/tablet
+const _origSelectSim = selectSim;
+selectSim = function(el) {
+  _origSelectSim(el);
+  if (window.innerWidth <= 900) {
+    const sb = document.getElementById('labSidebar');
+    const btn = document.getElementById('sidebarToggle');
+    sb.classList.remove('open');
+    if (btn) btn.textContent = '☰ EXPERIMENTS ▾';
+  }
+};
 </script>
 </body>
 </html>
