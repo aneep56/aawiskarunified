@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aawiskar Playground — Learn. Build. Play.</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<style>
+.hero-cta{display:flex;align-items:center;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem}
+.hero-stats{display:flex;align-items:center;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-subtle)}
+.module-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:1.5rem;padding:1.5rem}
+.module-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;overflow:hidden;transition:var(--transition);cursor:pointer;text-decoration:none;display:block}
+.module-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.module-card-header{padding:2rem;position:relative;overflow:hidden}
+.module-card-header::before{content:'';position:absolute;top:0;right:0;bottom:0;left:0;opacity:.15;background:var(--accent)}
+.module-icon{font-size:3rem;margin-bottom:1rem;display:block;position:relative;z-index:1;filter:drop-shadow(0 0 20px currentColor)}
+.module-card-title{font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:var(--text-bright);position:relative;z-index:1;letter-spacing:.04em}
+.module-card-sub{font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);margin-top:.25rem;position:relative;z-index:1}
+.module-card-body{padding:1.5rem;border-top:1px solid var(--border-subtle)}
+.module-feature{display:flex;align-items:center;gap:.6rem;padding:.35rem 0;font-size:.85rem;color:var(--text-dim);font-family:var(--font-body)}
+.module-feature span:first-child{font-size:.9rem}
+.module-card-footer{padding:1rem 1.5rem;background:rgba(0,0,0,.2);display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle)}
+.module-card[data-color="cyan"] .module-card-header{--accent:var(--neon-cyan);border-top:3px solid var(--neon-cyan)}
+.module-card[data-color="pink"] .module-card-header{--accent:var(--neon-pink);border-top:3px solid var(--neon-pink)}
+.module-card[data-color="purple"] .module-card-header{--accent:var(--neon-purple);border-top:3px solid var(--neon-purple)}
+.module-card[data-color="cyan"]:hover{border-color:rgba(0,245,255,.4);box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 30px rgba(0,245,255,.07)}
+.module-card[data-color="pink"]:hover{border-color:rgba(255,0,110,.4);box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 30px rgba(255,0,110,.07)}
+.module-card[data-color="purple"]:hover{border-color:rgba(191,95,255,.4);box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 30px rgba(191,95,255,.07)}
+.module-card[data-color="orange"] .module-card-header{--accent:var(--neon-orange);border-top:3px solid var(--neon-orange)}
+.module-card[data-color="orange"]:hover{border-color:rgba(255,107,0,.4);box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 30px rgba(255,107,0,.07)}
+.section{padding:2rem;max-width:1400px;margin:0 auto}
+.how-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:1.5rem}
+.how-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:1.5rem;position:relative}
+.how-num{font-family:var(--font-display);font-size:3rem;font-weight:900;color:var(--border-subtle);position:absolute;top:.75rem;right:1rem;line-height:1}
+.how-card h3{font-family:var(--font-display);font-size:.88rem;font-weight:700;color:var(--text-bright);letter-spacing:.05em;margin-bottom:.5rem}
+.how-card p{font-size:.85rem;color:var(--text-dim);line-height:1.5}
+.learn-path{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;padding:2rem;margin:2rem}
+.path-items{display:flex;flex-direction:column;gap:0;margin-top:1.5rem}
+.path-item{display:flex;align-items:flex-start;gap:1.25rem;padding:1rem 0;border-bottom:1px solid var(--border-subtle)}
+.path-item:last-child{border-bottom:none}
+.path-dot-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.path-dot-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.path-connector{width:2px;flex:1;min-height:20px;background:var(--border-subtle)}
+.path-item-text h4{font-family:var(--font-display);font-size:.85rem;font-weight:700;color:var(--text-bright);letter-spacing:.04em;margin-bottom:.25rem}
+.path-item-text p{font-size:.83rem;color:var(--text-dim)}
+.xp-display{display:flex;align-items:center;gap:1.5rem;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem 1.5rem;margin:1rem 2rem}
+.achievement-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-top:1rem}
+.achievement{background:var(--bg-panel);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;transition:var(--transition)}
+.achievement.unlocked{border-color:var(--neon-yellow);background:rgba(255,224,0,.05)}
+.achievement.locked{opacity:.4;filter:grayscale(1)}
+.achievement-icon{font-size:2rem;display:block;margin-bottom:.4rem}
+.achievement-name{font-family:var(--font-mono);font-size:.68rem;color:var(--text-dim);letter-spacing:.05em}
+.achievement.unlocked .achievement-name{color:var(--neon-yellow)}
+footer{padding:2rem;text-align:center;border-top:1px solid var(--border-subtle);color:var(--text-dim);font-family:var(--font-mono);font-size:.75rem;margin-top:2rem}
+footer span{color:var(--neon-cyan)}
+
+@media(max-width:600px){
+  .hero-cta{gap:.6rem}
+  .hero-cta .btn{min-width:calc(50% - .3rem);flex:1 1 calc(50% - .3rem);justify-content:center;text-align:center}
+  .hero-stats{gap:1rem 1.5rem}
+  .stat-item{min-width:calc(50% - .75rem)}
+  .module-grid{padding:1rem .75rem;gap:1rem}
+  .xp-display{margin:1rem .75rem;flex-wrap:wrap;gap:.5rem}
+  .xp-display>span:last-child{display:none}
+  .learn-path{margin:1.5rem .75rem;padding:1.25rem}
+  .section{padding:1.5rem .75rem}
+  .how-grid{gap:.75rem}
+  .achievement-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+
+<div id="app">
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="favicon.png" alt="Aawiskar Logo">
+    </div>
+    <div>
+      <div class="nav-logo-text">AAWISKAR <span>PLAYGROUND</span></div>
+      <div class="nav-logo-sub">A product of Aawiskar RoboLabs Pvt. Ltd.</div>
+    </div>
+  </a>
+
+  <button class="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="nav-module-strip">
+  <a href="index.html" class="module-pill active">🏠 Home</a>
+  <div class="module-pill-sep"></div>
+  <a href="python.html" class="module-pill">🐍 Python IDE</a>
+  <a href="ml.html" class="module-pill">🧠 ML Studio</a>
+  <a href="block.html" class="module-pill">🎮 Block Coder</a>
+  <a href="arduino.html" class="module-pill">⚡ Arduino Gen</a>
+  <div class="module-pill-sep"></div>
+  <a href="cv.html" class="module-pill">👁️ CV Studio</a>
+  <a href="webide.html" class="module-pill">🌐 Web IDE</a>
+  <a href="physics.html" class="module-pill">🔬 Physics Lab</a>
+  <a href="maths.html" class="module-pill">📐 Maths Lab</a>
+  <a href="astronomy.html" class="module-pill">🪐 Astronomy</a>
+</div>
+<div id="mobile-menu" class="mobile-menu">
+  <button class="mobile-menu-close">✕</button>
+  <a href="index.html">🏠 Home</a>
+  <a href="python.html">🐍 Python IDE</a>
+  <a href="ml.html">🧠 ML Studio</a>
+  <a href="block.html">🎮 Block Coder</a>
+  <a href="arduino.html">⚡ Arduino Gen</a>
+  <a href="cv.html">👁️ CV Studio</a>
+  <a href="webide.html">🌐 Web IDE</a>
+  <a href="physics.html">🔬 Physics Lab</a>
+  <a href="maths.html">📐 Maths Lab</a>
+  <a href="astronomy.html">🪐 Astronomy</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-orb" style="width:400px;height:400px;top:-100px;left:-100px;background:radial-gradient(circle,rgba(0,245,255,0.12),transparent 70%);animation:orbFloat 8s ease-in-out infinite"></div>
+  <div class="hero-orb" style="width:350px;height:350px;bottom:-80px;right:-80px;background:radial-gradient(circle,rgba(191,95,255,0.1),transparent 70%);animation:orbFloat 10s ease-in-out infinite reverse"></div>
+  <div class="hero-orb" style="width:200px;height:200px;top:40%;left:60%;background:radial-gradient(circle,rgba(255,0,110,0.08),transparent 70%);animation:orbFloat 6s ease-in-out infinite 2s"></div>
+
+  <div class="section-label text-center" style="justify-content:center">WELCOME TO THE FUTURE OF LEARNING</div>
+  <h1 class="hero-title animate-in">
+    CODE.<span class="p"> BUILD.</span><br>
+    <span class="c">EXPLORE.</span><span class="g"> WIN.</span>
+  </h1>
+  <p class="hero-subtitle animate-in delay-1">
+    Your gamified science &amp; tech playground. Write Python, train ML models, simulate physics, explore the solar system, and build websites — all in your browser. No installs. Just play and learn.
+  </p>
+
+  <div class="hero-cta animate-in delay-2">
+    <a href="python.html" class="btn btn-cyan btn-lg">🐍 Python IDE</a>
+    <a href="cv.html" class="btn btn-purple btn-lg">👁️ CV Studio</a>
+    <a href="physics.html" class="btn btn-green btn-lg">🔬 Physics Lab</a>
+    <a href="astronomy.html" class="btn btn-lg" style="background:linear-gradient(135deg,#1a1a4e,#3a0080);border:1px solid var(--neon-purple);color:var(--neon-purple);box-shadow:0 0 20px rgba(191,95,255,.3)">🪐 Astronomy</a>
+  </div>
+
+  <div class="hero-stats animate-in delay-3">
+    <div class="stat-item"><span class="stat-value" id="stat-modules">9</span><span class="stat-label">Modules Live</span></div>
+    <div class="stat-item"><span class="stat-value" id="stat-algorithms">12+</span><span class="stat-label">ML Algorithms</span></div>
+    <div class="stat-item"><span class="stat-value" id="stat-examples">50+</span><span class="stat-label">Code Examples</span></div>
+    <div class="stat-item"><span class="stat-value" id="stat-xp"> <span class="xp-level">LVL 1</span></span><span class="stat-label">Your Level</span></div>
+  </div>
+</section>
+
+<!-- XP BAR -->
+<div class="xp-display">
+  <span style="font-family:var(--font-display);font-size:.85rem;color:var(--neon-yellow);font-weight:700;white-space:nowrap">⭐ <span class="xp-level">LVL 1</span></span>
+  <div class="xp-bar-container" style="flex:1">
+    <span class="xp-label"><span class="xp-count">0/100 XP</span></span>
+    <div class="xp-track"><div class="xp-fill" style="width:0%"></div></div>
+  </div>
+  <span style="font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim)">Complete challenges to earn XP!</span>
+</div>
+
+<!-- MODULE CARDS -->
+<div class="module-grid" style="max-width:1400px;margin:0 auto">
+
+  <a href="python.html" class="module-card" data-color="cyan">
+    <div class="module-card-header">
+      <span class="module-icon">🐍</span>
+      <div class="module-card-title">PYTHON IDE</div>
+      <div class="module-card-sub">Powered by Pyodide — runs in your browser</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>💡</span><span>Syntax highlighting + autocomplete</span></div>
+      <div class="module-feature"><span>📦</span><span>NumPy, Pandas, Matplotlib, Sklearn</span></div>
+      <div class="module-feature"><span>📊</span><span>Inline charts and output</span></div>
+      <div class="module-feature"><span>📁</span><span>30+ starter programs</span></div>
+      <div class="module-feature"><span>🤖</span><span>AI hint system</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-cyan">Browser IDE</span>
+      <span class="tag tag-green">No Install</span>
+      <span style="color:var(--neon-cyan);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="ml.html" class="module-card" data-color="pink">
+    <div class="module-card-header">
+      <span class="module-icon">🧠</span>
+      <div class="module-card-title">ML STUDIO</div>
+      <div class="module-card-sub">Visualize machine learning step by step</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>📊</span><span>Scikit-learn datasets built in</span></div>
+      <div class="module-feature"><span>🔄</span><span>Stepwise training visualization</span></div>
+      <div class="module-feature"><span>📈</span><span>Live accuracy / loss charts</span></div>
+      <div class="module-feature"><span>🔬</span><span>Compare multiple algorithms</span></div>
+      <div class="module-feature"><span>🗺️</span><span>Decision boundary plots</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-pink">ML</span>
+      <span class="tag tag-purple">Visualization</span>
+      <span style="color:var(--neon-pink);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="block.html" class="module-card" data-color="purple">
+    <div class="module-card-header">
+      <span class="module-icon">🎮</span>
+      <div class="module-card-title">BLOCK CODER</div>
+      <div class="module-card-sub">Google Blockly — drag, snap, learn</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>🎯</span><span>Drag-and-drop programming blocks</span></div>
+      <div class="module-feature"><span>📚</span><span>10+ learning project templates</span></div>
+      <div class="module-feature"><span>🖥️</span><span>Text console + canvas output</span></div>
+      <div class="module-feature"><span>🔢</span><span>Math, logic, loops, lists & more</span></div>
+      <div class="module-feature"><span>🎨</span><span>Draw shapes, patterns & mini games</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-purple">Blockly</span>
+      <span class="tag tag-green">Beginner</span>
+      <span style="color:var(--neon-purple);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="arduino.html" class="module-card" data-color="orange">
+    <div class="module-card-header">
+      <span class="module-icon">⚡</span>
+      <div class="module-card-title">ARDUINO GEN</div>
+      <div class="module-card-sub">Code generator for Uno &amp; ESP32</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>🔌</span><span>Pick components — pins auto-assigned</span></div>
+      <div class="module-feature"><span>🖥️</span><span>OLED, LCD, TM1637 displays</span></div>
+      <div class="module-feature"><span>🌡️</span><span>DHT22, BMP280, ultrasonic sensors</span></div>
+      <div class="module-feature"><span>⚙️</span><span>Servo, motors, NeoPixel, relay</span></div>
+      <div class="module-feature"><span>📡</span><span>RFID, WiFi, Bluetooth, SD card</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-orange">Arduino Uno</span>
+      <span class="tag tag-yellow">ESP32</span>
+      <span style="color:var(--neon-orange);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="cv.html" class="module-card" data-color="cyan">
+    <div class="module-card-header">
+      <span class="module-icon">👁️</span>
+      <div class="module-card-title">CV STUDIO</div>
+      <div class="module-card-sub">MediaPipe computer vision playground</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>🎯</span><span>Object Detection with COCO-SSD</span></div>
+      <div class="module-feature"><span>🤚</span><span>Hand & pose landmark tracking</span></div>
+      <div class="module-feature"><span>😊</span><span>Face mesh — 468 key points</span></div>
+      <div class="module-feature"><span>✂️</span><span>Image segmentation & embedding</span></div>
+      <div class="module-feature"><span>🤙</span><span>Gesture recognition live</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-cyan">MediaPipe</span>
+      <span class="tag tag-green">Live Camera</span>
+      <span style="color:var(--neon-cyan);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="webide.html" class="module-card" data-color="pink">
+    <div class="module-card-header">
+      <span class="module-icon">🌐</span>
+      <div class="module-card-title">WEB IDE</div>
+      <div class="module-card-sub">HTML · CSS · JS live editor</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>✏️</span><span>CodeMirror editor with syntax highlighting</span></div>
+      <div class="module-feature"><span>⚡</span><span>Live preview — see changes instantly</span></div>
+      <div class="module-feature"><span>📋</span><span>11 starter templates (games, apps, UI)</span></div>
+      <div class="module-feature"><span>💾</span><span>Download your project as HTML</span></div>
+      <div class="module-feature"><span>🖥️</span><span>Fullscreen preview mode</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-pink">HTML/CSS/JS</span>
+      <span class="tag tag-purple">Live Preview</span>
+      <span style="color:var(--neon-pink);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="physics.html" class="module-card" data-color="purple">
+    <div class="module-card-header">
+      <span class="module-icon">🔬</span>
+      <div class="module-card-title">PHYSICS LAB</div>
+      <div class="module-card-sub">Interactive physics simulations</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>🏹</span><span>Projectile motion with trajectory trails</span></div>
+      <div class="module-feature"><span>🌊</span><span>Wave interference & superposition</span></div>
+      <div class="module-feature"><span>🌍</span><span>N-body gravity & orbital mechanics</span></div>
+      <div class="module-feature"><span>💡</span><span>Light refraction & Snell's law</span></div>
+      <div class="module-feature"><span>🎵</span><span>Sound harmonics & diffraction</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-purple">9 Simulations</span>
+      <span class="tag tag-cyan">Real-time</span>
+      <span style="color:var(--neon-purple);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="maths.html" class="module-card" data-color="orange">
+    <div class="module-card-header">
+      <span class="module-icon">📐</span>
+      <div class="module-card-title">MATHS LAB</div>
+      <div class="module-card-sub">Graph, calculus & equation explorer</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>📈</span><span>Multi-function graph plotter</span></div>
+      <div class="module-feature"><span>🔵</span><span>Interactive trigonometry unit circle</span></div>
+      <div class="module-feature"><span>∫</span><span>Derivatives, integrals & Taylor series</span></div>
+      <div class="module-feature"><span>🌀</span><span>ODE solver with Euler method</span></div>
+      <div class="module-feature"><span>🔍</span><span>Scroll to zoom, drag to pan</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-orange">math.js</span>
+      <span class="tag tag-yellow">Calculus</span>
+      <span style="color:var(--neon-orange);font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+  <a href="astronomy.html" class="module-card" data-color="purple" style="--accent:var(--neon-purple);background:linear-gradient(180deg,#060612,#0a0520)">
+    <div class="module-card-header" style="border-top:3px solid #7b2fff;background:linear-gradient(135deg,rgba(75,0,130,0.4),rgba(25,0,60,0.6))">
+      <span class="module-icon">🪐</span>
+      <div class="module-card-title">ASTRONOMY</div>
+      <div class="module-card-sub">Solar system — gesture controlled</div>
+    </div>
+    <div class="module-card-body">
+      <div class="module-feature"><span>☀️</span><span>All 8 planets with real orbital periods</span></div>
+      <div class="module-feature"><span>🌙</span><span>Saturn rings, Moon, asteroid belt</span></div>
+      <div class="module-feature"><span>🤚</span><span>Hand gestures: pause, zoom, speed</span></div>
+      <div class="module-feature"><span>✨</span><span>600 twinkling parallax stars</span></div>
+      <div class="module-feature"><span>🖱️</span><span>Drag to pan, scroll to zoom</span></div>
+    </div>
+    <div class="module-card-footer">
+      <span class="tag tag-purple">MediaPipe</span>
+      <span class="tag" style="background:rgba(255,224,0,.1);color:var(--neon-yellow);border-color:rgba(255,224,0,.3)">Gesture Control</span>
+      <span style="color:#bf5fff;font-family:var(--font-mono);font-size:.8rem">Launch →</span>
+    </div>
+  </a>
+
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Learn by <span class="text-cyan">doing</span>, not watching</h2>
+  <div class="how-grid">
+    <div class="how-card observe delay-1">
+      <div class="how-num">01</div>
+      <span style="font-size:1.5rem;display:block;margin-bottom:.75rem">🎯</span>
+      <h3>CHOOSE A MODULE</h3>
+      <p>Pick Python IDE, ML Studio, or Block Coder based on what you want to learn today.</p>
+    </div>
+    <div class="how-card observe delay-2">
+      <div class="how-num">02</div>
+      <span style="font-size:1.5rem;display:block;margin-bottom:.75rem">🔨</span>
+      <h3>BUILD SOMETHING</h3>
+      <p>Write real code, train real models, or snap blocks together. Instant results in your browser.</p>
+    </div>
+    <div class="how-card observe delay-3">
+      <div class="how-num">03</div>
+      <span style="font-size:1.5rem;display:block;margin-bottom:.75rem">📈</span>
+      <h3>SEE IT WORK</h3>
+      <p>Watch your model learn, see your code run, play your game — all with visual feedback.</p>
+    </div>
+    <div class="how-card observe delay-4">
+      <div class="how-num">04</div>
+      <span style="font-size:1.5rem;display:block;margin-bottom:.75rem">⭐</span>
+      <h3>EARN XP</h3>
+      <p>Complete challenges, run code, train models. Level up and unlock achievements!</p>
+    </div>
+  </div>
+</section>
+
+<!-- LEARNING PATH -->
+<div class="learn-path">
+  <div class="section-label">Learning Path</div>
+  <h2 class="section-title">Your <span class="text-green">journey</span> starts here</h2>
+  <div class="path-items">
+    <div class="path-item">
+      <div class="path-dot-wrap">
+        <div class="path-dot-circle" style="background:rgba(57,255,20,.2);border:2px solid var(--neon-green)">🐣</div>
+        <div class="path-connector"></div>
+      </div>
+      <div class="path-item-text">
+        <h4>BEGINNER — Block Coder</h4>
+        <p>Start by dragging blocks to build logic. Make a calculator, a quiz game, or a story bot. No typing required!</p>
+      </div>
+    </div>
+    <div class="path-item">
+      <div class="path-dot-wrap">
+        <div class="path-dot-circle" style="background:rgba(0,245,255,.2);border:2px solid var(--neon-cyan)">🐍</div>
+        <div class="path-connector"></div>
+      </div>
+      <div class="path-item-text">
+        <h4>INTERMEDIATE — Python IDE</h4>
+        <p>Move to real Python. Loops, functions, data structures. Use NumPy and Pandas. Plot your first chart.</p>
+      </div>
+    </div>
+    <div class="path-item">
+      <div class="path-dot-wrap">
+        <div class="path-dot-circle" style="background:rgba(191,95,255,.2);border:2px solid var(--neon-purple)">🧠</div>
+        <div class="path-connector"></div>
+      </div>
+      <div class="path-item-text">
+        <h4>ADVANCED — ML Studio</h4>
+        <p>Train classification, regression, and clustering models. Visualize decision boundaries and metrics.</p>
+      </div>
+    </div>
+    <div class="path-item">
+      <div class="path-dot-wrap">
+        <div class="path-dot-circle" style="background:rgba(255,224,0,.2);border:2px solid var(--neon-yellow)">🚀</div>
+      </div>
+      <div class="path-item-text">
+        <h4>EXPERT — AI + Blocks + Python</h4>
+        <p>Combine gesture detection blocks with Python backends. Build real AI-powered apps. Level up to expert!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACHIEVEMENTS -->
+<section class="section">
+  <div class="section-label">Achievements</div>
+  <h2 class="section-title">Unlock your <span class="text-yellow">badges</span></h2>
+  <div class="achievement-grid" id="achievement-grid">
+    <!-- populated by JS -->
+  </div>
+</section>
+
+<footer>
+  Built with 💙 for students everywhere — <span>Aawiskar Playground</span> v2.2 &nbsp;|&nbsp; 9 Modules Live &nbsp;|&nbsp; Press <kbd style="background:var(--bg-panel);border:1px solid var(--border-subtle);padding:.1rem .3rem;border-radius:3px">Ctrl+2</kbd> Python &nbsp;<kbd style="background:var(--bg-panel);border:1px solid var(--border-subtle);padding:.1rem .3rem;border-radius:3px">Ctrl+3</kbd> ML Studio &nbsp;<kbd style="background:var(--bg-panel);border:1px solid var(--border-subtle);padding:.1rem .3rem;border-radius:3px">Ctrl+4</kbd> Block Coder
+</footer>
+
+</div><!-- #app -->
+<div id="toast-container"></div>
+
+<script src="script.js"></script>
+<script>
+const ACHIEVEMENTS = [
+  {id:'first_run',icon:'🚀',name:'FIRST RUN',desc:'Run your first code',xp:10},
+  {id:'ml_train',icon:'🧠',name:'MODEL TRAINER',desc:'Train your first ML model',xp:20},
+  {id:'block_builder',icon:'🎮',name:'BLOCK BUILDER',desc:'Build with Blockly',xp:15},
+  {id:'level5',icon:'⭐',name:'LEVEL 5',desc:'Reach level 5',xp:50},
+  {id:'py_explorer',icon:'🐍',name:'PY EXPLORER',desc:'Try 5 Python examples',xp:25},
+  {id:'chart_maker',icon:'📊',name:'CHART MAKER',desc:'Generate a visualization',xp:15},
+  {id:'ml_compare',icon:'🔬',name:'SCIENTIST',desc:'Compare 3 algorithms',xp:30},
+  {id:'ai_blocks',icon:'🤖',name:'AI BUILDER',desc:'Use an AI block project',xp:40},
+];
+
+function getUnlocked(){return JSON.parse(localStorage.getItem('aawiskar_achievements')||'[]')}
+
+function renderAchievements(){
+  const unlocked = getUnlocked();
+  const grid = document.getElementById('achievement-grid');
+  grid.innerHTML = ACHIEVEMENTS.map(a=>`
+    <div class="achievement ${unlocked.includes(a.id)?'unlocked':'locked'}">
+      <span class="achievement-icon">${a.icon}</span>
+      <div class="achievement-name">${a.name}</div>
+      <div style="font-size:.65rem;color:var(--text-dim);font-family:var(--font-mono);margin-top:.2rem">${a.desc}</div>
+      <div style="font-size:.65rem;color:var(--neon-yellow);font-family:var(--font-mono);margin-top:.3rem">+${a.xp} XP</div>
+    </div>
+  `).join('');
+}
+
+renderAchievements();
+
+// Counter animation
+document.querySelectorAll('.stat-value[id]').forEach(el=>{
+  const target = parseInt(el.textContent);
+  if(isNaN(target)) return;
+  let start=0;
+  const step=()=>{
+    start+=Math.ceil(target/40);
+    el.textContent=Math.min(start,target)+(el.id==='stat-algorithms'||el.id==='stat-examples'?'+':'');
+    if(start<target) requestAnimationFrame(step);
+  };
+  setTimeout(()=>requestAnimationFrame(step),500);
+});
+</script>
+</body>

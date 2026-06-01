@@ -1,0 +1,3042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data: blob:;">
+<title>Arduino Code Gen — Aawiskar Playground</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<script src="script.js" defer></script>
+<style>
+.ard-layout{display:grid;grid-template-columns:270px 1fr 380px;height:calc(100vh - 106px);overflow:hidden}
+.ard-sidebar{background:var(--bg-panel);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow:hidden}
+.ard-main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-dark)}
+.ard-right{background:var(--bg-panel);border-left:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow:hidden}
+
+/* Board toggle */
+.board-toggle{display:flex;gap:.4rem;padding:.75rem;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.board-btn{flex:1;padding:.5rem;font-family:var(--font-display);font-size:.65rem;font-weight:700;letter-spacing:.08em;border:1px solid var(--border-subtle);border-radius:8px;cursor:pointer;background:transparent;color:var(--text-dim);transition:var(--transition);text-align:center}
+.board-btn.active{background:rgba(255,107,0,.15);border-color:var(--neon-orange);color:var(--neon-orange);box-shadow:0 0 12px rgba(255,107,0,.2)}
+.board-btn:hover:not(.active){border-color:rgba(255,255,255,.2);color:var(--text-primary)}
+.board-icon{font-size:1.4rem;display:block;margin-bottom:.3rem}
+
+/* Component library */
+.comp-search{padding:.5rem .75rem;border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.comp-search input{background:rgba(0,0,0,.3);border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-primary);font-family:var(--font-mono);font-size:.75rem;padding:.4rem .6rem;width:100%;outline:none}
+.comp-search input:focus{border-color:rgba(255,107,0,.4)}
+.comp-list{flex:1;overflow-y:auto;padding:.25rem}
+.comp-cat-label{font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);letter-spacing:.15em;text-transform:uppercase;padding:.6rem .6rem .3rem;opacity:.7}
+.comp-item{display:flex;align-items:center;gap:.6rem;padding:.45rem .6rem;border-radius:7px;cursor:pointer;transition:var(--transition);border:1px solid transparent;margin-bottom:.15rem}
+.comp-item:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.07)}
+.comp-item.selected{background:rgba(255,107,0,.1);border-color:rgba(255,107,0,.4)}
+.comp-item.disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+.comp-item-icon{font-size:1.3rem;flex-shrink:0;width:28px;text-align:center}
+.comp-item-info{flex:1;min-width:0}
+.comp-item-name{font-family:var(--font-body);font-size:.8rem;font-weight:600;color:var(--text-primary)}
+.comp-item-lib{font-family:var(--font-mono);font-size:.63rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.comp-item-check{width:16px;height:16px;border-radius:4px;border:1px solid var(--border-subtle);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.65rem}
+.comp-item.selected .comp-item-check{background:var(--neon-orange);border-color:var(--neon-orange);color:#000}
+
+/* Main workbench */
+.ard-toolbar{display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;background:var(--bg-panel);border-bottom:1px solid var(--border-subtle);flex-shrink:0;flex-wrap:wrap}
+.ard-toolbar-title{font-family:var(--font-display);font-size:.75rem;color:var(--neon-orange);letter-spacing:.08em;font-weight:700}
+.selected-count{font-family:var(--font-mono);font-size:.7rem;color:var(--text-dim)}
+
+/* Workbench scroll area */
+.ard-workbench{flex:1;overflow-y:auto;padding:1rem}
+.empty-workbench{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:1rem;opacity:.4;pointer-events:none}
+.empty-workbench .big-icon{font-size:4rem}
+.empty-workbench p{font-family:var(--font-mono);font-size:.8rem;color:var(--text-dim);text-align:center}
+
+/* Selected component cards */
+.sel-comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem}
+.sel-comp-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;overflow:hidden;transition:var(--transition);position:relative}
+.sel-comp-card:hover{border-color:rgba(255,107,0,.3);box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.sel-comp-top{padding:.75rem .85rem;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:.5rem}
+.sel-comp-top-icon{font-size:1.5rem}
+.sel-comp-top-name{font-family:var(--font-display);font-size:.72rem;font-weight:700;color:var(--text-bright);letter-spacing:.04em;flex:1}
+.sel-comp-remove{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:.9rem;padding:.1rem .3rem;border-radius:4px;transition:var(--transition)}
+.sel-comp-remove:hover{color:var(--neon-pink);background:rgba(255,0,110,.1)}
+.pin-table{width:100%;padding:.5rem .85rem .75rem}
+.pin-row{display:flex;align-items:center;justify-content:space-between;padding:.18rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pin-row:last-child{border-bottom:none}
+.pin-name{font-family:var(--font-mono);font-size:.68rem;color:var(--text-dim);letter-spacing:.05em}
+.pin-val{font-family:var(--font-mono);font-size:.68rem;font-weight:700;padding:.12rem .4rem;border-radius:4px}
+.pin-val.i2c{color:#00f5ff;background:rgba(0,245,255,.1);border:1px solid rgba(0,245,255,.25)}
+.pin-val.spi{color:#bf5fff;background:rgba(191,95,255,.1);border:1px solid rgba(191,95,255,.25)}
+.pin-val.digital{color:#39ff14;background:rgba(57,255,20,.1);border:1px solid rgba(57,255,20,.2)}
+.pin-val.analog{color:#ffe000;background:rgba(255,224,0,.1);border:1px solid rgba(255,224,0,.2)}
+.pin-val.power{color:#ff6b00;background:rgba(255,107,0,.1);border:1px solid rgba(255,107,0,.25)}
+.pin-val.builtin{color:#6b6b9a;background:rgba(107,107,154,.1);border:1px solid rgba(107,107,154,.2)}
+.lib-badge{margin:.2rem .85rem .65rem;display:inline-flex;align-items:center;gap:.3rem;font-family:var(--font-mono);font-size:.6rem;color:var(--neon-orange);background:rgba(255,107,0,.08);border:1px solid rgba(255,107,0,.2);border-radius:4px;padding:.15rem .45rem}
+.conflict-warn{margin:.2rem .85rem .65rem;display:inline-flex;align-items:center;gap:.3rem;font-family:var(--font-mono);font-size:.6rem;color:var(--neon-pink);background:rgba(255,0,110,.08);border:1px solid rgba(255,0,110,.2);border-radius:4px;padding:.15rem .45rem}
+
+/* Pin diagram overview */
+.pin-overview{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;margin-top:.75rem;padding:.85rem;flex-shrink:0}
+.pin-overview-title{font-family:var(--font-mono);font-size:.63rem;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem}
+.pin-overview-grid{display:flex;flex-wrap:wrap;gap:.35rem}
+.pin-chip{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .5rem;border-radius:4px;font-family:var(--font-mono);font-size:.65rem;font-weight:700;white-space:nowrap}
+
+/* Right: Code panel */
+.code-toolbar{display:flex;align-items:center;gap:.5rem;padding:.6rem .85rem;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border-subtle);flex-shrink:0;flex-wrap:wrap}
+.code-toolbar-title{font-family:var(--font-display);font-size:.7rem;color:var(--neon-orange);letter-spacing:.06em;font-weight:700;flex:1}
+.lib-list{padding:.65rem .85rem;border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.lib-list-title{font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.4rem}
+.lib-list-items{display:flex;flex-wrap:wrap;gap:.3rem}
+.lib-tag{font-family:var(--font-mono);font-size:.62rem;padding:.15rem .45rem;border-radius:4px;background:rgba(255,107,0,.1);border:1px solid rgba(255,107,0,.25);color:var(--neon-orange)}
+
+/* Code output */
+.code-output{flex:1;overflow-y:auto;padding:0}
+#generatedCodeDisplay{width:100%;height:100%;background:#04040e;color:#e8e8ff;font-family:'Share Tech Mono',monospace;font-size:.78rem;line-height:1.7;padding:.85rem 1rem;border:none;outline:none;resize:none;tab-size:2;white-space:pre}
+.kw{color:#bf5fff}.fn{color:#00f5ff}.str{color:#39ff14}.cmt{color:#4a4a6a;font-style:italic}.num{color:#ffe000}.prep{color:#ff6b00}.type{color:#f4a261}
+
+/* No code state */
+.no-code{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;opacity:.35;gap:.75rem;padding:1rem}
+.no-code .big-icon{font-size:3rem}
+.no-code p{font-family:var(--font-mono);font-size:.75rem;color:var(--text-dim);text-align:center;line-height:1.6}
+
+/* Responsive */
+@media(max-width:1100px){
+  .ard-layout{grid-template-columns:220px 1fr 300px}
+}
+@media(max-width:800px){
+  .ard-layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;height:auto}
+  .ard-sidebar{height:240px;border-right:none;border-bottom:1px solid var(--border-subtle)}
+  .ard-right{height:320px;border-left:none;border-top:1px solid var(--border-subtle)}
+  .ard-main{min-height:300px}
+}
+/* orange card color */
+.module-card[data-color="orange"] .module-card-header{--accent:var(--neon-orange);border-top:3px solid var(--neon-orange)}
+.module-card[data-color="orange"]:hover{border-color:rgba(255,107,0,.4);box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 30px rgba(255,107,0,.07)}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div id="app">
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="favicon.png" alt="Aawiskar Logo">
+    </div>
+    <div>
+      <div class="nav-logo-text">AAWISKAR <span>PLAYGROUND</span></div>
+      <div class="nav-logo-sub">A product of Aawiskar RoboLabs Pvt. Ltd.</div>
+    </div>
+  </a>
+  <button class="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-module-strip">
+  <a href="index.html" class="module-pill">🏠 Home</a>
+  <div class="module-pill-sep"></div>
+  <a href="python.html" class="module-pill">🐍 Python IDE</a>
+  <a href="ml.html" class="module-pill">🧠 ML Studio</a>
+  <a href="block.html" class="module-pill">🎮 Block Coder</a>
+  <a href="arduino.html" class="module-pill active">⚡ Arduino Gen</a>
+  <div class="module-pill-sep"></div>
+  <a href="cv.html" class="module-pill">👁️ CV Studio</a>
+  <a href="webide.html" class="module-pill">🌐 Web IDE</a>
+  <a href="physics.html" class="module-pill">🔬 Physics Lab</a>
+  <a href="maths.html" class="module-pill">📐 Maths Lab</a>
+  <a href="astronomy.html" class="module-pill">🪐 Astronomy</a>
+</div>
+<div id="mobile-menu" class="mobile-menu">
+  <button class="mobile-menu-close">✕</button>
+  <a href="index.html">🏠 Home</a>
+  <a href="python.html">🐍 Python IDE</a>
+  <a href="ml.html">🧠 ML Studio</a>
+  <a href="block.html">🎮 Block Coder</a>
+  <a href="arduino.html">⚡ Arduino Gen</a>
+  <a href="cv.html">👁️ CV Studio</a>
+  <a href="webide.html">🌐 Web IDE</a>
+  <a href="physics.html">🔬 Physics Lab</a>
+  <a href="maths.html">📐 Maths Lab</a>
+  <a href="astronomy.html">🪐 Astronomy</a>
+</div>
+
+<div class="ard-layout">
+
+  <!-- ════════ LEFT: LIBRARY ════════ -->
+  <div class="ard-sidebar">
+    <div class="board-toggle">
+      <button class="board-btn active" id="btnUno" onclick="setBoard('uno')">
+        <span class="board-icon">🔵</span>ARDUINO UNO
+      </button>
+      <button class="board-btn" id="btnEsp" onclick="setBoard('esp32')">
+        <span class="board-icon">🟡</span>ESP32 DEV
+      </button>
+    </div>
+    <div class="comp-search">
+      <input type="text" id="compSearch" placeholder="Search components..." id="compSearch">
+    </div>
+    <div class="comp-list" id="compList"><!-- filled by JS --></div>
+  </div>
+
+  <!-- ════════ CENTER: WORKBENCH ════════ -->
+  <div class="ard-main">
+    <div class="ard-toolbar">
+      <span class="ard-toolbar-title">⚡ WORKBENCH</span>
+      <span class="selected-count" id="selCount">0 components selected</span>
+      <div style="margin-left:auto;display:flex;gap:.4rem;align-items:center">
+        <button class="btn btn-outline btn-sm" onclick="clearAll()">🗑 Clear</button>
+        <button class="btn btn-sm" style="background:linear-gradient(135deg,var(--neon-orange),#cc5500);color:#fff;box-shadow:0 0 16px rgba(255,107,0,.3)" onclick="generateCode()">⚡ Generate Code</button>
+      </div>
+    </div>
+    <div class="ard-workbench" id="workbench">
+      <div class="empty-workbench" id="emptyState">
+        <div class="big-icon">🔌</div>
+        <p>Select components from the left panel<br>to build your circuit.<br><br>Pins are auto-assigned!</p>
+      </div>
+      <div class="sel-comp-grid" id="selGrid" style="display:none"></div>
+      <div id="pinOverview" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ════════ RIGHT: CODE OUTPUT ════════ -->
+  <div class="ard-right">
+    <div class="code-toolbar">
+      <span class="code-toolbar-title">{ } GENERATED CODE</span>
+      <button class="btn btn-outline btn-sm" onclick="copyCode()" id="copyBtn" disabled>📋 Copy</button>
+      <button class="btn btn-outline btn-sm" onclick="downloadCode()" id="dlBtn" disabled>⬇ .ino</button>
+    </div>
+    <div class="lib-list" id="libListPanel" style="display:none">
+      <div class="lib-list-title">📦 Required Libraries</div>
+      <div class="lib-list-items" id="libListItems"></div>
+    </div>
+    <div class="code-output" id="codeOutput">
+      <div class="no-code" id="noCode">
+        <div class="big-icon">💾</div>
+        <p>Select components &amp; click<br><strong style="color:var(--neon-orange)">⚡ Generate Code</strong><br><br>Complete .ino code will<br>appear here</p>
+      </div>
+      <textarea id="generatedCodeDisplay" style="display:none" readonly spellcheck="false"></textarea>
+    </div>
+  </div>
+
+</div><!-- ard-layout -->
+</div><!-- app -->
+<div id="toast-container"></div>
+
+<script>
+// Safe fallback: script.js may not be loaded yet due to defer
+if (typeof showToast === 'undefined') {
+  window.showToast = function(msg, type) { console.log('[' + (type||'info') + '] ' + msg); };
+}
+if (typeof addXP === 'undefined') {
+  window.addXP = function() {};
+}
+// ══════════════════════════════════════════════════
+//  COMPONENT DATABASE
+// ══════════════════════════════════════════════════
+const COMP_DB = {
+  // ── DISPLAYS ──
+  oled: {
+    name: 'OLED 128×64', cat: 'display', icon: '🖥️',
+    lib: 'Adafruit SSD1306 + Adafruit GFX',
+    desc: 'I2C OLED display',
+    pins: {
+      uno:   { SDA:'A4 (I2C)', SCL:'A5 (I2C)' },
+      esp32: { SDA:'GPIO 21 (I2C)', SCL:'GPIO 22 (I2C)' }
+    },
+    pinClass: { SDA:'i2c', SCL:'i2c' },
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define OLED_RESET -1','#define SCREEN_ADDRESS 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup:    [
+          '// OLED Display Init',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {',
+          '  Serial.println(F("SSD1306 failed"));',
+          '  while (true);',
+          '}',
+          'display.clearDisplay();',
+          'display.setTextSize(1);',
+          'display.setTextColor(SSD1306_WHITE);',
+          'display.setCursor(0, 0);',
+          'display.println(F("Hello, World!"));',
+          'display.println(F("Aawiskar v1.0"));',
+          'display.display();'
+        ],
+        loop: []
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDRESS 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup:    [
+          '// OLED Display Init (ESP32)',
+          'Wire.begin(OLED_SDA, OLED_SCL);',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {',
+          '  Serial.println(F("SSD1306 failed"));',
+          '  while (true);',
+          '}',
+          'display.clearDisplay();',
+          'display.setTextSize(1);',
+          'display.setTextColor(SSD1306_WHITE);',
+          'display.setCursor(0, 0);',
+          'display.println(F("Hello, World!"));',
+          'display.println(F("ESP32 Ready!"));',
+          'display.display();'
+        ],
+        loop: []
+      }
+    }
+  },
+
+  lcd_i2c: {
+    name: 'LCD 16×2 I2C', cat: 'display', icon: '📟',
+    lib: 'LiquidCrystal I2C',
+    desc: '16x2 LCD via I2C backpack',
+    pins: {
+      uno:   { SDA:'A4 (I2C)', SCL:'A5 (I2C)' },
+      esp32: { SDA:'GPIO 21 (I2C)', SCL:'GPIO 22 (I2C)' }
+    },
+    pinClass: { SDA:'i2c', SCL:'i2c' },
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <LiquidCrystal_I2C.h>'],
+        defines:  [],
+        globals:  ['LiquidCrystal_I2C lcd(0x27, 16, 2);'],
+        setup:    [
+          '// LCD I2C Init',
+          'lcd.init();',
+          'lcd.backlight();',
+          'lcd.setCursor(0, 0);',
+          'lcd.print("Hello, World!");',
+          'lcd.setCursor(0, 1);',
+          'lcd.print("Aawiskar v1.0");'
+        ],
+        loop: []
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <LiquidCrystal_I2C.h>'],
+        defines:  ['#define LCD_SDA 21','#define LCD_SCL 22'],
+        globals:  ['LiquidCrystal_I2C lcd(0x27, 16, 2);'],
+        setup:    [
+          '// LCD I2C Init (ESP32)',
+          'Wire.begin(LCD_SDA, LCD_SCL);',
+          'lcd.init();',
+          'lcd.backlight();',
+          'lcd.setCursor(0, 0);',
+          'lcd.print("Hello, ESP32!");',
+          'lcd.setCursor(0, 1);',
+          'lcd.print("Aawiskar v1.0");'
+        ],
+        loop: []
+      }
+    }
+  },
+
+  tm1637: {
+    name: 'TM1637 4-Digit', cat: 'display', icon: '🔢',
+    lib: 'TM1637Display',
+    desc: '4-digit 7-segment display',
+    pins: {
+      uno:   { CLK:'D2 (Digital)', DIO:'D3 (Digital)' },
+      esp32: { CLK:'GPIO 18', DIO:'GPIO 19' }
+    },
+    pinClass: { CLK:'digital', DIO:'digital' },
+    code: {
+      uno: {
+        includes: ['#include <TM1637Display.h>'],
+        defines:  ['#define TM_CLK 2','#define TM_DIO 3'],
+        globals:  ['TM1637Display tm(TM_CLK, TM_DIO);'],
+        setup:    [
+          '// TM1637 4-Digit Display',
+          'tm.setBrightness(5);',
+          'tm.showNumberDec(1234, false);'
+        ],
+        loop: [
+          '// Count up every second',
+          'static int counter = 0;',
+          'tm.showNumberDec(counter, false);',
+          'counter = (counter + 1) % 10000;',
+          'delay(1000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <TM1637Display.h>'],
+        defines:  ['#define TM_CLK 18','#define TM_DIO 19'],
+        globals:  ['TM1637Display tm(TM_CLK, TM_DIO);'],
+        setup:    [
+          '// TM1637 4-Digit Display (ESP32)',
+          'tm.setBrightness(5);',
+          'tm.showNumberDec(8888, false);'
+        ],
+        loop: [
+          'static int counter = 0;',
+          'tm.showNumberDec(counter, false);',
+          'counter = (counter + 1) % 10000;',
+          'delay(1000);'
+        ]
+      }
+    }
+  },
+
+  // ── SENSORS ──
+  dht22: {
+    name: 'DHT22 Temp/Hum', cat: 'sensor', icon: '🌡️',
+    lib: 'DHT sensor library',
+    desc: 'Temperature & humidity sensor',
+    pins: {
+      uno:   { DATA:'D2 (Digital)', VCC:'3.3V/5V', GND:'GND' },
+      esp32: { DATA:'GPIO 4', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { DATA:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <DHT.h>'],
+        defines:  ['#define DHT_PIN 2','#define DHT_TYPE DHT22'],
+        globals:  ['DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup:    ['dht.begin();','Serial.println("DHT22 ready");'],
+        loop:     [
+          '// Read DHT22',
+          'float hum = dht.readHumidity();',
+          'float temp = dht.readTemperature();',
+          'if (isnan(hum) || isnan(temp)) {',
+          '  Serial.println("DHT22 read failed!");',
+          '  return;',
+          '}',
+          'Serial.print("Temp: "); Serial.print(temp); Serial.print("°C  Hum: ");',
+          'Serial.print(hum); Serial.println("%");',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <DHT.h>'],
+        defines:  ['#define DHT_PIN 4','#define DHT_TYPE DHT22'],
+        globals:  ['DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup:    ['dht.begin();','Serial.println("DHT22 ready");'],
+        loop:     [
+          'float hum = dht.readHumidity();',
+          'float temp = dht.readTemperature();',
+          'if (!isnan(hum) && !isnan(temp)) {',
+          '  Serial.printf("Temp: %.1f°C  Hum: %.1f%%\\n", temp, hum);',
+          '}',
+          'delay(2000);'
+        ]
+      }
+    }
+  },
+
+  dht11: {
+    name: 'DHT11 Temp/Hum', cat: 'sensor', icon: '🌤️',
+    lib: 'DHT sensor library',
+    desc: 'Basic temperature & humidity',
+    pins: {
+      uno:   { DATA:'D4 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { DATA:'GPIO 5', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { DATA:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <DHT.h>'],
+        defines:  ['#define DHT_PIN 4','#define DHT_TYPE DHT11'],
+        globals:  ['DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup:    ['dht.begin();'],
+        loop:     [
+          'float temp = dht.readTemperature();',
+          'float hum = dht.readHumidity();',
+          'Serial.print("T:"); Serial.print(temp);',
+          'Serial.print("°C H:"); Serial.print(hum); Serial.println("%");',
+          'delay(1000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <DHT.h>'],
+        defines:  ['#define DHT_PIN 5','#define DHT_TYPE DHT11'],
+        globals:  ['DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup:    ['dht.begin();'],
+        loop:     [
+          'Serial.printf("T:%.1f°C H:%.1f%%\\n", dht.readTemperature(), dht.readHumidity());',
+          'delay(1000);'
+        ]
+      }
+    }
+  },
+
+  hcsr04: {
+    name: 'HC-SR04 Ultrasonic', cat: 'sensor', icon: '📡',
+    lib: 'No library needed',
+    desc: 'Distance sensor (2cm – 400cm)',
+    pins: {
+      uno:   { TRIG:'D9 (Digital)', ECHO:'D10 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { TRIG:'GPIO 5', ECHO:'GPIO 18', VCC:'5V', GND:'GND' }
+    },
+    pinClass: { TRIG:'digital', ECHO:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define TRIG_PIN 9','#define ECHO_PIN 10'],
+        globals:  [],
+        setup:    ['pinMode(TRIG_PIN, OUTPUT);','pinMode(ECHO_PIN, INPUT);'],
+        loop:     [
+          '// HC-SR04 distance measurement',
+          'digitalWrite(TRIG_PIN, LOW);',
+          'delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN, HIGH);',
+          'delayMicroseconds(10);',
+          'digitalWrite(TRIG_PIN, LOW);',
+          'long duration = pulseIn(ECHO_PIN, HIGH);',
+          'float distance = duration * 0.034 / 2.0;',
+          'Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");',
+          'delay(500);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define TRIG_PIN 5','#define ECHO_PIN 18'],
+        globals:  [],
+        setup:    ['pinMode(TRIG_PIN, OUTPUT);','pinMode(ECHO_PIN, INPUT);'],
+        loop:     [
+          'digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10);',
+          'digitalWrite(TRIG_PIN, LOW);',
+          'float dist = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2.0;',
+          'Serial.printf("Distance: %.1f cm\\n", dist);',
+          'delay(500);'
+        ]
+      }
+    }
+  },
+
+  bmp280: {
+    name: 'BMP280 Pressure', cat: 'sensor', icon: '🌬️',
+    lib: 'Adafruit BMP280',
+    desc: 'Pressure, altitude & temperature',
+    pins: {
+      uno:   { SDA:'A4 (I2C)', SCL:'A5 (I2C)' },
+      esp32: { SDA:'GPIO 21 (I2C)', SCL:'GPIO 22 (I2C)' }
+    },
+    pinClass: { SDA:'i2c', SCL:'i2c' },
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_BMP280.h>'],
+        defines:  [],
+        globals:  ['Adafruit_BMP280 bmp;'],
+        setup:    [
+          'if (!bmp.begin(0x76)) {',
+          '  Serial.println("BMP280 not found!");',
+          '  while (true);',
+          '}'
+        ],
+        loop:     [
+          'Serial.print("Temp: "); Serial.print(bmp.readTemperature()); Serial.println(" °C");',
+          'Serial.print("Pressure: "); Serial.print(bmp.readPressure()/100.0); Serial.println(" hPa");',
+          'Serial.print("Altitude: "); Serial.print(bmp.readAltitude(1013.25)); Serial.println(" m");',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_BMP280.h>'],
+        defines:  [],
+        globals:  ['Adafruit_BMP280 bmp;'],
+        setup:    [
+          'Wire.begin(21, 22);',
+          'if (!bmp.begin(0x76)) { Serial.println("BMP280 not found!"); while(true); }'
+        ],
+        loop:     [
+          'Serial.printf("T:%.1f°C P:%.1fhPa Alt:%.1fm\\n",',
+          '  bmp.readTemperature(), bmp.readPressure()/100.0, bmp.readAltitude(1013.25));',
+          'delay(2000);'
+        ]
+      }
+    }
+  },
+
+  mpu6050: {
+    name: 'MPU6050 IMU', cat: 'sensor', icon: '🔄',
+    lib: 'MPU6050 (Electronic Cats)',
+    desc: 'Gyroscope + Accelerometer',
+    pins: {
+      uno:   { SDA:'A4 (I2C)', SCL:'A5 (I2C)', INT:'D2' },
+      esp32: { SDA:'GPIO 21 (I2C)', SCL:'GPIO 22 (I2C)', INT:'GPIO 4' }
+    },
+    pinClass: { SDA:'i2c', SCL:'i2c', INT:'digital' },
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <MPU6050.h>'],
+        defines:  [],
+        globals:  ['MPU6050 mpu;','int16_t ax, ay, az, gx, gy, gz;'],
+        setup:    ['Wire.begin();','mpu.initialize();','Serial.println(mpu.testConnection() ? "MPU6050 OK" : "MPU6050 FAIL");'],
+        loop:     [
+          'mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);',
+          'Serial.print("aX:"); Serial.print(ax/16384.0);',
+          'Serial.print(" aY:"); Serial.print(ay/16384.0);',
+          'Serial.print(" aZ:"); Serial.println(az/16384.0);',
+          'delay(500);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <MPU6050.h>'],
+        defines:  [],
+        globals:  ['MPU6050 mpu;','int16_t ax, ay, az, gx, gy, gz;'],
+        setup:    ['Wire.begin(21, 22);','mpu.initialize();'],
+        loop:     [
+          'mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);',
+          'Serial.printf("aX:%.2f aY:%.2f aZ:%.2f\\n", ax/16384.0, ay/16384.0, az/16384.0);',
+          'delay(500);'
+        ]
+      }
+    }
+  },
+
+  pir: {
+    name: 'PIR Motion Sensor', cat: 'sensor', icon: '🚶',
+    lib: 'No library needed',
+    desc: 'Passive infrared motion detector',
+    pins: {
+      uno:   { OUT:'D7 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { OUT:'GPIO 14', VCC:'5V', GND:'GND' }
+    },
+    pinClass: { OUT:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define PIR_PIN 7'],
+        globals:  [],
+        setup:    ['pinMode(PIR_PIN, INPUT);','Serial.println("PIR ready. Waiting...");'],
+        loop:     [
+          'if (digitalRead(PIR_PIN) == HIGH) {',
+          '  Serial.println("Motion detected!");',
+          '  delay(1000);',
+          '}'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define PIR_PIN 14'],
+        globals:  [],
+        setup:    ['pinMode(PIR_PIN, INPUT);'],
+        loop:     [
+          'if (digitalRead(PIR_PIN)) {',
+          '  Serial.println("Motion detected!");',
+          '  delay(1000);',
+          '}'
+        ]
+      }
+    }
+  },
+
+  ldr: {
+    name: 'LDR Light Sensor', cat: 'sensor', icon: '☀️',
+    lib: 'No library needed',
+    desc: 'Light-dependent resistor (analog)',
+    pins: {
+      uno:   { AOUT:'A0 (Analog)', VCC:'5V', GND:'GND' },
+      esp32: { AOUT:'GPIO 34 (ADC)', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { AOUT:'analog', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define LDR_PIN A0'],
+        globals:  [],
+        setup:    [],
+        loop:     [
+          'int ldrValue = analogRead(LDR_PIN);',
+          'int brightness = map(ldrValue, 0, 1023, 0, 100);',
+          'Serial.print("Light: "); Serial.print(brightness); Serial.println("%");',
+          'delay(500);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define LDR_PIN 34'],
+        globals:  [],
+        setup:    [],
+        loop:     [
+          'int raw = analogRead(LDR_PIN);',
+          'int pct = map(raw, 0, 4095, 0, 100);',
+          'Serial.printf("Light: %d%%\\n", pct);',
+          'delay(500);'
+        ]
+      }
+    }
+  },
+
+  soil: {
+    name: 'Soil Moisture', cat: 'sensor', icon: '🌱',
+    lib: 'No library needed',
+    desc: 'Capacitive soil moisture sensor',
+    pins: {
+      uno:   { AOUT:'A1 (Analog)', VCC:'5V', GND:'GND' },
+      esp32: { AOUT:'GPIO 35 (ADC)', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { AOUT:'analog', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define SOIL_PIN A1','#define SOIL_DRY 600','#define SOIL_WET 300'],
+        globals:  [],
+        setup:    [],
+        loop:     [
+          'int raw = analogRead(SOIL_PIN);',
+          'int moisture = map(raw, SOIL_DRY, SOIL_WET, 0, 100);',
+          'moisture = constrain(moisture, 0, 100);',
+          'Serial.print("Moisture: "); Serial.print(moisture); Serial.println("%");',
+          'if (moisture < 30) Serial.println("  ⚠ Needs watering!");',
+          'delay(1000);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define SOIL_PIN 35'],
+        globals:  [],
+        setup:    [],
+        loop:     [
+          'int raw = analogRead(SOIL_PIN);',
+          'int pct = map(raw, 3500, 1500, 0, 100);',
+          'Serial.printf("Moisture: %d%%\\n", constrain(pct, 0, 100));',
+          'delay(1000);'
+        ]
+      }
+    }
+  },
+
+  mq2: {
+    name: 'MQ-2 Gas Sensor', cat: 'sensor', icon: '💨',
+    lib: 'No library needed',
+    desc: 'LPG, smoke, alcohol, propane',
+    pins: {
+      uno:   { AOUT:'A2 (Analog)', DOUT:'D8 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { AOUT:'GPIO 36 (ADC)', DOUT:'GPIO 15', VCC:'5V', GND:'GND' }
+    },
+    pinClass: { AOUT:'analog', DOUT:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define MQ2_APIN A2','#define MQ2_DPIN 8'],
+        globals:  [],
+        setup:    ['pinMode(MQ2_DPIN, INPUT);','Serial.println("MQ2 warming up...");','delay(2000);'],
+        loop:     [
+          'int gasLevel = analogRead(MQ2_APIN);',
+          'int digital = digitalRead(MQ2_DPIN);',
+          'Serial.print("Gas: "); Serial.print(gasLevel);',
+          'if (digital == LOW) Serial.println(" ⚠ THRESHOLD EXCEEDED!");',
+          'else Serial.println(" — Normal");',
+          'delay(1000);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define MQ2_APIN 36','#define MQ2_DPIN 15'],
+        globals:  [],
+        setup:    ['pinMode(MQ2_DPIN, INPUT);','delay(2000);'],
+        loop:     [
+          'Serial.printf("Gas: %d %s\\n", analogRead(MQ2_APIN),',
+          '  digitalRead(MQ2_DPIN)==LOW ? "⚠ ALERT!" : "Normal");',
+          'delay(1000);'
+        ]
+      }
+    }
+  },
+
+  // ── ACTUATORS ──
+  led: {
+    name: 'LED', cat: 'actuator', icon: '💡',
+    lib: 'No library needed',
+    desc: 'Single LED with 220Ω resistor',
+    pins: {
+      uno:   { ANODE:'D13 (Digital)', GND:'GND' },
+      esp32: { ANODE:'GPIO 2 (Built-in)', GND:'GND' }
+    },
+    pinClass: { ANODE:'digital', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define LED_PIN 13'],
+        globals:  [],
+        setup:    ['pinMode(LED_PIN, OUTPUT);'],
+        loop:     [
+          '// Blink LED',
+          'digitalWrite(LED_PIN, HIGH);',
+          'delay(500);',
+          'digitalWrite(LED_PIN, LOW);',
+          'delay(500);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define LED_PIN 2'],
+        globals:  [],
+        setup:    ['pinMode(LED_PIN, OUTPUT);'],
+        loop:     [
+          'digitalWrite(LED_PIN, HIGH); delay(500);',
+          'digitalWrite(LED_PIN, LOW);  delay(500);'
+        ]
+      }
+    }
+  },
+
+  rgb_led: {
+    name: 'RGB LED', cat: 'actuator', icon: '🌈',
+    lib: 'No library needed',
+    desc: 'Common cathode RGB LED',
+    pins: {
+      uno:   { RED:'D9 (PWM)', GREEN:'D10 (PWM)', BLUE:'D11 (PWM)', GND:'GND' },
+      esp32: { RED:'GPIO 25 (PWM)', GREEN:'GPIO 26 (PWM)', BLUE:'GPIO 27 (PWM)', GND:'GND' }
+    },
+    pinClass: { RED:'digital', GREEN:'digital', BLUE:'digital', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define RGB_R 9','#define RGB_G 10','#define RGB_B 11'],
+        globals:  [],
+        setup:    ['pinMode(RGB_R, OUTPUT); pinMode(RGB_G, OUTPUT); pinMode(RGB_B, OUTPUT);'],
+        loop:     [
+          '// Cycle through colors',
+          'analogWrite(RGB_R,255); analogWrite(RGB_G,0);   analogWrite(RGB_B,0);   delay(500); // Red',
+          'analogWrite(RGB_R,0);   analogWrite(RGB_G,255); analogWrite(RGB_B,0);   delay(500); // Green',
+          'analogWrite(RGB_R,0);   analogWrite(RGB_G,0);   analogWrite(RGB_B,255); delay(500); // Blue',
+          'analogWrite(RGB_R,255); analogWrite(RGB_G,165); analogWrite(RGB_B,0);   delay(500); // Orange'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define RGB_R 25','#define RGB_G 26','#define RGB_B 27'],
+        globals:  ['int rgb_ch_r=0, rgb_ch_g=1, rgb_ch_b=2;'],
+        setup:    [
+          'ledcSetup(0, 5000, 8); ledcAttachPin(RGB_R, 0);',
+          'ledcSetup(1, 5000, 8); ledcAttachPin(RGB_G, 1);',
+          'ledcSetup(2, 5000, 8); ledcAttachPin(RGB_B, 2);'
+        ],
+        loop:     [
+          'ledcWrite(0,255); ledcWrite(1,0);   ledcWrite(2,0);   delay(500); // Red',
+          'ledcWrite(0,0);   ledcWrite(1,255); ledcWrite(2,0);   delay(500); // Green',
+          'ledcWrite(0,0);   ledcWrite(1,0);   ledcWrite(2,255); delay(500); // Blue'
+        ]
+      }
+    }
+  },
+
+  buzzer: {
+    name: 'Passive Buzzer', cat: 'actuator', icon: '🔔',
+    lib: 'No library needed',
+    desc: 'Passive piezo buzzer (PWM tone)',
+    pins: {
+      uno:   { POS:'D8 (PWM)', NEG:'GND' },
+      esp32: { POS:'GPIO 12 (PWM)', NEG:'GND' }
+    },
+    pinClass: { POS:'digital', NEG:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define BUZZER_PIN 8'],
+        globals:  [],
+        setup:    ['pinMode(BUZZER_PIN, OUTPUT);'],
+        loop:     [
+          '// Play simple melody',
+          'tone(BUZZER_PIN, 262, 250); delay(300); // C4',
+          'tone(BUZZER_PIN, 294, 250); delay(300); // D4',
+          'tone(BUZZER_PIN, 330, 250); delay(300); // E4',
+          'tone(BUZZER_PIN, 349, 250); delay(300); // F4',
+          'noTone(BUZZER_PIN);',
+          'delay(1000);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define BUZZER_PIN 12','#define BUZZER_CH 3'],
+        globals:  [],
+        setup:    ['ledcSetup(BUZZER_CH, 2000, 8); ledcAttachPin(BUZZER_PIN, BUZZER_CH);'],
+        loop:     [
+          '// Beep pattern on ESP32',
+          'ledcWriteTone(BUZZER_CH, 1000); delay(200);',
+          'ledcWriteTone(BUZZER_CH, 0);    delay(200);',
+          'ledcWriteTone(BUZZER_CH, 1500); delay(200);',
+          'ledcWriteTone(BUZZER_CH, 0);    delay(800);'
+        ]
+      }
+    }
+  },
+
+  servo: {
+    name: 'Servo Motor', cat: 'actuator', icon: '⚙️',
+    lib: 'Servo (built-in)',
+    desc: 'Standard servo 0–180°',
+    pins: {
+      uno:   { SIGNAL:'D6 (PWM)', VCC:'5V', GND:'GND' },
+      esp32: { SIGNAL:'GPIO 13 (PWM)', VCC:'5V', GND:'GND' }
+    },
+    pinClass: { SIGNAL:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <Servo.h>'],
+        defines:  ['#define SERVO_PIN 6'],
+        globals:  ['Servo myServo;'],
+        setup:    ['myServo.attach(SERVO_PIN);','myServo.write(90); // Center'],
+        loop:     [
+          '// Sweep servo 0 to 180',
+          'for (int pos = 0; pos <= 180; pos++) { myServo.write(pos); delay(10); }',
+          'for (int pos = 180; pos >= 0; pos--) { myServo.write(pos); delay(10); }'
+        ]
+      },
+      esp32: {
+        includes: ['#include <ESP32Servo.h>'],
+        defines:  ['#define SERVO_PIN 13'],
+        globals:  ['Servo myServo;'],
+        setup:    ['myServo.attach(SERVO_PIN);','myServo.write(90);'],
+        loop:     [
+          'for (int pos = 0; pos <= 180; pos++) { myServo.write(pos); delay(10); }',
+          'for (int pos = 180; pos >= 0; pos--) { myServo.write(pos); delay(10); }'
+        ]
+      }
+    }
+  },
+
+  relay: {
+    name: 'Relay Module', cat: 'actuator', icon: '🔌',
+    lib: 'No library needed',
+    desc: '5V relay (active LOW)',
+    pins: {
+      uno:   { IN:'D7 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { IN:'GPIO 26', VCC:'5V', GND:'GND' }
+    },
+    pinClass: { IN:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define RELAY_PIN 7'],
+        globals:  [],
+        setup:    ['pinMode(RELAY_PIN, OUTPUT);','digitalWrite(RELAY_PIN, HIGH); // OFF (active LOW)'],
+        loop:     [
+          '// Toggle relay every 2 seconds',
+          'digitalWrite(RELAY_PIN, LOW);  // ON',
+          'Serial.println("Relay ON");',
+          'delay(2000);',
+          'digitalWrite(RELAY_PIN, HIGH); // OFF',
+          'Serial.println("Relay OFF");',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define RELAY_PIN 26'],
+        globals:  [],
+        setup:    ['pinMode(RELAY_PIN, OUTPUT);','digitalWrite(RELAY_PIN, HIGH);'],
+        loop:     [
+          'digitalWrite(RELAY_PIN, LOW);  Serial.println("Relay ON");  delay(2000);',
+          'digitalWrite(RELAY_PIN, HIGH); Serial.println("Relay OFF"); delay(2000);'
+        ]
+      }
+    }
+  },
+
+  neopixel: {
+    name: 'WS2812B NeoPixel', cat: 'actuator', icon: '🌟',
+    lib: 'Adafruit NeoPixel',
+    desc: 'Addressable RGB LEDs strip',
+    pins: {
+      uno:   { DIN:'D6 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { DIN:'GPIO 13', VCC:'5V', GND:'GND' }
+    },
+    pinClass: { DIN:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <Adafruit_NeoPixel.h>'],
+        defines:  ['#define NEO_PIN 6','#define NEO_COUNT 8'],
+        globals:  ['Adafruit_NeoPixel strip(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);'],
+        setup:    ['strip.begin();','strip.show(); // all off'],
+        loop:     [
+          '// Rainbow cycle',
+          'for (int i = 0; i < strip.numPixels(); i++) {',
+          '  strip.setPixelColor(i, strip.ColorHSV(i * 65536L / strip.numPixels()));',
+          '}',
+          'strip.show();',
+          'delay(50);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Adafruit_NeoPixel.h>'],
+        defines:  ['#define NEO_PIN 13','#define NEO_COUNT 8'],
+        globals:  ['Adafruit_NeoPixel strip(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);'],
+        setup:    ['strip.begin(); strip.show();'],
+        loop:     [
+          'for (int i = 0; i < strip.numPixels(); i++)',
+          '  strip.setPixelColor(i, strip.ColorHSV(i * 65536L / strip.numPixels()));',
+          'strip.show(); delay(50);'
+        ]
+      }
+    }
+  },
+
+  l298n: {
+    name: 'DC Motor L298N', cat: 'actuator', icon: '🔧',
+    lib: 'No library needed',
+    desc: 'Dual H-bridge motor driver',
+    pins: {
+      uno:   { IN1:'D5 (PWM)', IN2:'D6 (PWM)', IN3:'D7 (Digital)', IN4:'D8 (Digital)', ENA:'D3 (PWM)', ENB:'D11 (PWM)' },
+      esp32: { IN1:'GPIO 26', IN2:'GPIO 27', IN3:'GPIO 32', IN4:'GPIO 33', ENA:'GPIO 25 (PWM)', ENB:'GPIO 14 (PWM)' }
+    },
+    pinClass: { IN1:'digital', IN2:'digital', IN3:'digital', IN4:'digital', ENA:'digital', ENB:'digital' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define IN1 5','#define IN2 6','#define IN3 7','#define IN4 8','#define ENA 3','#define ENB 11'],
+        globals:  [],
+        setup:    ['pinMode(IN1,OUTPUT); pinMode(IN2,OUTPUT); pinMode(IN3,OUTPUT); pinMode(IN4,OUTPUT);','analogWrite(ENA, 200); analogWrite(ENB, 200);'],
+        loop:     [
+          '// Motor A forward',
+          'digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);',
+          '// Motor B forward',
+          'digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);',
+          'Serial.println("Motors: FORWARD"); delay(2000);',
+          'digitalWrite(IN1, LOW); digitalWrite(IN3, LOW);',
+          'Serial.println("Motors: STOP"); delay(1000);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define IN1 26','#define IN2 27','#define IN3 32','#define IN4 33'],
+        globals:  [],
+        setup:    ['pinMode(IN1,OUTPUT); pinMode(IN2,OUTPUT); pinMode(IN3,OUTPUT); pinMode(IN4,OUTPUT);'],
+        loop:     [
+          'digitalWrite(IN1,HIGH); digitalWrite(IN2,LOW);',
+          'digitalWrite(IN3,HIGH); digitalWrite(IN4,LOW);',
+          'Serial.println("Forward"); delay(2000);',
+          'digitalWrite(IN1,LOW); digitalWrite(IN3,LOW);',
+          'Serial.println("Stop"); delay(1000);'
+        ]
+      }
+    }
+  },
+
+  // ── INPUT ──
+  button: {
+    name: 'Push Button', cat: 'input', icon: '🔘',
+    lib: 'No library needed',
+    desc: 'Tactile push button (pull-up)',
+    pins: {
+      uno:   { SIG:'D2 (Digital)', GND:'GND' },
+      esp32: { SIG:'GPIO 0 (Boot)', GND:'GND' }
+    },
+    pinClass: { SIG:'digital', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define BTN_PIN 2'],
+        globals:  ['int lastBtnState = HIGH;'],
+        setup:    ['pinMode(BTN_PIN, INPUT_PULLUP);'],
+        loop:     [
+          'int btnState = digitalRead(BTN_PIN);',
+          'if (btnState == LOW && lastBtnState == HIGH) {',
+          '  Serial.println("Button PRESSED!");',
+          '}',
+          'lastBtnState = btnState;',
+          'delay(10);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define BTN_PIN 0'],
+        globals:  ['int lastBtnState = HIGH;'],
+        setup:    ['pinMode(BTN_PIN, INPUT_PULLUP);'],
+        loop:     [
+          'int s = digitalRead(BTN_PIN);',
+          'if (s == LOW && lastBtnState == HIGH) Serial.println("Button pressed!");',
+          'lastBtnState = s; delay(10);'
+        ]
+      }
+    }
+  },
+
+  potentiometer: {
+    name: 'Potentiometer', cat: 'input', icon: '🎚️',
+    lib: 'No library needed',
+    desc: '10kΩ rotary potentiometer',
+    pins: {
+      uno:   { WIPER:'A0 (Analog)', VCC:'5V', GND:'GND' },
+      esp32: { WIPER:'GPIO 34 (ADC)', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { WIPER:'analog', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define POT_PIN A0'],
+        globals:  [],
+        setup:    [],
+        loop:     [
+          'int raw = analogRead(POT_PIN);',
+          'int percent = map(raw, 0, 1023, 0, 100);',
+          'Serial.print("Pot: "); Serial.print(percent); Serial.println("%");',
+          'delay(200);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define POT_PIN 34'],
+        globals:  [],
+        setup:    [],
+        loop:     [
+          'int pct = map(analogRead(POT_PIN), 0, 4095, 0, 100);',
+          'Serial.printf("Pot: %d%%\\n", pct);',
+          'delay(200);'
+        ]
+      }
+    }
+  },
+
+  joystick: {
+    name: 'Joystick Module', cat: 'input', icon: '🕹️',
+    lib: 'No library needed',
+    desc: 'Dual-axis analog joystick + button',
+    pins: {
+      uno:   { VRX:'A0 (Analog)', VRY:'A1 (Analog)', SW:'D4 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { VRX:'GPIO 34 (ADC)', VRY:'GPIO 35 (ADC)', SW:'GPIO 32', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { VRX:'analog', VRY:'analog', SW:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define JOY_X A0','#define JOY_Y A1','#define JOY_SW 4'],
+        globals:  [],
+        setup:    ['pinMode(JOY_SW, INPUT_PULLUP);'],
+        loop:     [
+          'int x = map(analogRead(JOY_X), 0, 1023, -100, 100);',
+          'int y = map(analogRead(JOY_Y), 0, 1023, -100, 100);',
+          'bool pressed = (digitalRead(JOY_SW) == LOW);',
+          'Serial.print("X:"); Serial.print(x);',
+          'Serial.print(" Y:"); Serial.print(y);',
+          'Serial.println(pressed ? " [CLICK]" : "");',
+          'delay(100);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define JOY_X 34','#define JOY_Y 35','#define JOY_SW 32'],
+        globals:  [],
+        setup:    ['pinMode(JOY_SW, INPUT_PULLUP);'],
+        loop:     [
+          'int x = map(analogRead(JOY_X), 0, 4095, -100, 100);',
+          'int y = map(analogRead(JOY_Y), 0, 4095, -100, 100);',
+          'Serial.printf("X:%d Y:%d %s\\n", x, y, digitalRead(JOY_SW)==LOW?"[CLICK]":"");',
+          'delay(100);'
+        ]
+      }
+    }
+  },
+
+  encoder: {
+    name: 'Rotary Encoder', cat: 'input', icon: '🔁',
+    lib: 'Encoder (Paul Stoffregen)',
+    desc: 'Incremental rotary encoder',
+    pins: {
+      uno:   { CLK:'D2 (INT)', DT:'D3 (INT)', SW:'D4 (Digital)', VCC:'5V', GND:'GND' },
+      esp32: { CLK:'GPIO 4', DT:'GPIO 5', SW:'GPIO 15', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { CLK:'digital', DT:'digital', SW:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <Encoder.h>'],
+        defines:  ['#define ENC_A 2','#define ENC_B 3','#define ENC_SW 4'],
+        globals:  ['Encoder myEnc(ENC_A, ENC_B);','long lastPos = -999;'],
+        setup:    ['pinMode(ENC_SW, INPUT_PULLUP);'],
+        loop:     [
+          'long pos = myEnc.read();',
+          'if (pos != lastPos) {',
+          '  Serial.print("Position: "); Serial.println(pos/4);',
+          '  lastPos = pos;',
+          '}',
+          'if (digitalRead(ENC_SW) == LOW) { Serial.println("Click!"); delay(200); }'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Encoder.h>'],
+        defines:  ['#define ENC_A 4','#define ENC_B 5','#define ENC_SW 15'],
+        globals:  ['Encoder myEnc(ENC_A, ENC_B);','long lastPos = -999;'],
+        setup:    ['pinMode(ENC_SW, INPUT_PULLUP);'],
+        loop:     [
+          'long pos = myEnc.read()/4;',
+          'if (pos != lastPos) { Serial.printf("Pos: %ld\\n", pos); lastPos = pos; }',
+          'if (digitalRead(ENC_SW)==LOW) { Serial.println("Click!"); delay(200); }'
+        ]
+      }
+    }
+  },
+
+  // ── COMMUNICATION ──
+  rfid: {
+    name: 'RFID RC522', cat: 'comms', icon: '📶',
+    lib: 'MFRC522',
+    desc: 'RFID reader/writer (SPI)',
+    pins: {
+      uno:   { SDA:'D10 (SPI SS)', SCK:'D13 (SPI)', MOSI:'D11 (SPI)', MISO:'D12 (SPI)', RST:'D9', VCC:'3.3V', GND:'GND' },
+      esp32: { SDA:'GPIO 5 (SPI SS)', SCK:'GPIO 18 (SPI)', MOSI:'GPIO 23 (SPI)', MISO:'GPIO 19 (SPI)', RST:'GPIO 4', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { SDA:'spi', SCK:'spi', MOSI:'spi', MISO:'spi', RST:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <SPI.h>','#include <MFRC522.h>'],
+        defines:  ['#define SS_PIN 10','#define RST_PIN 9'],
+        globals:  ['MFRC522 rfid(SS_PIN, RST_PIN);'],
+        setup:    ['SPI.begin();','rfid.PCD_Init();','Serial.println("RFID ready — scan card...");'],
+        loop:     [
+          'if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) return;',
+          'Serial.print("Card UID: ");',
+          'for (byte i = 0; i < rfid.uid.size; i++) {',
+          '  Serial.print(rfid.uid.uidByte[i] < 0x10 ? " 0" : " ");',
+          '  Serial.print(rfid.uid.uidByte[i], HEX);',
+          '}',
+          'Serial.println();',
+          'rfid.PICC_HaltA();'
+        ]
+      },
+      esp32: {
+        includes: ['#include <SPI.h>','#include <MFRC522.h>'],
+        defines:  ['#define SS_PIN 5','#define RST_PIN 4'],
+        globals:  ['MFRC522 rfid(SS_PIN, RST_PIN);'],
+        setup:    ['SPI.begin(18, 19, 23, 5);','rfid.PCD_Init();','Serial.println("RFID ready...");'],
+        loop:     [
+          'if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) return;',
+          'Serial.print("UID:");',
+          'for (byte i=0; i<rfid.uid.size; i++) Serial.printf(" %02X", rfid.uid.uidByte[i]);',
+          'Serial.println();',
+          'rfid.PICC_HaltA();'
+        ]
+      }
+    }
+  },
+
+  wifi_esp: {
+    name: 'WiFi (ESP32)', cat: 'comms', icon: '📡',
+    lib: 'WiFi (built-in)',
+    desc: 'ESP32 built-in WiFi',
+    esp32Only: true,
+    pins: {
+      uno:   {},
+      esp32: { ANTENNA:'Built-in' }
+    },
+    pinClass: { ANTENNA:'builtin' },
+    code: {
+      uno: { includes:[], defines:[], globals:[], setup:['// WiFi not available on Uno'], loop:[] },
+      esp32: {
+        includes: ['#include <WiFi.h>'],
+        defines:  ['#define WIFI_SSID "YourSSID"','#define WIFI_PASS "YourPassword"'],
+        globals:  [],
+        setup:    [
+          '// WiFi Connection',
+          'WiFi.begin(WIFI_SSID, WIFI_PASS);',
+          'Serial.print("Connecting to WiFi");',
+          'while (WiFi.status() != WL_CONNECTED) {',
+          '  delay(500); Serial.print(".");',
+          '}',
+          'Serial.println("\\nWiFi connected!");',
+          'Serial.print("IP: "); Serial.println(WiFi.localIP());'
+        ],
+        loop:     [
+          '// WiFi is connected — add HTTP client or web server here',
+          'delay(10000);'
+        ]
+      }
+    }
+  },
+
+  bluetooth_hc05: {
+    name: 'Bluetooth HC-05', cat: 'comms', icon: '🔵',
+    lib: 'SoftwareSerial',
+    desc: 'Serial Bluetooth module',
+    pins: {
+      uno:   { TX:'D10 (RX←)', RX:'D11 (TX→)', VCC:'5V', GND:'GND' },
+      esp32: { TX:'GPIO 16 (RX2)', RX:'GPIO 17 (TX2)', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { TX:'digital', RX:'digital', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <SoftwareSerial.h>'],
+        defines:  ['#define BT_RX 10','#define BT_TX 11'],
+        globals:  ['SoftwareSerial btSerial(BT_RX, BT_TX);'],
+        setup:    ['btSerial.begin(9600);','btSerial.println("Hello from Arduino!");'],
+        loop:     [
+          'if (btSerial.available()) {',
+          '  String msg = btSerial.readStringUntil(\'\\n\');',
+          '  Serial.print("BT received: "); Serial.println(msg);',
+          '  btSerial.println("Echo: " + msg);',
+          '}'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  [],
+        globals:  [],
+        setup:    [
+          '// ESP32: Use built-in Bluetooth instead of HC-05',
+          'Serial2.begin(9600, SERIAL_8N1, 16, 17);',
+          'Serial2.println("Hello from ESP32!");'
+        ],
+        loop:     [
+          'if (Serial2.available()) {',
+          '  String msg = Serial2.readStringUntil(\'\\n\');',
+          '  Serial.println("Received: " + msg);',
+          '  Serial2.println("Echo: " + msg);',
+          '}'
+        ]
+      }
+    }
+  },
+
+  sd_card: {
+    name: 'SD Card Module', cat: 'comms', icon: '💾',
+    lib: 'SD (built-in)',
+    desc: 'SPI SD card read/write',
+    pins: {
+      uno:   { CS:'D10 (SPI SS)', SCK:'D13 (SPI)', MOSI:'D11 (SPI)', MISO:'D12 (SPI)', VCC:'5V', GND:'GND' },
+      esp32: { CS:'GPIO 5', SCK:'GPIO 18 (SPI)', MOSI:'GPIO 23 (SPI)', MISO:'GPIO 19 (SPI)', VCC:'3.3V', GND:'GND' }
+    },
+    pinClass: { CS:'spi', SCK:'spi', MOSI:'spi', MISO:'spi', VCC:'power', GND:'power' },
+    code: {
+      uno: {
+        includes: ['#include <SPI.h>','#include <SD.h>'],
+        defines:  ['#define SD_CS 10'],
+        globals:  [],
+        setup:    [
+          'if (!SD.begin(SD_CS)) {',
+          '  Serial.println("SD card failed!");',
+          '  while (true);',
+          '}',
+          'Serial.println("SD card OK");',
+          '// Write hello world',
+          'File f = SD.open("hello.txt", FILE_WRITE);',
+          'if (f) { f.println("Hello, World!"); f.close(); Serial.println("Written!"); }'
+        ],
+        loop:     [
+          '// Read file',
+          'File f = SD.open("hello.txt");',
+          'while (f.available()) Serial.write(f.read());',
+          'f.close();',
+          'delay(5000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <SPI.h>','#include <SD.h>'],
+        defines:  ['#define SD_CS 5'],
+        globals:  [],
+        setup:    [
+          'if (!SD.begin(SD_CS)) { Serial.println("SD failed!"); while(true); }',
+          'File f = SD.open("/hello.txt", FILE_WRITE);',
+          'if (f) { f.println("Hello ESP32!"); f.close(); }'
+        ],
+        loop:     [
+          'File f = SD.open("/hello.txt");',
+          'while (f.available()) Serial.write(f.read());',
+          'f.close(); delay(5000);'
+        ]
+      }
+    }
+  }
+};
+
+// ── Categories meta ──
+const CATEGORIES = [
+  { id:'display',  label:'DISPLAYS',       icon:'🖥️' },
+  { id:'sensor',   label:'SENSORS',        icon:'🔬' },
+  { id:'actuator', label:'ACTUATORS',      icon:'⚡' },
+  { id:'input',    label:'INPUT',          icon:'🎛️' },
+  { id:'comms',    label:'COMMUNICATION',  icon:'📡' },
+];
+
+// ── State ──
+let currentBoard = 'uno';
+let selectedComps = new Set();
+
+// ══════════════════════════════════════════════════
+//  BOARD SELECTION
+// ══════════════════════════════════════════════════
+function setBoard(board) {
+  currentBoard = board;
+  document.getElementById('btnUno').classList.toggle('active', board === 'uno');
+  document.getElementById('btnEsp').classList.toggle('active', board === 'esp32');
+  renderLibrary();
+  renderWorkbench();
+  // Clear generated code when board changes
+  document.getElementById('noCode').style.display = '';
+  document.getElementById('generatedCodeDisplay').style.display = 'none';
+  document.getElementById('libListPanel').style.display = 'none';
+  document.getElementById('copyBtn').disabled = true;
+  document.getElementById('dlBtn').disabled = true;
+}
+
+// ══════════════════════════════════════════════════
+//  LIBRARY RENDER
+// ══════════════════════════════════════════════════
+function renderLibrary(filter = '') {
+  const list = document.getElementById('compList');
+  list.innerHTML = '';
+  const fl = filter.toLowerCase();
+
+  CATEGORIES.forEach(cat => {
+    const items = Object.entries(COMP_DB).filter(([id, c]) => {
+      if (c.cat !== cat.id) return false;
+      if (c.esp32Only && currentBoard === 'uno') return false;
+      if (fl && !c.name.toLowerCase().includes(fl) && !c.desc.toLowerCase().includes(fl)) return false;
+      return true;
+    });
+    if (!items.length) return;
+
+    const label = document.createElement('div');
+    label.className = 'comp-cat-label';
+    label.textContent = cat.icon + ' ' + cat.label;
+    list.appendChild(label);
+
+    items.forEach(function(item) {
+      var id = item[0], comp = item[1];
+      var el = document.createElement('div');
+      el.className = 'comp-item' + (selectedComps.has(id) ? ' selected' : '');
+      el.setAttribute('data-id', id);
+      // IIFE captures id correctly across all browsers including Edge
+      (function(cid) {
+        el.addEventListener('click', function() { toggleComp(cid); });
+      })(id);
+      el.innerHTML =
+        '<span class="comp-item-icon">' + comp.icon + '</span>' +
+        '<div class="comp-item-info">' +
+          '<div class="comp-item-name">' + comp.name + '</div>' +
+          '<div class="comp-item-lib">' + comp.lib + '</div>' +
+        '</div>' +
+        '<div class="comp-item-check">' + (selectedComps.has(id) ? '✓' : '') + '</div>';
+      list.appendChild(el);
+    });
+  });
+}
+
+function filterComponents() {
+  var val = document.getElementById('compSearch');
+  renderLibrary(val ? val.value : '');
+}
+
+// ══════════════════════════════════════════════════
+//  TOGGLE COMPONENT
+// ══════════════════════════════════════════════════
+function toggleComp(id) {
+  if (selectedComps.has(id)) {
+    selectedComps.delete(id);
+  } else {
+    selectedComps.add(id);
+  }
+  renderLibrary(document.getElementById('compSearch').value);
+  renderWorkbench();
+}
+
+function clearAll() {
+  selectedComps.clear();
+  renderLibrary(document.getElementById('compSearch').value);
+  renderWorkbench();
+  document.getElementById('noCode').style.display = '';
+  document.getElementById('generatedCodeDisplay').style.display = 'none';
+  document.getElementById('libListPanel').style.display = 'none';
+  document.getElementById('copyBtn').disabled = true;
+  document.getElementById('dlBtn').disabled = true;
+}
+
+// ══════════════════════════════════════════════════
+//  WORKBENCH RENDER
+// ══════════════════════════════════════════════════
+function renderWorkbench() {
+  const count = selectedComps.size;
+  document.getElementById('selCount').textContent = count + ' component' + (count !== 1 ? 's' : '') + ' selected';
+  document.getElementById('emptyState').style.display = count ? 'none' : '';
+  document.getElementById('selGrid').style.display = count ? '' : 'none';
+  document.getElementById('pinOverview').style.display = count ? '' : 'none';
+
+  if (!count) return;
+
+  // Build component cards
+  var grid = document.getElementById('selGrid');
+  grid.innerHTML = Array.from(selectedComps).map(function(id) {
+    var c = COMP_DB[id];
+    var pins = c.pins[currentBoard] || {};
+    var pinRows = Object.entries(pins).map(function(entry) {
+      var name = entry[0], val = entry[1];
+      var cls = c.pinClass && c.pinClass[name] ? c.pinClass[name] : 'digital';
+      return '<div class="pin-row"><span class="pin-name">' + name + '</span><span class="pin-val ' + cls + '">' + val + '</span></div>';
+    }).join('');
+    var libBadge = (c.lib && c.lib !== 'No library needed')
+      ? '<div class="lib-badge">📦 ' + c.lib + '</div>' : '';
+    return '<div class="sel-comp-card">' +
+      '<div class="sel-comp-top">' +
+        '<span class="sel-comp-top-icon">' + c.icon + '</span>' +
+        '<span class="sel-comp-top-name">' + c.name + '</span>' +
+        '<button class="sel-comp-remove" data-remove-id="' + id + '" title="Remove">✕</button>' +
+      '</div>' +
+      '<div class="pin-table">' + pinRows + '</div>' +
+      libBadge +
+      '</div>';
+  }).join('');
+
+  // Wire remove buttons via event delegation (Edge-safe)
+  grid.querySelectorAll('[data-remove-id]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      toggleComp(this.getAttribute('data-remove-id'));
+    });
+  });
+
+  // Pin overview bar
+  const allPins = {};
+  [...selectedComps].forEach(id => {
+    const c = COMP_DB[id];
+    const pins = c.pins[currentBoard] || {};
+    Object.entries(pins).forEach(([name, val]) => {
+      const cls = c.pinClass && c.pinClass[name] ? c.pinClass[name] : 'digital';
+      if (cls !== 'power' && cls !== 'builtin') {
+        allPins[val] = cls;
+      }
+    });
+  });
+
+  const pinChips = Object.entries(allPins).map(([pin, cls]) =>
+    `<span class="pin-chip" style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1)">
+      <span class="pin-val ${cls}" style="margin:0;padding:.1rem .35rem">${pin}</span>
+    </span>`
+  ).join('');
+
+  // Combo detection preview
+  const { usedCombos } = resolveComboCode(selectedComps, currentBoard);
+  const comboBadges = usedCombos.map(({combo}) =>
+    `<div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem;background:rgba(255,107,0,.1);border:1px solid rgba(255,107,0,.35);border-radius:8px;margin-bottom:.35rem">
+      <span style="font-size:1.1rem">${combo.icon}</span>
+      <div>
+        <div style="font-family:var(--font-display);font-size:.68rem;font-weight:700;color:var(--neon-orange);letter-spacing:.04em">${combo.name}</div>
+        <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim)">${combo.desc}</div>
+      </div>
+      <span style="margin-left:auto;font-family:var(--font-mono);font-size:.6rem;color:var(--neon-orange);background:rgba(255,107,0,.15);padding:.1rem .4rem;border-radius:3px">INTEGRATED</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('pinOverview').innerHTML = `
+    ${comboBadges ? `<div style="margin-bottom:.75rem">
+      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--neon-orange);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.4rem">⚡ SMART COMBOS DETECTED</div>
+      ${comboBadges}
+    </div>` : ''}
+    <div class="pin-overview">
+      <div class="pin-overview-title">// ALL USED PINS — ${currentBoard.toUpperCase()}</div>
+      <div class="pin-overview-grid">${pinChips || '<span style="font-family:var(--font-mono);font-size:.7rem;color:var(--text-dim)">No external pins required</span>'}</div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════
+//  CODE GENERATION
+// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  COMBO LIBRARY  — integrated examples when
+//  multiple components are selected together
+//  Priority: larger combos (more components) first
+// ══════════════════════════════════════════════════
+const COMBOS = {
+
+  // ── DISPLAY + SENSOR COMBOS ───────────────────
+  'oled+dht22': {
+    name: 'DHT22 Temp & Humidity → OLED',
+    desc: 'Live temp & humidity on OLED',
+    icon: '🌡️→🖥️',
+    components: ['oled','dht22'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <DHT.h>'],
+        defines:  ['#define OLED_RESET -1','#define SCREEN_ADDR 0x3C','#define DHT_PIN 2','#define DHT_TYPE DHT22'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: [
+          'dht.begin();',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while (true);',
+          'display.clearDisplay();',
+          'display.setTextColor(SSD1306_WHITE);',
+          'display.setCursor(0,0); display.setTextSize(1);',
+          'display.println("DHT22 + OLED Ready");',
+          'display.display();',
+          'delay(1000);'
+        ],
+        loop: [
+          'float temp = dht.readTemperature();',
+          'float hum  = dht.readHumidity();',
+          'if (isnan(temp) || isnan(hum)) { Serial.println("DHT read error"); delay(2000); return; }',
+          'display.clearDisplay();',
+          'display.setTextSize(2);',
+          'display.setCursor(0, 0);',
+          'display.print(temp, 1); display.println(" C");',
+          'display.print(hum,  1); display.println(" %");',
+          'display.setTextSize(1);',
+          'display.setCursor(0, 52);',
+          'display.println("Temp / Humidity");',
+          'display.display();',
+          'Serial.print("T:"); Serial.print(temp); Serial.print("C  H:"); Serial.print(hum); Serial.println("%");',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <DHT.h>'],
+        defines:  ['#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C','#define DHT_PIN 4','#define DHT_TYPE DHT22'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: [
+          'Wire.begin(OLED_SDA, OLED_SCL);',
+          'dht.begin();',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while (true);',
+          'display.clearDisplay(); display.setTextColor(SSD1306_WHITE);',
+          'display.println("ESP32 DHT22 Ready"); display.display(); delay(1000);'
+        ],
+        loop: [
+          'float temp = dht.readTemperature();',
+          'float hum  = dht.readHumidity();',
+          'if (isnan(temp)||isnan(hum)) { delay(2000); return; }',
+          'display.clearDisplay();',
+          'display.setTextSize(2); display.setCursor(0,0);',
+          'display.print(temp,1); display.println("C");',
+          'display.print(hum,1);  display.println("%");',
+          'display.setTextSize(1); display.setCursor(0,52);',
+          'display.println("Temp / Humidity"); display.display();',
+          'Serial.printf("T:%.1fC H:%.1f%%\\n", temp, hum);',
+          'delay(2000);'
+        ]
+      }
+    }
+  },
+
+  'oled+dht11': {
+    name: 'DHT11 Temp & Humidity → OLED',
+    desc: 'Live temp & humidity on OLED',
+    icon: '🌤️→🖥️',
+    components: ['oled','dht11'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <DHT.h>'],
+        defines:  ['#define OLED_RESET -1','#define SCREEN_ADDR 0x3C','#define DHT_PIN 4','#define DHT_TYPE DHT11'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: ['dht.begin();','if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);','display.clearDisplay(); display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'float t=dht.readTemperature(), h=dht.readHumidity();',
+          'if (isnan(t)||isnan(h)) { delay(1000); return; }',
+          'display.clearDisplay(); display.setTextSize(2); display.setCursor(0,0);',
+          'display.print(t,1); display.println("C");',
+          'display.print(h,1); display.println("%");',
+          'display.setTextSize(1); display.setCursor(0,52); display.println("DHT11 Sensor"); display.display();',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <DHT.h>'],
+        defines:  ['#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C','#define DHT_PIN 5','#define DHT_TYPE DHT11'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: ['Wire.begin(OLED_SDA, OLED_SCL); dht.begin();','if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);','display.clearDisplay(); display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'float t=dht.readTemperature(), h=dht.readHumidity();',
+          'if (!isnan(t)&&!isnan(h)) {',
+          '  display.clearDisplay(); display.setTextSize(2); display.setCursor(0,0);',
+          '  display.print(t,1); display.println("C");',
+          '  display.print(h,1); display.println("%");',
+          '  display.setTextSize(1); display.setCursor(0,52); display.println("DHT11"); display.display();',
+          '}',
+          'delay(2000);'
+        ]
+      }
+    }
+  },
+
+  'lcd_i2c+dht22': {
+    name: 'DHT22 → LCD Display',
+    desc: 'Temp & humidity on LCD 16×2',
+    icon: '🌡️→📟',
+    components: ['lcd_i2c','dht22'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <LiquidCrystal_I2C.h>','#include <DHT.h>'],
+        defines:  ['#define DHT_PIN 2','#define DHT_TYPE DHT22'],
+        globals:  ['LiquidCrystal_I2C lcd(0x27,16,2);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: ['lcd.init(); lcd.backlight(); dht.begin();','lcd.setCursor(0,0); lcd.print("DHT22 + LCD Ready");','delay(1500); lcd.clear();'],
+        loop: [
+          'float t=dht.readTemperature(), h=dht.readHumidity();',
+          'if (isnan(t)||isnan(h)) { lcd.print("Sensor Error"); delay(2000); return; }',
+          'lcd.setCursor(0,0); lcd.print("Temp:  "); lcd.print(t,1); lcd.print((char)223); lcd.print("C ");',
+          'lcd.setCursor(0,1); lcd.print("Humi:  "); lcd.print(h,1); lcd.print("%  ");',
+          'Serial.print("T:"); Serial.print(t); Serial.print("C H:"); Serial.print(h); Serial.println("%");',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <LiquidCrystal_I2C.h>','#include <DHT.h>'],
+        defines:  ['#define LCD_SDA 21','#define LCD_SCL 22','#define DHT_PIN 4','#define DHT_TYPE DHT22'],
+        globals:  ['LiquidCrystal_I2C lcd(0x27,16,2);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: ['Wire.begin(LCD_SDA,LCD_SCL); lcd.init(); lcd.backlight(); dht.begin();','lcd.print("ESP32+DHT22 LCD"); delay(1500); lcd.clear();'],
+        loop: [
+          'float t=dht.readTemperature(), h=dht.readHumidity();',
+          'if (!isnan(t)&&!isnan(h)) {',
+          '  lcd.setCursor(0,0); lcd.print("Temp:  "); lcd.print(t,1); lcd.print("C ");',
+          '  lcd.setCursor(0,1); lcd.print("Humi:  "); lcd.print(h,1); lcd.print("% ");',
+          '}',
+          'delay(2000);'
+        ]
+      }
+    }
+  },
+
+  'oled+bmp280': {
+    name: 'BMP280 Pressure → OLED',
+    desc: 'Pressure, altitude & temp on OLED',
+    icon: '🌬️→🖥️',
+    components: ['oled','bmp280'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <Adafruit_BMP280.h>'],
+        defines:  ['#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','Adafruit_BMP280 bmp;'],
+        setup: [
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);',
+          'if (!bmp.begin(0x76)) { Serial.println("BMP280 fail!"); while(true); }',
+          'display.clearDisplay(); display.setTextColor(SSD1306_WHITE);',
+          'display.println("BMP280 + OLED"); display.display(); delay(1000);'
+        ],
+        loop: [
+          'float temp = bmp.readTemperature();',
+          'float pres = bmp.readPressure()/100.0;',
+          'float alt  = bmp.readAltitude(1013.25);',
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(0,0);',
+          'display.print("Temp:  "); display.print(temp,1); display.println(" C");',
+          'display.print("Press: "); display.print(pres,1); display.println(" hPa");',
+          'display.print("Alt:   "); display.print(alt,1);  display.println(" m");',
+          'display.display();',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <Adafruit_BMP280.h>'],
+        defines:  ['#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','Adafruit_BMP280 bmp;'],
+        setup: ['Wire.begin(OLED_SDA,OLED_SCL);','if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);','if (!bmp.begin(0x76)) while(true);','display.clearDisplay(); display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(0,0);',
+          'display.printf("T: %.1f C\\n",  bmp.readTemperature());',
+          'display.printf("P: %.1f hPa\\n",bmp.readPressure()/100.0);',
+          'display.printf("A: %.1f m\\n",  bmp.readAltitude(1013.25));',
+          'display.display(); delay(2000);'
+        ]
+      }
+    }
+  },
+
+  'tm1637+dht22': {
+    name: 'DHT22 Temp → TM1637',
+    desc: 'Temperature on 7-segment display',
+    icon: '🌡️→🔢',
+    components: ['tm1637','dht22'],
+    code: {
+      uno: {
+        includes: ['#include <TM1637Display.h>','#include <DHT.h>'],
+        defines:  ['#define TM_CLK 2','#define TM_DIO 3','#define DHT_PIN 4','#define DHT_TYPE DHT22'],
+        globals:  ['TM1637Display tm(TM_CLK, TM_DIO);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: ['tm.setBrightness(5); dht.begin();','tm.showNumberDec(8888); delay(1000); tm.clear();'],
+        loop: [
+          'float temp = dht.readTemperature();',
+          'if (!isnan(temp)) {',
+          '  int display_val = (int)(temp * 10);  // e.g. 23.4 → 234',
+          '  tm.showNumberDecEx(display_val, 0b01000000, false, 4, 0); // shows 23.4',
+          '  Serial.print("Temp: "); Serial.print(temp); Serial.println(" C");',
+          '}',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <TM1637Display.h>','#include <DHT.h>'],
+        defines:  ['#define TM_CLK 18','#define TM_DIO 19','#define DHT_PIN 4','#define DHT_TYPE DHT22'],
+        globals:  ['TM1637Display tm(TM_CLK, TM_DIO);','DHT dht(DHT_PIN, DHT_TYPE);'],
+        setup: ['tm.setBrightness(5); dht.begin(); tm.showNumberDec(8888); delay(1000);'],
+        loop: [
+          'float temp = dht.readTemperature();',
+          'if (!isnan(temp)) tm.showNumberDecEx((int)(temp*10), 0b01000000, false, 4, 0);',
+          'delay(2000);'
+        ]
+      }
+    }
+  },
+
+  // ── DISTANCE + OUTPUT COMBOS ─────────────────
+  'hcsr04+servo': {
+    name: 'HC-SR04 Distance → Servo',
+    desc: 'Servo angle controlled by distance',
+    icon: '📡→⚙️',
+    components: ['hcsr04','servo'],
+    code: {
+      uno: {
+        includes: ['#include <Servo.h>'],
+        defines:  ['#define TRIG_PIN 9','#define ECHO_PIN 10','#define SERVO_PIN 6','#define MAX_DIST 100'],
+        globals:  ['Servo myServo;'],
+        setup: [
+          'pinMode(TRIG_PIN, OUTPUT); pinMode(ECHO_PIN, INPUT);',
+          'myServo.attach(SERVO_PIN);',
+          'myServo.write(90);',
+          'Serial.println("HC-SR04 + Servo ready");'
+        ],
+        loop: [
+          '// Measure distance',
+          'digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10);',
+          'digitalWrite(TRIG_PIN, LOW);',
+          'float dist = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2.0;',
+          'dist = constrain(dist, 2, MAX_DIST);',
+          '// Map distance to servo angle: close=0°, far=180°',
+          'int angle = map((int)dist, 2, MAX_DIST, 0, 180);',
+          'myServo.write(angle);',
+          'Serial.print("Dist: "); Serial.print(dist);',
+          'Serial.print(" cm → Servo: "); Serial.print(angle); Serial.println("°");',
+          'delay(100);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <ESP32Servo.h>'],
+        defines:  ['#define TRIG_PIN 5','#define ECHO_PIN 18','#define SERVO_PIN 13','#define MAX_DIST 100'],
+        globals:  ['Servo myServo;'],
+        setup: [
+          'pinMode(TRIG_PIN, OUTPUT); pinMode(ECHO_PIN, INPUT);',
+          'myServo.attach(SERVO_PIN); myServo.write(90);'
+        ],
+        loop: [
+          'digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10);',
+          'digitalWrite(TRIG_PIN, LOW);',
+          'float dist = constrain(pulseIn(ECHO_PIN, HIGH) * 0.034 / 2.0, 2, MAX_DIST);',
+          'int angle = map((int)dist, 2, MAX_DIST, 0, 180);',
+          'myServo.write(angle);',
+          'Serial.printf("Dist:%.1fcm → %d°\\n", dist, angle);',
+          'delay(100);'
+        ]
+      }
+    }
+  },
+
+  'hcsr04+oled': {
+    name: 'HC-SR04 Distance → OLED',
+    desc: 'Live distance meter on OLED',
+    icon: '📡→🖥️',
+    components: ['hcsr04','oled'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define TRIG_PIN 9','#define ECHO_PIN 10','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: [
+          'pinMode(TRIG_PIN, OUTPUT); pinMode(ECHO_PIN, INPUT);',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);',
+          'display.clearDisplay(); display.setTextColor(SSD1306_WHITE);',
+          'display.println("Distance Meter"); display.display(); delay(1000);'
+        ],
+        loop: [
+          'digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN, LOW);',
+          'float dist = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2.0;',
+          'String status = dist < 10 ? "VERY CLOSE!" : dist < 30 ? "CLOSE" : dist < 80 ? "MEDIUM" : "FAR";',
+          'display.clearDisplay();',
+          'display.setTextSize(1); display.setCursor(0,0); display.println("  Distance Meter");',
+          'display.drawLine(0,10,127,10,SSD1306_WHITE);',
+          'display.setTextSize(3); display.setCursor(10,20);',
+          'display.print(dist,1);',
+          'display.setTextSize(1); display.setCursor(90,32); display.print("cm");',
+          'display.setCursor(30,54); display.print(status);',
+          'display.display();',
+          'delay(200);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define TRIG_PIN 5','#define ECHO_PIN 18','#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: [
+          'Wire.begin(OLED_SDA, OLED_SCL);',
+          'pinMode(TRIG_PIN, OUTPUT); pinMode(ECHO_PIN, INPUT);',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);',
+          'display.clearDisplay(); display.setTextColor(SSD1306_WHITE);'
+        ],
+        loop: [
+          'digitalWrite(TRIG_PIN,LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN,HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN,LOW);',
+          'float dist = pulseIn(ECHO_PIN,HIGH)*0.034/2.0;',
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(0,0);',
+          'display.println("  Distance Meter"); display.drawLine(0,10,127,10,SSD1306_WHITE);',
+          'display.setTextSize(3); display.setCursor(10,20); display.print(dist,1);',
+          'display.setTextSize(1); display.setCursor(90,32); display.print("cm");',
+          'display.setCursor(30,54);',
+          'display.print(dist<10?"VERY CLOSE!":dist<30?"CLOSE":dist<80?"MEDIUM":"FAR");',
+          'display.display(); delay(200);'
+        ]
+      }
+    }
+  },
+
+  'hcsr04+led': {
+    name: 'HC-SR04 Proximity → LED Alert',
+    desc: 'LED flashes faster when closer',
+    icon: '📡→💡',
+    components: ['hcsr04','led'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define TRIG_PIN 9','#define ECHO_PIN 10','#define LED_PIN 13','#define DANGER_DIST 20'],
+        globals:  [],
+        setup: ['pinMode(TRIG_PIN, OUTPUT); pinMode(ECHO_PIN, INPUT);','pinMode(LED_PIN, OUTPUT);','Serial.println("Proximity Alert Ready");'],
+        loop: [
+          'digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN, LOW);',
+          'float dist = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2.0;',
+          'Serial.print("Dist: "); Serial.print(dist); Serial.println(" cm");',
+          'if (dist < DANGER_DIST) {',
+          '  // Flash speed proportional to closeness',
+          '  int flashDelay = map((int)dist, 2, DANGER_DIST, 50, 500);',
+          '  digitalWrite(LED_PIN, HIGH); delay(flashDelay);',
+          '  digitalWrite(LED_PIN, LOW);  delay(flashDelay);',
+          '} else {',
+          '  digitalWrite(LED_PIN, LOW);',
+          '  delay(200);',
+          '}'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define TRIG_PIN 5','#define ECHO_PIN 18','#define LED_PIN 2','#define DANGER_DIST 20'],
+        globals:  [],
+        setup: ['pinMode(TRIG_PIN,OUTPUT); pinMode(ECHO_PIN,INPUT); pinMode(LED_PIN,OUTPUT);'],
+        loop: [
+          'digitalWrite(TRIG_PIN,LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN,HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN,LOW);',
+          'float dist = pulseIn(ECHO_PIN,HIGH)*0.034/2.0;',
+          'if (dist < DANGER_DIST) {',
+          '  int d = map((int)dist, 2, DANGER_DIST, 50, 400);',
+          '  digitalWrite(LED_PIN,HIGH); delay(d);',
+          '  digitalWrite(LED_PIN,LOW);  delay(d);',
+          '} else { digitalWrite(LED_PIN,LOW); delay(200); }'
+        ]
+      }
+    }
+  },
+
+  'hcsr04+buzzer': {
+    name: 'HC-SR04 Proximity → Buzzer',
+    desc: 'Parking sensor: faster beeps when closer',
+    icon: '📡→🔔',
+    components: ['hcsr04','buzzer'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define TRIG_PIN 9','#define ECHO_PIN 10','#define BUZZER_PIN 8','#define DANGER_DIST 30'],
+        globals:  [],
+        setup: ['pinMode(TRIG_PIN,OUTPUT); pinMode(ECHO_PIN,INPUT); pinMode(BUZZER_PIN,OUTPUT);','Serial.println("Parking Sensor Ready");'],
+        loop: [
+          'digitalWrite(TRIG_PIN,LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN,HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN,LOW);',
+          'float dist = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2.0;',
+          'Serial.print("Dist: "); Serial.print(dist); Serial.println(" cm");',
+          'if (dist < 5) {',
+          '  // Continuous tone — too close!',
+          '  tone(BUZZER_PIN, 1000);',
+          '} else if (dist < DANGER_DIST) {',
+          '  int beepDelay = map((int)dist, 5, DANGER_DIST, 80, 800);',
+          '  tone(BUZZER_PIN, 880, 50);',
+          '  delay(beepDelay);',
+          '} else {',
+          '  noTone(BUZZER_PIN);',
+          '  delay(200);',
+          '}'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define TRIG_PIN 5','#define ECHO_PIN 18','#define BUZZER_PIN 12','#define BUZZER_CH 3','#define DANGER_DIST 30'],
+        globals:  [],
+        setup: ['pinMode(TRIG_PIN,OUTPUT); pinMode(ECHO_PIN,INPUT);','ledcSetup(BUZZER_CH,2000,8); ledcAttachPin(BUZZER_PIN,BUZZER_CH);'],
+        loop: [
+          'digitalWrite(TRIG_PIN,LOW); delayMicroseconds(2);',
+          'digitalWrite(TRIG_PIN,HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN,LOW);',
+          'float dist = pulseIn(ECHO_PIN,HIGH)*0.034/2.0;',
+          'if (dist<5) { ledcWriteTone(BUZZER_CH,1000); }',
+          'else if (dist<DANGER_DIST) {',
+          '  int d=map((int)dist,5,DANGER_DIST,80,800);',
+          '  ledcWriteTone(BUZZER_CH,880); delay(50); ledcWriteTone(BUZZER_CH,0); delay(d);',
+          '} else { ledcWriteTone(BUZZER_CH,0); delay(200); }'
+        ]
+      }
+    }
+  },
+
+  // ── PIR COMBOS ──────────────────────────────
+  'pir+led': {
+    name: 'PIR Motion → LED',
+    desc: 'Auto light — LED on when motion detected',
+    icon: '🚶→💡',
+    components: ['pir','led'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define PIR_PIN 7','#define LED_PIN 13','#define LIGHT_ON_MS 5000'],
+        globals:  ['unsigned long ledOnTime = 0;'],
+        setup: ['pinMode(PIR_PIN, INPUT); pinMode(LED_PIN, OUTPUT);','Serial.println("Motion-activated light ready");'],
+        loop: [
+          'if (digitalRead(PIR_PIN) == HIGH) {',
+          '  digitalWrite(LED_PIN, HIGH);',
+          '  ledOnTime = millis();',
+          '  Serial.println("Motion! LED ON");',
+          '}',
+          '// Auto turn off after timeout',
+          'if (millis() - ledOnTime > LIGHT_ON_MS) {',
+          '  digitalWrite(LED_PIN, LOW);',
+          '}',
+          'delay(100);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define PIR_PIN 14','#define LED_PIN 2','#define LIGHT_ON_MS 5000'],
+        globals:  ['unsigned long ledOnTime = 0;'],
+        setup: ['pinMode(PIR_PIN,INPUT); pinMode(LED_PIN,OUTPUT);'],
+        loop: [
+          'if (digitalRead(PIR_PIN)) { digitalWrite(LED_PIN,HIGH); ledOnTime=millis(); Serial.println("Motion!"); }',
+          'if (millis()-ledOnTime > LIGHT_ON_MS) digitalWrite(LED_PIN,LOW);',
+          'delay(100);'
+        ]
+      }
+    }
+  },
+
+  'pir+buzzer': {
+    name: 'PIR Motion → Buzzer Alarm',
+    desc: 'Security alarm — beep when motion detected',
+    icon: '🚶→🔔',
+    components: ['pir','buzzer'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define PIR_PIN 7','#define BUZZER_PIN 8'],
+        globals:  ['bool alarming = false;','unsigned long alarmStart = 0;'],
+        setup: ['pinMode(PIR_PIN, INPUT); pinMode(BUZZER_PIN, OUTPUT);','Serial.println("PIR Alarm ready — waiting...");'],
+        loop: [
+          'if (digitalRead(PIR_PIN) == HIGH) {',
+          '  alarming = true; alarmStart = millis();',
+          '  Serial.println("INTRUDER ALERT!");',
+          '}',
+          'if (alarming) {',
+          '  // Siren pattern',
+          '  for (int f = 800; f < 1200; f += 10) { tone(BUZZER_PIN, f); delay(5); }',
+          '  for (int f = 1200; f > 800; f -= 10) { tone(BUZZER_PIN, f); delay(5); }',
+          '  if (millis() - alarmStart > 5000) { noTone(BUZZER_PIN); alarming = false; }',
+          '} else { delay(100); }'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define PIR_PIN 14','#define BUZZER_PIN 12','#define BUZZER_CH 3'],
+        globals:  ['bool alarming=false; unsigned long alarmStart=0;'],
+        setup: ['pinMode(PIR_PIN,INPUT); ledcSetup(BUZZER_CH,2000,8); ledcAttachPin(BUZZER_PIN,BUZZER_CH);'],
+        loop: [
+          'if (digitalRead(PIR_PIN)) { alarming=true; alarmStart=millis(); Serial.println("ALERT!"); }',
+          'if (alarming) {',
+          '  for(int f=800;f<1200;f+=20){ledcWriteTone(BUZZER_CH,f);delay(3);}',
+          '  for(int f=1200;f>800;f-=20){ledcWriteTone(BUZZER_CH,f);delay(3);}',
+          '  if(millis()-alarmStart>5000){ledcWriteTone(BUZZER_CH,0);alarming=false;}',
+          '} else delay(100);'
+        ]
+      }
+    }
+  },
+
+  'pir+relay': {
+    name: 'PIR Motion → Relay',
+    desc: 'Auto power — relay on when motion detected',
+    icon: '🚶→🔌',
+    components: ['pir','relay'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define PIR_PIN 7','#define RELAY_PIN 6','#define AUTO_OFF_MS 10000'],
+        globals:  ['unsigned long relayOnTime = 0;'],
+        setup: ['pinMode(PIR_PIN, INPUT); pinMode(RELAY_PIN, OUTPUT);','digitalWrite(RELAY_PIN, HIGH); // Relay OFF (active LOW)'],
+        loop: [
+          'if (digitalRead(PIR_PIN) == HIGH) {',
+          '  digitalWrite(RELAY_PIN, LOW); // Relay ON',
+          '  relayOnTime = millis();',
+          '  Serial.println("Motion → Relay ON");',
+          '}',
+          'if (millis() - relayOnTime > AUTO_OFF_MS) {',
+          '  digitalWrite(RELAY_PIN, HIGH); // Relay OFF',
+          '}',
+          'delay(100);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define PIR_PIN 14','#define RELAY_PIN 26','#define AUTO_OFF_MS 10000'],
+        globals:  ['unsigned long relayOnTime=0;'],
+        setup: ['pinMode(PIR_PIN,INPUT); pinMode(RELAY_PIN,OUTPUT); digitalWrite(RELAY_PIN,HIGH);'],
+        loop: [
+          'if (digitalRead(PIR_PIN)) { digitalWrite(RELAY_PIN,LOW); relayOnTime=millis(); Serial.println("Motion→Relay ON"); }',
+          'if (millis()-relayOnTime>AUTO_OFF_MS) digitalWrite(RELAY_PIN,HIGH);',
+          'delay(100);'
+        ]
+      }
+    }
+  },
+
+  // ── LIGHT SENSOR COMBOS ──────────────────────
+  'ldr+led': {
+    name: 'LDR → Auto Night Light',
+    desc: 'LED turns on automatically when dark',
+    icon: '☀️→💡',
+    components: ['ldr','led'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define LDR_PIN A0','#define LED_PIN 13','#define DARK_THRESHOLD 400'],
+        globals:  [],
+        setup: ['pinMode(LED_PIN, OUTPUT); Serial.println("Auto Night Light Ready");'],
+        loop: [
+          'int light = analogRead(LDR_PIN);',
+          'bool isDark = light < DARK_THRESHOLD;',
+          'digitalWrite(LED_PIN, isDark ? HIGH : LOW);',
+          'Serial.print("Light: "); Serial.print(light);',
+          'Serial.println(isDark ? " → LED ON (dark)" : " → LED OFF (bright)");',
+          'delay(500);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define LDR_PIN 34','#define LED_PIN 2','#define DARK_THRESHOLD 1500'],
+        globals:  [],
+        setup: ['pinMode(LED_PIN,OUTPUT);'],
+        loop: [
+          'int v = analogRead(LDR_PIN);',
+          'bool dark = v < DARK_THRESHOLD;',
+          'digitalWrite(LED_PIN, dark);',
+          'Serial.printf("Light:%d %s\\n", v, dark?"LED ON":"LED OFF");',
+          'delay(500);'
+        ]
+      }
+    }
+  },
+
+  'ldr+oled': {
+    name: 'LDR → OLED Light Meter',
+    desc: 'Light level percentage on OLED',
+    icon: '☀️→🖥️',
+    components: ['ldr','oled'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define LDR_PIN A0','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);','display.clearDisplay(); display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'int raw = analogRead(LDR_PIN);',
+          'int pct = map(raw, 0, 1023, 0, 100);',
+          'int barW = map(pct, 0, 100, 0, 120);',
+          'display.clearDisplay();',
+          'display.setTextSize(1); display.setCursor(0,0); display.println("  Light Meter");',
+          'display.setTextSize(3); display.setCursor(20,18); display.print(pct); display.println("%");',
+          'display.drawRect(4,50,120,10,SSD1306_WHITE);',
+          'display.fillRect(4,50,barW,10,SSD1306_WHITE);',
+          'display.display();',
+          'delay(300);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define LDR_PIN 34','#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['Wire.begin(OLED_SDA,OLED_SCL); if (!display.begin(SSD1306_SWITCHCAPVCC,SCREEN_ADDR)) while(true);','display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'int pct = map(analogRead(LDR_PIN),0,4095,0,100);',
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(0,0); display.println("  Light Meter");',
+          'display.setTextSize(3); display.setCursor(20,18); display.print(pct); display.println("%");',
+          'display.drawRect(4,50,120,10,SSD1306_WHITE); display.fillRect(4,50,map(pct,0,100,0,120),10,SSD1306_WHITE);',
+          'display.display(); delay(300);'
+        ]
+      }
+    }
+  },
+
+  // ── SOIL COMBOS ─────────────────────────────
+  'soil+relay': {
+    name: 'Soil Moisture → Auto Watering Relay',
+    desc: 'Pump relay turns on when soil is dry',
+    icon: '🌱→🔌',
+    components: ['soil','relay'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define SOIL_PIN A1','#define RELAY_PIN 7','#define DRY_THRESHOLD 400','#define WET_THRESHOLD 700'],
+        globals:  ['bool pumpOn = false;'],
+        setup: ['pinMode(RELAY_PIN, OUTPUT); digitalWrite(RELAY_PIN, HIGH); Serial.println("Auto Watering Ready");'],
+        loop: [
+          'int moisture = analogRead(SOIL_PIN);',
+          'int pct = map(moisture, 300, 700, 0, 100);',
+          'pct = constrain(pct, 0, 100);',
+          'Serial.print("Moisture: "); Serial.print(pct); Serial.print("%");',
+          'if (pct < 30 && !pumpOn) {',
+          '  digitalWrite(RELAY_PIN, LOW); pumpOn = true;',
+          '  Serial.println(" → PUMP ON (dry)");',
+          '} else if (pct > 60 && pumpOn) {',
+          '  digitalWrite(RELAY_PIN, HIGH); pumpOn = false;',
+          '  Serial.println(" → PUMP OFF (watered)");',
+          '} else { Serial.println(); }',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define SOIL_PIN 35','#define RELAY_PIN 26'],
+        globals:  ['bool pumpOn=false;'],
+        setup: ['pinMode(RELAY_PIN,OUTPUT); digitalWrite(RELAY_PIN,HIGH);'],
+        loop: [
+          'int pct=constrain(map(analogRead(SOIL_PIN),3500,1500,0,100),0,100);',
+          'Serial.printf("Moisture:%d%% ",pct);',
+          'if(pct<30&&!pumpOn){digitalWrite(RELAY_PIN,LOW);pumpOn=true;Serial.println("→PUMP ON");}',
+          'else if(pct>60&&pumpOn){digitalWrite(RELAY_PIN,HIGH);pumpOn=false;Serial.println("→PUMP OFF");}',
+          'else Serial.println();',
+          'delay(2000);'
+        ]
+      }
+    }
+  },
+
+  'soil+oled': {
+    name: 'Soil Moisture → OLED',
+    desc: 'Live moisture % and plant status on OLED',
+    icon: '🌱→🖥️',
+    components: ['soil','oled'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define SOIL_PIN A1','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);','display.clearDisplay(); display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'int pct = constrain(map(analogRead(SOIL_PIN), 300, 700, 0, 100), 0, 100);',
+          'String status = pct<30?"WATER ME!":pct<60?"HAPPY":pct<80?"MOIST":"SOGGY";',
+          'display.clearDisplay();',
+          'display.setTextSize(1); display.setCursor(0,0); display.println("  Soil Monitor");',
+          'display.setTextSize(3); display.setCursor(15,16); display.print(pct); display.println("%");',
+          'display.drawRect(4,46,120,8,SSD1306_WHITE);',
+          'display.fillRect(4,46,map(pct,0,100,0,120),8,SSD1306_WHITE);',
+          'display.setTextSize(1); display.setCursor(28,56); display.print(status);',
+          'display.display();',
+          'delay(1000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define SOIL_PIN 35','#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['Wire.begin(OLED_SDA,OLED_SCL); if(!display.begin(SSD1306_SWITCHCAPVCC,SCREEN_ADDR))while(true);','display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'int pct=constrain(map(analogRead(SOIL_PIN),3500,1500,0,100),0,100);',
+          'const char* st=pct<30?"WATER ME!":pct<60?"HAPPY":pct<80?"MOIST":"SOGGY";',
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(0,0); display.println("  Soil Monitor");',
+          'display.setTextSize(3); display.setCursor(15,16); display.print(pct); display.println("%");',
+          'display.drawRect(4,46,120,8,SSD1306_WHITE); display.fillRect(4,46,map(pct,0,100,0,120),8,SSD1306_WHITE);',
+          'display.setTextSize(1); display.setCursor(28,56); display.print(st);',
+          'display.display(); delay(1000);'
+        ]
+      }
+    }
+  },
+
+  // ── GAS COMBOS ──────────────────────────────
+  'mq2+buzzer': {
+    name: 'MQ-2 Gas → Buzzer Alarm',
+    desc: 'Alarm sounds when gas/smoke detected',
+    icon: '💨→🔔',
+    components: ['mq2','buzzer'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define MQ2_APIN A2','#define MQ2_DPIN 8','#define BUZZER_PIN 3','#define GAS_THRESHOLD 400'],
+        globals:  [],
+        setup: ['pinMode(MQ2_DPIN, INPUT); pinMode(BUZZER_PIN, OUTPUT);','Serial.println("Gas Alarm warming up..."); delay(2000);'],
+        loop: [
+          'int gasLevel = analogRead(MQ2_APIN);',
+          'bool alert = (gasLevel > GAS_THRESHOLD || digitalRead(MQ2_DPIN) == LOW);',
+          'Serial.print("Gas: "); Serial.print(gasLevel);',
+          'if (alert) {',
+          '  Serial.println(" ⚠ ALERT!");',
+          '  tone(BUZZER_PIN, 1000, 200); delay(250);',
+          '  tone(BUZZER_PIN, 1500, 200); delay(250);',
+          '} else {',
+          '  Serial.println(" Normal"); noTone(BUZZER_PIN); delay(1000);',
+          '}'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define MQ2_APIN 36','#define MQ2_DPIN 15','#define BUZZER_PIN 12','#define BUZZER_CH 3','#define GAS_THRESHOLD 2000'],
+        globals:  [],
+        setup: ['pinMode(MQ2_DPIN,INPUT); ledcSetup(BUZZER_CH,2000,8); ledcAttachPin(BUZZER_PIN,BUZZER_CH); delay(2000);'],
+        loop: [
+          'int gas=analogRead(MQ2_APIN);',
+          'bool alert=(gas>GAS_THRESHOLD||!digitalRead(MQ2_DPIN));',
+          'if(alert){',
+          '  Serial.printf("GAS ALERT! Level:%d\\n",gas);',
+          '  ledcWriteTone(BUZZER_CH,1000); delay(200); ledcWriteTone(BUZZER_CH,1500); delay(200);',
+          '}else{ledcWriteTone(BUZZER_CH,0); delay(1000);}'
+        ]
+      }
+    }
+  },
+
+  'mq2+oled': {
+    name: 'MQ-2 Gas → OLED Monitor',
+    desc: 'Gas level with alert status on OLED',
+    icon: '💨→🖥️',
+    components: ['mq2','oled'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define MQ2_APIN A2','#define MQ2_DPIN 8','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C','#define GAS_THRESHOLD 400'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['pinMode(MQ2_DPIN, INPUT);','if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);','display.clearDisplay(); display.setTextColor(SSD1306_WHITE);','display.println("MQ-2 Warming Up..."); display.display(); delay(2000);'],
+        loop: [
+          'int gas = analogRead(MQ2_APIN);',
+          'int pct = map(gas, 0, 1023, 0, 100);',
+          'bool alert = gas > GAS_THRESHOLD;',
+          'display.clearDisplay();',
+          'display.setTextSize(1); display.setCursor(0,0); display.println("  Gas Monitor");',
+          'display.setTextSize(3); display.setCursor(10,16); display.print(pct); display.println("%");',
+          'display.setTextSize(1); display.setCursor(alert?22:30, 48);',
+          'if (alert) { display.setTextSize(2); display.println("! ALERT !"); }',
+          'else { display.println("NORMAL"); }',
+          'display.display(); delay(500);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define MQ2_APIN 36','#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C','#define GAS_THRESHOLD 2000'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['Wire.begin(OLED_SDA,OLED_SCL); if(!display.begin(SSD1306_SWITCHCAPVCC,SCREEN_ADDR))while(true);','display.setTextColor(SSD1306_WHITE); delay(2000);'],
+        loop: [
+          'int gas=analogRead(MQ2_APIN); int pct=map(gas,0,4095,0,100);',
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(0,0); display.println("  Gas Monitor");',
+          'display.setTextSize(3); display.setCursor(10,16); display.print(pct); display.println("%");',
+          'display.setTextSize(gas>GAS_THRESHOLD?2:1); display.setCursor(20,48);',
+          'display.println(gas>GAS_THRESHOLD?"! ALERT !":"NORMAL");',
+          'display.display(); delay(500);'
+        ]
+      }
+    }
+  },
+
+  // ── INPUT → OUTPUT COMBOS ─────────────────
+  'potentiometer+servo': {
+    name: 'Potentiometer → Servo Control',
+    desc: 'Pot directly controls servo angle',
+    icon: '🎚️→⚙️',
+    components: ['potentiometer','servo'],
+    code: {
+      uno: {
+        includes: ['#include <Servo.h>'],
+        defines:  ['#define POT_PIN A0','#define SERVO_PIN 6'],
+        globals:  ['Servo myServo;','int lastAngle = -1;'],
+        setup: ['myServo.attach(SERVO_PIN); myServo.write(90);','Serial.println("Pot → Servo ready. Turn the knob!");'],
+        loop: [
+          'int potVal = analogRead(POT_PIN);',
+          'int angle  = map(potVal, 0, 1023, 0, 180);',
+          'if (abs(angle - lastAngle) > 2) {  // Only update if changed >2°',
+          '  myServo.write(angle);',
+          '  Serial.print("Pot: "); Serial.print(potVal);',
+          '  Serial.print(" → Servo: "); Serial.print(angle); Serial.println("°");',
+          '  lastAngle = angle;',
+          '}',
+          'delay(20);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <ESP32Servo.h>'],
+        defines:  ['#define POT_PIN 34','#define SERVO_PIN 13'],
+        globals:  ['Servo myServo; int lastAngle=-1;'],
+        setup: ['myServo.attach(SERVO_PIN); myServo.write(90);'],
+        loop: [
+          'int angle = map(analogRead(POT_PIN), 0, 4095, 0, 180);',
+          'if (abs(angle-lastAngle)>2) { myServo.write(angle); Serial.printf("Servo:%d°\\n",angle); lastAngle=angle; }',
+          'delay(20);'
+        ]
+      }
+    }
+  },
+
+  'potentiometer+led': {
+    name: 'Potentiometer → LED Brightness',
+    desc: 'Pot controls LED brightness via PWM',
+    icon: '🎚️→💡',
+    components: ['potentiometer','led'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define POT_PIN A0','#define LED_PIN 9'],
+        globals:  [],
+        setup: ['pinMode(LED_PIN, OUTPUT); Serial.println("Pot → LED Brightness");'],
+        loop: [
+          'int pot = analogRead(POT_PIN);',
+          'int brightness = map(pot, 0, 1023, 0, 255);',
+          'analogWrite(LED_PIN, brightness);',
+          'Serial.print("Brightness: "); Serial.print(brightness*100/255); Serial.println("%");',
+          'delay(50);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define POT_PIN 34','#define LED_PIN 2','#define LED_CH 0'],
+        globals:  [],
+        setup: ['ledcSetup(LED_CH,5000,8); ledcAttachPin(LED_PIN,LED_CH);'],
+        loop: [
+          'int bright = map(analogRead(POT_PIN),0,4095,0,255);',
+          'ledcWrite(LED_CH,bright);',
+          'Serial.printf("Brightness:%d%%\\n",bright*100/255);',
+          'delay(50);'
+        ]
+      }
+    }
+  },
+
+  'potentiometer+oled': {
+    name: 'Potentiometer → OLED Bar Graph',
+    desc: 'Visual pot position bar graph on OLED',
+    icon: '🎚️→🖥️',
+    components: ['potentiometer','oled'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define POT_PIN A0','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);','display.clearDisplay(); display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'int raw = analogRead(POT_PIN);',
+          'int pct = map(raw, 0, 1023, 0, 100);',
+          'display.clearDisplay();',
+          'display.setTextSize(1); display.setCursor(20,0); display.println("Potentiometer");',
+          'display.setTextSize(3); display.setCursor(30,16); display.print(pct); display.println("%");',
+          'display.drawRect(4,50,120,10,SSD1306_WHITE);',
+          'display.fillRect(4,50,map(pct,0,100,0,120),10,SSD1306_WHITE);',
+          'display.display(); delay(100);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>'],
+        defines:  ['#define POT_PIN 34','#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);'],
+        setup: ['Wire.begin(OLED_SDA,OLED_SCL); if(!display.begin(SSD1306_SWITCHCAPVCC,SCREEN_ADDR))while(true);','display.setTextColor(SSD1306_WHITE);'],
+        loop: [
+          'int pct=map(analogRead(POT_PIN),0,4095,0,100);',
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(20,0); display.println("Potentiometer");',
+          'display.setTextSize(3); display.setCursor(30,16); display.print(pct); display.println("%");',
+          'display.drawRect(4,50,120,10,SSD1306_WHITE); display.fillRect(4,50,map(pct,0,100,0,120),10,SSD1306_WHITE);',
+          'display.display(); delay(100);'
+        ]
+      }
+    }
+  },
+
+  'button+led': {
+    name: 'Button → LED Toggle',
+    desc: 'Button press toggles LED on/off',
+    icon: '🔘→💡',
+    components: ['button','led'],
+    code: {
+      uno: {
+        includes: [],
+        defines:  ['#define BTN_PIN 2','#define LED_PIN 13'],
+        globals:  ['bool ledState = false;','int lastBtn = HIGH;'],
+        setup: ['pinMode(BTN_PIN, INPUT_PULLUP); pinMode(LED_PIN, OUTPUT);','Serial.println("Button → LED Toggle ready");'],
+        loop: [
+          'int btn = digitalRead(BTN_PIN);',
+          'if (btn == LOW && lastBtn == HIGH) {  // Falling edge = button pressed',
+          '  ledState = !ledState;',
+          '  digitalWrite(LED_PIN, ledState);',
+          '  Serial.print("LED: "); Serial.println(ledState ? "ON" : "OFF");',
+          '  delay(50); // debounce',
+          '}',
+          'lastBtn = btn;',
+          'delay(10);'
+        ]
+      },
+      esp32: {
+        includes: [],
+        defines:  ['#define BTN_PIN 0','#define LED_PIN 2'],
+        globals:  ['bool ledState=false; int lastBtn=HIGH;'],
+        setup: ['pinMode(BTN_PIN,INPUT_PULLUP); pinMode(LED_PIN,OUTPUT);'],
+        loop: [
+          'int btn=digitalRead(BTN_PIN);',
+          'if(btn==LOW&&lastBtn==HIGH){',
+          '  ledState=!ledState; digitalWrite(LED_PIN,ledState);',
+          '  Serial.println(ledState?"LED ON":"LED OFF"); delay(50);',
+          '}',
+          'lastBtn=btn; delay(10);'
+        ]
+      }
+    }
+  },
+
+  'encoder+servo': {
+    name: 'Rotary Encoder → Servo',
+    desc: 'Encoder rotation controls servo position',
+    icon: '🔁→⚙️',
+    components: ['encoder','servo'],
+    code: {
+      uno: {
+        includes: ['#include <Encoder.h>','#include <Servo.h>'],
+        defines:  ['#define ENC_A 2','#define ENC_B 3','#define SERVO_PIN 6'],
+        globals:  ['Encoder myEnc(ENC_A, ENC_B);','Servo myServo;','int servoPos = 90;','long lastEncPos = 0;'],
+        setup: ['myServo.attach(SERVO_PIN); myServo.write(servoPos);','Serial.println("Encoder → Servo: rotate to control!");'],
+        loop: [
+          'long encPos = myEnc.read() / 4;',
+          'if (encPos != lastEncPos) {',
+          '  int delta = encPos - lastEncPos;',
+          '  servoPos = constrain(servoPos + delta * 5, 0, 180);',
+          '  myServo.write(servoPos);',
+          '  Serial.print("Encoder: "); Serial.print(encPos);',
+          '  Serial.print(" → Servo: "); Serial.print(servoPos); Serial.println("°");',
+          '  lastEncPos = encPos;',
+          '}',
+          'delay(10);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Encoder.h>','#include <ESP32Servo.h>'],
+        defines:  ['#define ENC_A 4','#define ENC_B 5','#define SERVO_PIN 13'],
+        globals:  ['Encoder myEnc(ENC_A,ENC_B); Servo myServo;','int servoPos=90; long lastEncPos=0;'],
+        setup: ['myServo.attach(SERVO_PIN); myServo.write(90);'],
+        loop: [
+          'long pos=myEnc.read()/4;',
+          'if(pos!=lastEncPos){',
+          '  servoPos=constrain(servoPos+(pos-lastEncPos)*5,0,180);',
+          '  myServo.write(servoPos);',
+          '  Serial.printf("Enc:%ld → Servo:%d°\\n",pos,servoPos);',
+          '  lastEncPos=pos;',
+          '}',
+          'delay(10);'
+        ]
+      }
+    }
+  },
+
+  'joystick+servo': {
+    name: 'Joystick → Servo Pan/Tilt',
+    desc: 'X-axis controls servo angle',
+    icon: '🕹️→⚙️',
+    components: ['joystick','servo'],
+    code: {
+      uno: {
+        includes: ['#include <Servo.h>'],
+        defines:  ['#define JOY_X A0','#define JOY_Y A1','#define JOY_SW 4','#define SERVO_PIN 6'],
+        globals:  ['Servo myServo;'],
+        setup: ['pinMode(JOY_SW, INPUT_PULLUP); myServo.attach(SERVO_PIN); myServo.write(90);','Serial.println("Joystick → Servo ready");'],
+        loop: [
+          'int x = analogRead(JOY_X);',
+          'int angle = map(x, 0, 1023, 0, 180);',
+          'myServo.write(angle);',
+          'if (digitalRead(JOY_SW) == LOW) {',
+          '  myServo.write(90); // Center on click',
+          '  Serial.println("Centered!");',
+          '  delay(500);',
+          '}',
+          'Serial.print("Joystick X:"); Serial.print(x); Serial.print(" → "); Serial.print(angle); Serial.println("°");',
+          'delay(20);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <ESP32Servo.h>'],
+        defines:  ['#define JOY_X 34','#define JOY_Y 35','#define JOY_SW 32','#define SERVO_PIN 13'],
+        globals:  ['Servo myServo;'],
+        setup: ['pinMode(JOY_SW,INPUT_PULLUP); myServo.attach(SERVO_PIN); myServo.write(90);'],
+        loop: [
+          'int angle=map(analogRead(JOY_X),0,4095,0,180);',
+          'myServo.write(angle);',
+          'if(!digitalRead(JOY_SW)){myServo.write(90);Serial.println("Centered!"); delay(500);}',
+          'Serial.printf("Servo:%d°\\n",angle); delay(20);'
+        ]
+      }
+    }
+  },
+
+  // ── RFID COMBOS ─────────────────────────────
+  'rfid+oled': {
+    name: 'RFID → OLED Scanner',
+    desc: 'Card UID and access status on OLED',
+    icon: '📶→🖥️',
+    components: ['rfid','oled'],
+    code: {
+      uno: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <SPI.h>','#include <MFRC522.h>'],
+        defines:  ['#define SS_PIN 10','#define RST_PIN 9','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['MFRC522 rfid(SS_PIN, RST_PIN);','Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','String authorizedUID = "AB CD EF 12";'],
+        setup: [
+          'SPI.begin(); rfid.PCD_Init();',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);',
+          'display.clearDisplay(); display.setTextColor(SSD1306_WHITE);',
+          'display.setTextSize(1); display.setCursor(0,0);',
+          'display.println("  RFID Scanner");',
+          'display.println("  Ready - Scan card");',
+          'display.display();'
+        ],
+        loop: [
+          'if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) return;',
+          'String uid = "";',
+          'for (byte i = 0; i < rfid.uid.size; i++) {',
+          '  if (uid.length()) uid += " ";',
+          '  if (rfid.uid.uidByte[i] < 0x10) uid += "0";',
+          '  uid += String(rfid.uid.uidByte[i], HEX);',
+          '}',
+          'uid.toUpperCase();',
+          'bool access = (uid == authorizedUID);',
+          'display.clearDisplay();',
+          'display.setTextSize(1); display.setCursor(0,0); display.println("  RFID Scanner");',
+          'display.setCursor(0,14); display.print("UID: "); display.println(uid);',
+          'display.setTextSize(2); display.setCursor(access?18:12, 38);',
+          'display.println(access ? "ACCESS OK" : "DENIED");',
+          'display.display();',
+          'Serial.print("Card: "); Serial.print(uid); Serial.println(access?" - OK":" - DENIED");',
+          'rfid.PICC_HaltA();',
+          'delay(2000);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Wire.h>','#include <Adafruit_GFX.h>','#include <Adafruit_SSD1306.h>','#include <SPI.h>','#include <MFRC522.h>'],
+        defines:  ['#define SS_PIN 5','#define RST_PIN 4','#define OLED_SDA 21','#define OLED_SCL 22','#define OLED_RESET -1','#define SCREEN_ADDR 0x3C'],
+        globals:  ['MFRC522 rfid(SS_PIN, RST_PIN);','Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);','String authorizedUID = "AB CD EF 12";'],
+        setup: [
+          'Wire.begin(OLED_SDA,OLED_SCL);',
+          'SPI.begin(18,19,23,5); rfid.PCD_Init();',
+          'if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) while(true);',
+          'display.clearDisplay(); display.setTextColor(SSD1306_WHITE);',
+          'display.println("RFID Scanner Ready"); display.display();'
+        ],
+        loop: [
+          'if (!rfid.PICC_IsNewCardPresent()||!rfid.PICC_ReadCardSerial()) return;',
+          'String uid="";',
+          'for(byte i=0;i<rfid.uid.size;i++){if(uid.length())uid+=" ";if(rfid.uid.uidByte[i]<0x10)uid+="0";uid+=String(rfid.uid.uidByte[i],HEX);}',
+          'uid.toUpperCase();',
+          'bool ok=(uid==authorizedUID);',
+          'display.clearDisplay(); display.setTextSize(1); display.setCursor(0,0); display.println("  RFID Scanner");',
+          'display.setCursor(0,14); display.print("UID: "); display.println(uid);',
+          'display.setTextSize(2); display.setCursor(ok?18:12,38); display.println(ok?"ACCESS OK":"DENIED");',
+          'display.display(); rfid.PICC_HaltA(); delay(2000);'
+        ]
+      }
+    }
+  },
+
+  'rfid+buzzer': {
+    name: 'RFID → Buzzer Feedback',
+    desc: 'Beep pattern on card scan (access control)',
+    icon: '📶→🔔',
+    components: ['rfid','buzzer'],
+    code: {
+      uno: {
+        includes: ['#include <SPI.h>','#include <MFRC522.h>'],
+        defines:  ['#define SS_PIN 10','#define RST_PIN 9','#define BUZZER_PIN 8'],
+        globals:  ['MFRC522 rfid(SS_PIN, RST_PIN);','String authorizedUID = "AB CD EF 12";'],
+        setup: ['SPI.begin(); rfid.PCD_Init(); pinMode(BUZZER_PIN, OUTPUT);','Serial.println("RFID + Buzzer ready — scan card");'],
+        loop: [
+          'if (!rfid.PICC_IsNewCardPresent()||!rfid.PICC_ReadCardSerial()) return;',
+          'String uid="";',
+          'for(byte i=0;i<rfid.uid.size;i++){if(uid.length())uid+=" ";if(rfid.uid.uidByte[i]<0x10)uid+="0";uid+=String(rfid.uid.uidByte[i],HEX);}',
+          'uid.toUpperCase(); Serial.println("Card: " + uid);',
+          'if (uid == authorizedUID) {',
+          '  // Access granted: two short beeps',
+          '  tone(BUZZER_PIN,1000,100); delay(150); tone(BUZZER_PIN,1500,100); delay(150);',
+          '  Serial.println("ACCESS GRANTED");',
+          '} else {',
+          '  // Access denied: one long low beep',
+          '  tone(BUZZER_PIN, 400, 600);',
+          '  Serial.println("ACCESS DENIED");',
+          '}',
+          'rfid.PICC_HaltA(); delay(1500);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <SPI.h>','#include <MFRC522.h>'],
+        defines:  ['#define SS_PIN 5','#define RST_PIN 4','#define BUZZER_PIN 12','#define BUZZER_CH 3'],
+        globals:  ['MFRC522 rfid(SS_PIN,RST_PIN); String authUID="AB CD EF 12";'],
+        setup: ['SPI.begin(18,19,23,5); rfid.PCD_Init();','ledcSetup(BUZZER_CH,2000,8); ledcAttachPin(BUZZER_PIN,BUZZER_CH);'],
+        loop: [
+          'if(!rfid.PICC_IsNewCardPresent()||!rfid.PICC_ReadCardSerial()) return;',
+          'String uid="";',
+          'for(byte i=0;i<rfid.uid.size;i++){if(uid.length())uid+=" ";if(rfid.uid.uidByte[i]<0x10)uid+="0";uid+=String(rfid.uid.uidByte[i],HEX);}',
+          'uid.toUpperCase();',
+          'if(uid==authUID){ledcWriteTone(BUZZER_CH,1000);delay(100);ledcWriteTone(BUZZER_CH,1500);delay(100);ledcWriteTone(BUZZER_CH,0);Serial.println("GRANTED");}',
+          'else{ledcWriteTone(BUZZER_CH,400);delay(600);ledcWriteTone(BUZZER_CH,0);Serial.println("DENIED");}',
+          'rfid.PICC_HaltA(); delay(1500);'
+        ]
+      }
+    }
+  },
+
+  // ── NEOPIXEL COMBOS ─────────────────────────
+  'neopixel+potentiometer': {
+    name: 'Potentiometer → NeoPixel Brightness',
+    desc: 'Pot controls NeoPixel color and brightness',
+    icon: '🎚️→🌟',
+    components: ['neopixel','potentiometer'],
+    code: {
+      uno: {
+        includes: ['#include <Adafruit_NeoPixel.h>'],
+        defines:  ['#define NEO_PIN 6','#define NEO_COUNT 8','#define POT_PIN A0'],
+        globals:  ['Adafruit_NeoPixel strip(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);'],
+        setup: ['strip.begin(); strip.show();'],
+        loop: [
+          'int pot = analogRead(POT_PIN);',
+          'int hue = map(pot, 0, 1023, 0, 65535);  // Full color spectrum',
+          'int brightness = map(pot, 0, 1023, 10, 255);',
+          'strip.setBrightness(brightness);',
+          'for (int i = 0; i < strip.numPixels(); i++) {',
+          '  strip.setPixelColor(i, strip.ColorHSV(hue));',
+          '}',
+          'strip.show();',
+          'delay(20);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Adafruit_NeoPixel.h>'],
+        defines:  ['#define NEO_PIN 13','#define NEO_COUNT 8','#define POT_PIN 34'],
+        globals:  ['Adafruit_NeoPixel strip(NEO_COUNT,NEO_PIN,NEO_GRB+NEO_KHZ800);'],
+        setup: ['strip.begin(); strip.show();'],
+        loop: [
+          'int pot=analogRead(POT_PIN);',
+          'int hue=map(pot,0,4095,0,65535);',
+          'strip.setBrightness(map(pot,0,4095,10,255));',
+          'for(int i=0;i<strip.numPixels();i++) strip.setPixelColor(i,strip.ColorHSV(hue));',
+          'strip.show(); delay(20);'
+        ]
+      }
+    }
+  },
+
+  'neopixel+pir': {
+    name: 'PIR Motion → NeoPixel',
+    desc: 'NeoPixel animates when motion detected',
+    icon: '🚶→🌟',
+    components: ['neopixel','pir'],
+    code: {
+      uno: {
+        includes: ['#include <Adafruit_NeoPixel.h>'],
+        defines:  ['#define NEO_PIN 6','#define NEO_COUNT 8','#define PIR_PIN 7'],
+        globals:  ['Adafruit_NeoPixel strip(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);','unsigned long motionTime = 0;'],
+        setup: ['pinMode(PIR_PIN, INPUT); strip.begin(); strip.show();'],
+        loop: [
+          'if (digitalRead(PIR_PIN)) {',
+          '  motionTime = millis();',
+          '  // Flash red alert pattern',
+          '  for (int i=0; i<NEO_COUNT; i++) strip.setPixelColor(i, strip.Color(255,0,0));',
+          '  strip.show(); Serial.println("Motion! Lights ON");',
+          '} else if (millis() - motionTime > 5000) {',
+          '  // Fade out',
+          '  strip.clear(); strip.show();',
+          '} else {',
+          '  // Gentle breathing white',
+          '  int b = (millis() % 2000 < 1000) ? map(millis()%1000,0,999,50,200) : map(millis()%1000,0,999,200,50);',
+          '  for (int i=0;i<NEO_COUNT;i++) strip.setPixelColor(i,strip.Color(b,b,b));',
+          '  strip.show();',
+          '}',
+          'delay(20);'
+        ]
+      },
+      esp32: {
+        includes: ['#include <Adafruit_NeoPixel.h>'],
+        defines:  ['#define NEO_PIN 13','#define NEO_COUNT 8','#define PIR_PIN 14'],
+        globals:  ['Adafruit_NeoPixel strip(NEO_COUNT,NEO_PIN,NEO_GRB+NEO_KHZ800); unsigned long mt=0;'],
+        setup: ['pinMode(PIR_PIN,INPUT); strip.begin(); strip.show();'],
+        loop: [
+          'if(digitalRead(PIR_PIN)){mt=millis();for(int i=0;i<NEO_COUNT;i++)strip.setPixelColor(i,0xFF0000);strip.show();}',
+          'else if(millis()-mt>5000){strip.clear();strip.show();}',
+          'else{int b=128+127*sin(millis()/500.0);for(int i=0;i<NEO_COUNT;i++)strip.setPixelColor(i,strip.Color(b,b,b));strip.show();}',
+          'delay(20);'
+        ]
+      }
+    }
+  },
+
+  // ── ESP32 WIFI COMBOS ────────────────────────
+  'wifi_esp+dht22': {
+    name: 'DHT22 → WiFi Web Server',
+    desc: 'Live temp & humidity served over WiFi',
+    icon: '🌡️→📡',
+    components: ['wifi_esp','dht22'],
+    code: {
+      uno:  { includes:[], defines:[], globals:[], setup:['// WiFi not available on Uno'], loop:[] },
+      esp32: {
+        includes: ['#include <WiFi.h>','#include <WebServer.h>','#include <DHT.h>'],
+        defines:  ['#define WIFI_SSID "YourSSID"','#define WIFI_PASS "YourPassword"','#define DHT_PIN 4','#define DHT_TYPE DHT22'],
+        globals:  ['DHT dht(DHT_PIN, DHT_TYPE);','WebServer server(80);','float lastTemp=0, lastHum=0;'],
+        setup: [
+          'dht.begin();',
+          'WiFi.begin(WIFI_SSID, WIFI_PASS);',
+          'Serial.print("Connecting WiFi");',
+          'while (WiFi.status()!=WL_CONNECTED){delay(500);Serial.print(".");}',
+          'Serial.println("\\nIP: " + WiFi.localIP().toString());',
+          'server.on("/", [](){',
+          '  String html = "<html><body style=\"font-family:sans-serif\">";',
+          '  html += "<h1>Weather Station</h1>";',
+          '  html += "<h2>Temp: " + String(lastTemp,1) + " &deg;C</h2>";',
+          '  html += "<h2>Humi: " + String(lastHum,1)  + " %</h2>";',
+          '  html += "<p>Refreshes every 5s</p>";',
+          '  html += "<meta http-equiv=\"refresh\" content=\"5\"></body></html>";',
+          '  server.send(200, "text/html", html);',
+          '});',
+          'server.begin();'
+        ],
+        loop: [
+          'server.handleClient();',
+          'static unsigned long lastRead = 0;',
+          'if (millis()-lastRead > 2000) {',
+          '  float t=dht.readTemperature(), h=dht.readHumidity();',
+          '  if (!isnan(t)&&!isnan(h)) { lastTemp=t; lastHum=h; }',
+          '  Serial.printf("T:%.1f H:%.1f\\n", lastTemp, lastHum);',
+          '  lastRead = millis();',
+          '}'
+        ]
+      }
+    }
+  }
+};
+
+// ══════════════════════════════════════════════════
+//  COMBO RESOLVER
+//  Greedily picks best combos for selected components
+// ══════════════════════════════════════════════════
+function resolveComboCode(selectedSet, board) {
+  const claimed = new Set();
+  const usedCombos = [];
+
+  // Sort combos by coverage size desc (prefer more specific combos)
+  const sortedCombos = Object.entries(COMBOS).sort(
+    (a, b) => b[1].components.length - a[1].components.length
+  );
+
+  // Greedy: pick each combo if ALL its components are selected and none claimed yet
+  for (const [key, combo] of sortedCombos) {
+    const needs = combo.components;
+    const allSelected  = needs.every(c => selectedSet.has(c));
+    const noneClaimed  = needs.every(c => !claimed.has(c));
+    if (allSelected && noneClaimed) {
+      usedCombos.push({ key, combo });
+      needs.forEach(c => claimed.add(c));
+    }
+  }
+
+  // Standalone: anything not claimed by a combo
+  const standaloneCodes = [];
+  for (const id of selectedSet) {
+    if (!claimed.has(id)) standaloneCodes.push(id);
+  }
+
+  return { usedCombos, standaloneCodes, claimed };
+}
+
+
+function generateCode() {
+  if (!selectedComps.size) {
+    showToast('Select at least one component first!', 'error');
+    return;
+  }
+
+  const board = currentBoard;
+  const boardName = board === 'uno' ? 'Arduino Uno' : 'ESP32 Dev Module';
+
+  // Resolve combos
+  const { usedCombos, standaloneCodes } = resolveComboCode(selectedComps, board);
+
+  const allIncludes = new Set();
+  const allDefines  = [];
+  const allGlobals  = [];
+  const allSetup    = [];
+  const allLoop     = [];
+  const allLibs     = [];
+  const comboNames  = [];
+
+  // ── Inject combo code ──
+  usedCombos.forEach(({ key, combo }) => {
+    const code = combo.code[board];
+    if (!code) return;
+    comboNames.push(combo.name + ' (' + combo.icon + ')');
+    code.includes.forEach(i => allIncludes.add(i));
+    code.defines.forEach(d  => allDefines.push(d));
+    code.globals.forEach(g  => allGlobals.push(g));
+    if (code.setup.length) {
+      allSetup.push('');
+      allSetup.push('  // ── ' + combo.name + ' ──');
+      code.setup.forEach(s  => allSetup.push('  ' + s));
+    }
+    if (code.loop.length) {
+      allLoop.push('');
+      allLoop.push('  // ── ' + combo.name + ' ──');
+      code.loop.forEach(l   => allLoop.push('  ' + l));
+    }
+    // Collect libs from combo's components
+    combo.components.forEach(id => {
+      const c = COMP_DB[id];
+      if (c && c.lib && c.lib !== 'No library needed' && !allLibs.includes(c.lib)) allLibs.push(c.lib);
+    });
+  });
+
+  // ── Inject standalone component code ──
+  standaloneCodes.forEach(id => {
+    const c = COMP_DB[id];
+    const code = c.code[board];
+    if (!code) return;
+    code.includes.forEach(i => allIncludes.add(i));
+    code.defines.forEach(d  => allDefines.push(d));
+    code.globals.forEach(g  => allGlobals.push(g));
+    if (code.setup.length) {
+      allSetup.push('');
+      allSetup.push('  // ── ' + c.name + ' ──');
+      code.setup.forEach(s  => allSetup.push('  ' + s));
+    }
+    if (code.loop.length) {
+      allLoop.push('');
+      allLoop.push('  // ── ' + c.name + ' ──');
+      code.loop.forEach(l   => allLoop.push('  ' + l));
+    }
+    if (c.lib && c.lib !== 'No library needed' && !allLibs.includes(c.lib)) allLibs.push(c.lib);
+  });
+
+  // Build header comment
+  const date = new Date().toLocaleDateString();
+  const compList = [...selectedComps].map(id => '//   - ' + COMP_DB[id].name).join('\n');
+  const comboSection = comboNames.length
+    ? '//\n// Integrated Examples Detected:\n' + comboNames.map(n => '//   ✦ ' + n).join('\n') + '\n'
+    : '';
+  const libList = allLibs.length
+    ? '//\n// Required Libraries (install via Arduino Library Manager):\n' + allLibs.map(l => '//   * ' + l).join('\n') + '\n'
+    : '';
+
+  let code = `// ═══════════════════════════════════════════════
+// Aawiskar Playground — Arduino Code Generator
+// Board: ${boardName}
+// Generated: ${date}
+//
+// Components:
+${compList}
+${comboSection}${libList}// ═══════════════════════════════════════════════
+
+`;
+
+  if (allIncludes.size) code += [...allIncludes].join('\n') + '\n\n';
+  if (allDefines.length)  code += allDefines.join('\n') + '\n\n';
+  if (allGlobals.length)  code += allGlobals.join('\n') + '\n\n';
+
+  code += 'void setup() {\n';
+  code += '  Serial.begin(9600);\n';
+  if (allSetup.length) code += allSetup.join('\n') + '\n';
+  code += '}\n\n';
+
+  code += 'void loop() {\n';
+  if (allLoop.length) {
+    code += allLoop.join('\n') + '\n';
+  } else {
+    code += '  // All output happens in setup() — nothing to loop\n';
+    code += '  delay(1000);\n';
+  }
+  code += '}\n';
+
+  // Display
+  const el = document.getElementById('generatedCodeDisplay');
+  el.value = code;
+  el.style.display = '';
+  document.getElementById('noCode').style.display = 'none';
+  document.getElementById('copyBtn').disabled = false;
+  document.getElementById('dlBtn').disabled = false;
+
+  // Libraries panel
+  if (allLibs.length) {
+    document.getElementById('libListPanel').style.display = '';
+    document.getElementById('libListItems').innerHTML = allLibs.map(l =>
+      `<span class="lib-tag">📦 ${l}</span>`
+    ).join('');
+  } else {
+    document.getElementById('libListPanel').style.display = 'none';
+  }
+
+  showToast('Code generated! ' + [...selectedComps].length + ' components (' + boardName + ')', 'success');
+}
+
+function copyCode() {
+  const el = document.getElementById('generatedCodeDisplay');
+  if (!el.value) return;
+  // Try modern clipboard API first, fallback to execCommand
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(el.value)
+      .then(() => showToast('Copied to clipboard! 📋', 'success'))
+      .catch(() => fallbackCopy(el));
+  } else {
+    fallbackCopy(el);
+  }
+}
+function fallbackCopy(el) {
+  el.removeAttribute('readonly');
+  el.select();
+  el.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy');
+    showToast('Copied to clipboard! 📋', 'success');
+  } catch(e) {
+    showToast('Select the code and press Ctrl+C', 'info');
+  }
+  el.setAttribute('readonly', '');
+  window.getSelection()?.removeAllRanges();
+}
+
+function downloadCode() {
+  const code = document.getElementById('generatedCodeDisplay').value;
+  if (!code) return;
+  const name = 'aawiskar_' + currentBoard + '_' + Date.now() + '.ino';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([code], {type:'text/plain'}));
+  a.download = name;
+  a.click();
+  showToast('Downloaded: ' + name, 'success');
+}
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  // Render component library
+  renderLibrary();
+
+  // Mobile menu
+  var hamburger = document.querySelector('.hamburger');
+  var menuClose = document.querySelector('.mobile-menu-close');
+  var mobileMenu = document.getElementById('mobile-menu');
+  if (hamburger && mobileMenu) {
+    hamburger.addEventListener('click', function() {
+      mobileMenu.classList.toggle('open');
+    });
+  }
+  if (menuClose && mobileMenu) {
+    menuClose.addEventListener('click', function() {
+      mobileMenu.classList.remove('open');
+    });
+  }
+
+  // Explicit button bindings (Edge onclick reliability fix)
+  var genBtn = document.querySelector('[onclick="generateCode()"]');
+  if (genBtn) genBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    generateCode();
+  });
+
+  // Board buttons
+  var btnUno = document.getElementById('btnUno');
+  var btnEsp = document.getElementById('btnEsp');
+  if (btnUno) btnUno.addEventListener('click', function() { setBoard('uno'); });
+  if (btnEsp) btnEsp.addEventListener('click', function() { setBoard('esp32'); });
+
+  // Copy / Download
+  var copyBtn = document.getElementById('copyBtn');
+  var dlBtn   = document.getElementById('dlBtn');
+  if (copyBtn) copyBtn.addEventListener('click', function() { copyCode(); });
+  if (dlBtn)   dlBtn.addEventListener('click',   function() { downloadCode(); });
+
+  // Search
+  var searchInput = document.getElementById('compSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      renderLibrary(this.value);
+    });
+  }
+});
+</script>
+</body>
+</html>

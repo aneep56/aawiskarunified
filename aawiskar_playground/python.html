@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physics Lab — Aawiskar Playground</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── Core layout ── */
+html,body{height:100%;overflow:hidden}
+#app{height:100%;overflow:hidden;display:flex;flex-direction:column}
+
+/* Desktop: sidebar + main side-by-side */
+.lab-layout{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr;flex:1;min-height:0;overflow:hidden}
+.sidebar-toggle-btn{grid-column:1/-1;display:none;}
+.lab-sidebar{background:var(--bg-card);border-right:1px solid var(--border-subtle);overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.lab-main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-deep);min-height:0;position:relative}
+
+/* Canvas — fills all available space */
+.sim-canvas-area{flex:1;position:relative;overflow:hidden;background:#04040e;min-height:0}
+.sim-canvas-area canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
+
+/* ── Controls panel — responsive grid ── */
+.sim-controls{
+  background:var(--bg-card);
+  border-top:1px solid var(--border-subtle);
+  padding:.6rem 1rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:.5rem .75rem;
+  flex-shrink:0;
+}
+
+/* Single control group */
+.control-group{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.control-label{
+  font-family:var(--font-mono);
+  font-size:.58rem;
+  color:var(--text-dim);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.control-row{display:flex;align-items:center;gap:.45rem}
+.control-row input[type=range]{flex:1;min-width:0}
+.control-value{
+  font-family:var(--font-mono);
+  font-size:.78rem;
+  color:var(--neon-cyan);
+  min-width:36px;
+  text-align:right;
+  flex-shrink:0;
+}
+
+/* ── Sliders — larger touch targets ── */
+input[type=range]{
+  height:6px;
+  -webkit-appearance:none;
+  appearance:none;
+  background:rgba(255,255,255,0.14);
+  border-radius:3px;
+  outline:none;
+  border:none;
+  cursor:pointer;
+  touch-action:pan-x;
+}
+input[type=range]::-webkit-slider-runnable-track{background:rgba(255,255,255,0.12);border-radius:3px;height:6px}
+input[type=range]::-moz-range-track{background:rgba(255,255,255,0.12);border-radius:3px;height:6px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:#00f5ff;cursor:pointer;box-shadow:0 0 8px #00f5ff;margin-top:-7px;
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;border-radius:50%;background:#00f5ff;border:none;cursor:pointer;
+}
+
+/* ── Sim list items ── */
+.sim-item{display:flex;align-items:center;gap:.7rem;padding:.6rem .85rem;cursor:pointer;transition:var(--transition);border-left:3px solid transparent;font-family:var(--font-body);font-size:.85rem;color:var(--text-dim)}
+.sim-item:hover{background:rgba(255,255,255,.04);color:var(--text-primary)}
+.sim-item.active{background:rgba(57,255,20,.08);border-left-color:var(--neon-green);color:var(--neon-green)}
+
+/* ── Info panel ── */
+.info-panel{
+  background:var(--bg-panel);
+  border-top:1px solid var(--border-subtle);
+  padding:.45rem .85rem;
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  color:var(--text-dim);
+  display:flex;
+  flex-wrap:wrap;
+  gap:.3rem .9rem;
+  align-items:center;
+  flex-shrink:0;
+}
+.info-stat{display:flex;gap:.35rem;align-items:center}
+.info-key{color:var(--text-dim)}
+.info-val{color:var(--neon-green)}
+
+/* ── Theory panel — overlays the canvas instead of pushing it ── */
+#theoryPanel{
+  position:absolute !important;
+  bottom:0; left:0; right:0;
+  z-index:10;
+  max-height:55% !important;
+  overflow-y:auto;
+  backdrop-filter:blur(4px);
+}
+
+/* ── Mobile sidebar toggle button ── */
+.sidebar-toggle-btn{
+  display:none;
+  width:100%;
+  background:rgba(57,255,20,.08);
+  border:none;
+  border-bottom:1px solid var(--border-subtle);
+  color:var(--neon-green);
+  font-family:var(--font-mono);
+  font-size:.7rem;
+  letter-spacing:.1em;
+  padding:.5rem 1rem;
+  text-align:left;
+  cursor:pointer;
+  flex-shrink:0;
+}
+
+/* ── Tablet (≤900px) ── */
+@media(max-width:900px){
+  /* Collapse page header: hide description, compact layout */
+  .page-header{
+    padding:.4rem .85rem !important;
+    gap:.4rem;
+  }
+  .page-header-info p{display:none}
+  .page-header-info h1{font-size:.85rem !important;gap:.45rem}
+  .page-header-actions .btn-sm{
+    padding:.28rem .6rem;
+    font-size:.6rem;
+  }
+
+  .lab-layout{
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto 1fr;
+    height:100%;
+  }
+  .lab-sidebar{
+    border-right:none;
+    border-bottom:1px solid var(--border-subtle);
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .3s ease;
+  }
+  .lab-sidebar.open{max-height:210px;overflow-y:auto}
+  .sidebar-toggle-btn{display:block}
+
+  .sim-controls{
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    padding:.5rem .75rem;
+    gap:.45rem .6rem;
+  }
+  input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-8px}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px}
+}
+
+/* ── Mobile (≤600px) — aggressive height recovery ── */
+@media(max-width:600px){
+  /* Nav strip — hide on mobile to save ~40px */
+  .nav-module-strip{display:none}
+
+  /* Page header — single-line strip */
+  .page-header{
+    padding:.35rem .75rem !important;
+    flex-wrap:nowrap;
+    gap:.35rem;
+    min-height:0;
+    align-items:center;
+  }
+  .page-header-info p{display:none}
+  .page-header-info h1{
+    font-size:.78rem !important;
+    white-space:nowrap;
+    gap:.3rem;
+    flex-wrap:nowrap;
+  }
+  .page-header-info h1 .tag{display:none}
+  .page-header-actions{gap:.3rem;flex-shrink:0}
+  .page-header-actions .btn-sm{
+    padding:.25rem .5rem;
+    font-size:.58rem;
+    letter-spacing:.04em;
+  }
+
+  /* Sidebar toggle */
+  .sidebar-toggle-btn{padding:.42rem .75rem;font-size:.65rem}
+  .lab-sidebar.open{max-height:180px}
+
+  /* Info panel — single row, no wrap, scroll if needed */
+  .info-panel{
+    font-size:.62rem;
+    padding:.3rem .6rem;
+    gap:.2rem .5rem;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .info-panel .btn-sm{
+    flex-shrink:0;
+    padding:.22rem .45rem;
+    font-size:.55rem;
+    margin-left:.5rem;
+  }
+
+  /* Controls — 2 columns, capped height */
+  .sim-controls{
+    grid-template-columns:repeat(2,1fr);
+    gap:.4rem .45rem;
+    padding:.45rem .6rem;
+    max-height:36vh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .control-label{font-size:.54rem}
+  .control-value{font-size:.7rem;min-width:28px}
+
+  /* Bigger thumbs for fingers */
+  input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-9px}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px}
+  input[type=range]{height:6px}
+}
+
+/* ── Smartboard / landscape tablet (≥1100px, short viewport) ── */
+@media(min-width:1100px) and (max-height:850px){
+  .sim-controls{
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    padding:.4rem 1rem;
+    gap:.35rem .6rem;
+  }
+  input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-8px}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div id="app">
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="favicon.png" alt="Aawiskar Logo">
+    </div>
+    <div>
+      <div class="nav-logo-text">AAWISKAR <span>PLAYGROUND</span></div>
+      <div class="nav-logo-sub">A product of Aawiskar RoboLabs Pvt. Ltd.</div>
+    </div>
+  </a>
+  <button class="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-module-strip">
+  <a href="index.html" class="module-pill">🏠 Home</a>
+  <div class="module-pill-sep"></div>
+  <a href="python.html" class="module-pill">🐍 Python IDE</a>
+  <a href="ml.html" class="module-pill">🧠 ML Studio</a>
+  <a href="block.html" class="module-pill">🎮 Block Coder</a>
+  <a href="arduino.html" class="module-pill">⚡ Arduino Gen</a>
+  <div class="module-pill-sep"></div>
+  <a href="cv.html" class="module-pill">👁️ CV Studio</a>
+  <a href="webide.html" class="module-pill">🌐 Web IDE</a>
+  <a href="physics.html" class="module-pill active">🔬 Physics Lab</a>
+  <a href="maths.html" class="module-pill">📐 Maths Lab</a>
+  <a href="astronomy.html" class="module-pill">🪐 Astronomy</a>
+</div>
+<div id="mobile-menu" class="mobile-menu">
+  <button class="mobile-menu-close">✕</button>
+  <a href="index.html">🏠 Home</a>
+  <a href="python.html">🐍 Python IDE</a>
+  <a href="ml.html">🧠 ML Studio</a>
+  <a href="block.html">🎮 Block Coder</a>
+  <a href="arduino.html">⚡ Arduino Gen</a>
+  <a href="cv.html">👁️ CV Studio</a>
+  <a href="webide.html">🌐 Web IDE</a>
+  <a href="physics.html">🔬 Physics Lab</a>
+  <a href="maths.html">📐 Maths Lab</a>
+  <a href="astronomy.html">🪐 Astronomy</a>
+</div>
+
+<div class="page-header" style="padding:.75rem 2rem">
+  <div class="page-header-info">
+    <h1>🔬 PHYSICS LAB <span class="tag tag-green" style="font-size:.6rem;vertical-align:middle">Interactive Simulations</span></h1>
+    <p>Simulate real physics — projectiles, gravity, optics, waves, harmonics and more</p>
+  </div>
+  <div class="page-header-actions">
+    <button class="btn btn-green btn-sm" id="playBtn">▶ Play</button>
+    <button class="btn btn-ghost btn-sm" id="pauseBtn">⏸ Pause</button>
+    <button class="btn btn-outline btn-sm" id="resetBtn">↺ Reset</button>
+  </div>
+</div>
+
+<div class="lab-layout" id="labLayout">
+  <!-- Mobile/tablet sidebar toggle — shown via CSS only on small screens -->
+  <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">☰ EXPERIMENTS ▾</button>
+  <div class="lab-sidebar" id="labSidebar">
+    <div class="panel-label"><div class="status-dot" style="background:var(--neon-green);box-shadow:0 0 6px var(--neon-green)"></div>EXPERIMENTS</div>
+    <div style="padding:.25rem 0">
+      <div class="sidebar-section-title">// Mechanics</div>
+      <div class="sim-item active" data-sim="projectile" onclick="selectSim(this)"><span>🎯</span><div><div>Projectile Motion</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Angle, velocity, gravity</div></div></div>
+      <div class="sim-item" data-sim="gravity" onclick="selectSim(this)"><span>🌍</span><div><div>Gravity Well</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">N-body gravity</div></div></div>
+      <div class="sim-item" data-sim="pendulum" onclick="selectSim(this)"><span>⏰</span><div><div>Pendulum</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Simple harmonic motion</div></div></div>
+      <div class="sim-item" data-sim="spring" onclick="selectSim(this)"><span>🌀</span><div><div>Spring-Mass System</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Hooke's law</div></div></div>
+      <div class="sim-item" data-sim="collision" onclick="selectSim(this)"><span>💥</span><div><div>Elastic Collisions</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Conservation of momentum</div></div></div>
+      <div class="sidebar-section-title">// Waves</div>
+      <div class="sim-item" data-sim="wave" onclick="selectSim(this)"><span>〰️</span><div><div>Wave Interference</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Superposition</div></div></div>
+      <div class="sim-item" data-sim="sound" onclick="selectSim(this)"><span>🔊</span><div><div>Sound Harmonics</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Overtones & resonance</div></div></div>
+      <div class="sim-item" data-sim="doppler" onclick="selectSim(this)"><span>🔉</span><div><div>Doppler Effect</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Moving sound source</div></div></div>
+      <div class="sidebar-section-title">// Optics</div>
+      <div class="sim-item" data-sim="refraction" onclick="selectSim(this)"><span>🔮</span><div><div>Light Refraction</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Snell's law</div></div></div>
+      <div class="sim-item" data-sim="diffraction" onclick="selectSim(this)"><span>🌈</span><div><div>Diffraction & Prism</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Light spectrum</div></div></div>
+      <div class="sim-item" data-sim="lens" onclick="selectSim(this)"><span>🔭</span><div><div>Lens & Mirrors</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Focal point optics</div></div></div>
+      <div class="sidebar-section-title">// Electricity</div>
+      <div class="sim-item" data-sim="electric" onclick="selectSim(this)"><span>⚡</span><div><div>Electric Field</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Charge field lines</div></div></div>
+      <div class="sim-item" data-sim="lcr" onclick="selectSim(this)"><span>🔌</span><div><div>LCR Circuit</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Resonance & damping</div></div></div>
+      <div class="sidebar-section-title">// Thermodynamics &amp; Fluids</div>
+      <div class="sim-item" data-sim="cooling" onclick="selectSim(this)"><span>🌡️</span><div><div>Newton's Cooling</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Temp vs time law</div></div></div>
+      <div class="sim-item" data-sim="buoyancy" onclick="selectSim(this)"><span>🌊</span><div><div>Buoyancy</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Archimedes' principle</div></div></div>
+      <div class="sim-item" data-sim="circular" onclick="selectSim(this)"><span>⭕</span><div><div>Circular Motion</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Centripetal force</div></div></div>
+      <div class="sim-item" data-sim="magnet" onclick="selectSim(this)"><span>🧲</span><div><div>Magnetic Field</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Bar magnet field lines</div></div></div>
+      <div class="sidebar-section-title">// Atomic</div>
+      <div class="sim-item" data-sim="atom" onclick="selectSim(this)"><span>⚛️</span><div><div>Atom Visualizer</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Protons, neutrons, electrons</div></div></div>
+      <div class="sim-item" data-sim="gas" onclick="selectSim(this)"><span>💨</span><div><div>Ideal Gas</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">Maxwell-Boltzmann</div></div></div>
+    </div>
+  </div>
+
+  <div class="lab-main">
+    <div class="sim-canvas-area" id="simArea">
+      <canvas id="simCanvas"></canvas>
+    </div>
+    <div class="info-panel" id="infoPanel">
+      <div class="info-stat"><span class="info-key">sim:</span><span class="info-val" id="simName">Projectile Motion</span></div>
+      <div class="info-stat"><span class="info-key">t:</span><span class="info-val" id="timeVal">0.00s</span></div>
+      <div class="info-stat"><span class="info-key">x:</span><span class="info-val" id="xVal">0m</span></div>
+      <div class="info-stat"><span class="info-key">y:</span><span class="info-val" id="yVal">0m</span></div>
+      <div class="info-stat"><span class="info-key">v:</span><span class="info-val" id="vVal">0 m/s</span></div>
+      <div class="info-stat"><span class="info-key">KE:</span><span class="info-val" id="keVal">0 J</span></div>
+      <button class="btn btn-outline btn-sm" onclick="toggleTheory()" style="margin-left:auto">📖 Theory</button>
+    </div>
+    <div id="theoryPanel" style="display:none;background:rgba(0,0,0,0.85);border-top:1px solid var(--border-subtle);padding:.75rem 1.25rem;font-family:var(--font-body);font-size:.83rem;color:var(--text-dim);line-height:1.6;max-height:140px;overflow-y:auto"></div>
+    <div class="sim-controls" id="simControls">
+      <!-- filled by sim -->
+    </div>
+  </div>
+</div>
+
+</div>
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, animId, running = true, t = 0, currentSim = 'projectile';
+
+// Called at the top of every frame — reads offsetWidth/Height which are always correct
+// because the canvas is position:absolute filling its container via CSS
+function syncSize() {
+  const nw = canvas.offsetWidth;
+  const nh = canvas.offsetHeight;
+  if (nw !== W || nh !== H) {
+    W = canvas.width  = nw;
+    H = canvas.height = nh;
+    return true; // resized
+  }
+  return false;
+}
+
+window.addEventListener('resize', () => { syncSize(); initSim(); });
+
+// ---- SIMULATIONS ----
+const SIMS = {};
+
+// PROJECTILE
+let proj = {};
+SIMS.projectile = {
+  name: 'Projectile Motion',
+  theory: '🎯 <b>Projectile Motion</b>: A ball launched at angle θ with velocity v₀ follows a parabolic path. Horizontal velocity vₓ = v₀cos(θ) is constant (no air resistance). Vertical velocity vᵧ = v₀sin(θ) − g·t decreases due to gravity. Range = v₀²sin(2θ)/g. Maximum height = v₀²sin²(θ)/(2g). Try 45° for maximum range!',
+  controls: `
+    <div class="control-group"><div class="control-label">Angle (°)</div><div class="control-row"><input type="range" id="c-angle" min="1" max="89" value="45" oninput="updateCtrl(this,'angle')"><span class="control-value" id="v-angle">45°</span></div></div>
+    <div class="control-group"><div class="control-label">Velocity (m/s)</div><div class="control-row"><input type="range" id="c-vel" min="5" max="100" value="40" oninput="updateCtrl(this,'vel')"><span class="control-value" id="v-vel">40</span></div></div>
+    <div class="control-group"><div class="control-label">Gravity (m/s²)</div><div class="control-row"><input type="range" id="c-grav" min="1" max="25" value="9.8" step="0.1" oninput="updateCtrl(this,'grav')"><span class="control-value" id="v-grav">9.8</span></div></div>
+    <div class="control-group"><div class="control-label">Mass (kg)</div><div class="control-row"><input type="range" id="c-mass" min="1" max="100" value="10" oninput="updateCtrl(this,'mass')"><span class="control-value" id="v-mass">10</span></div></div>
+    <button class="btn btn-cyan btn-sm" onclick="SIMS.projectile.launch()" style="margin:0 .5rem">🚀 Launch</button>`,
+  params: { angle:45, vel:40, grav:9.8, mass:10 },
+  // Scale: 1 pixel = SCALE meters
+  get SCALE(){ return Math.max(1, (W-120) / (this.params.vel * this.params.vel * Math.sin(2*this.params.angle*Math.PI/180) / this.params.grav + 20)); },
+  launch() {
+    const a = this.params.angle * Math.PI/180;
+    const sc = this.SCALE;
+    proj = {
+      x: 60, y: H-60,
+      vx: this.params.vel * Math.cos(a),
+      vy: this.params.vel * Math.sin(a),
+      trail: [], done: false, ready: false, simT: 0, sc
+    };
+    t = 0;
+    running = true;
+  },
+  init() {
+    // Show a static ready state — ball at origin, no movement until Launch is clicked
+    const a = this.params.angle * Math.PI/180;
+    const sc = this.SCALE;
+    proj = {
+      x: 60, y: H - 60,
+      vx: this.params.vel * Math.cos(a),
+      vy: this.params.vel * Math.sin(a),
+      trail: [], done: true,   // done:true = waiting, ball sits at origin
+      ready: true,             // flag: not yet launched
+      simT: 0, sc
+    };
+    t = 0;
+    document.getElementById('timeVal').textContent = '0.00s';
+    document.getElementById('xVal').textContent = '0.0m';
+    document.getElementById('yVal').textContent = '0.0m';
+    const speed = Math.hypot(this.params.vel * Math.cos(a), this.params.vel * Math.sin(a));
+    document.getElementById('vVal').textContent = speed.toFixed(1) + ' m/s';
+    document.getElementById('keVal').textContent = (0.5 * this.params.mass * speed * speed).toFixed(0) + ' J';
+  },
+  update(dt) {
+    if(proj.ready || proj.done) return;  // not launched yet, or already landed
+    const g = SIMS.projectile.params.grav;
+    const sc = proj.sc || this.SCALE;
+    proj.simT += dt;
+    proj.vy -= g * dt;  // physics in m/s
+    const wx = proj.vx * dt * sc;
+    const wy = proj.vy * dt * sc;
+    proj.x += wx;
+    proj.y -= wy; // screen y is inverted
+    proj.trail.push({x:proj.x, y:proj.y});
+    if(proj.trail.length > 500) proj.trail.shift();
+    const groundY = H - 60;
+    if(proj.y >= groundY) {
+      proj.y = groundY; proj.done = true;
+    }
+    const m = SIMS.projectile.params.mass;
+    const speed = Math.hypot(proj.vx, proj.vy);
+    const xDist = (proj.x - 60) / sc;
+    const yHeight = Math.max(0, (groundY - proj.y) / sc);
+    document.getElementById('xVal').textContent = xDist.toFixed(1)+'m';
+    document.getElementById('yVal').textContent = yHeight.toFixed(1)+'m';
+    document.getElementById('vVal').textContent = speed.toFixed(1)+' m/s';
+    document.getElementById('keVal').textContent = (0.5*m*speed*speed).toFixed(0)+' J';
+    t += dt;
+    document.getElementById('timeVal').textContent = t.toFixed(2)+'s';
+  },
+  draw() {
+    const groundY = H - 60;
+    const sc = proj.sc || this.SCALE;
+    // Background grid (x-y plane)
+    ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+    const gridStep = Math.max(20, Math.round(50/sc)*sc);
+    for(let gx=60; gx<W-20; gx+=40){ ctx.beginPath();ctx.moveTo(gx,20);ctx.lineTo(gx,groundY);ctx.stroke(); }
+    for(let gy=groundY; gy>20; gy-=40){ ctx.beginPath();ctx.moveTo(40,gy);ctx.lineTo(W-20,gy);ctx.stroke(); }
+    // X axis
+    ctx.strokeStyle='rgba(57,255,20,0.6)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(40,groundY); ctx.lineTo(W-10,groundY); ctx.stroke();
+    // Arrow tip X
+    ctx.fillStyle='rgba(57,255,20,0.6)';
+    ctx.beginPath(); ctx.moveTo(W-10,groundY); ctx.lineTo(W-20,groundY-5); ctx.lineTo(W-20,groundY+5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#39ff14'; ctx.font='bold 13px monospace'; ctx.textAlign='left';
+    ctx.fillText('x (m)',W-8,groundY+4);
+    // Y axis
+    ctx.strokeStyle='rgba(0,245,255,0.6)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(60,groundY); ctx.lineTo(60,20); ctx.stroke();
+    ctx.fillStyle='rgba(0,245,255,0.6)';
+    ctx.beginPath(); ctx.moveTo(60,20); ctx.lineTo(55,30); ctx.lineTo(65,30); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#00f5ff'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+    ctx.fillText('y (m)',60,15);
+    // Axis tick labels
+    ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px monospace';
+    for(let px=60+80; px<W-30; px+=80){
+      const m=(px-60)/sc;
+      ctx.textAlign='center'; ctx.fillText(m.toFixed(0),px,groundY+14);
+      ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(px,groundY); ctx.lineTo(px,groundY+4); ctx.stroke();
+    }
+    for(let py=groundY-60; py>30; py-=60){
+      const m=(groundY-py)/sc;
+      ctx.textAlign='right'; ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillText(m.toFixed(0),55,py+4);
+    }
+    // Origin label
+    ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px monospace'; ctx.textAlign='center';
+    ctx.fillText('O',52,groundY+13);
+    // Ground fill
+    ctx.fillStyle='rgba(57,255,20,0.08)'; ctx.fillRect(40,groundY,W-50,H-groundY);
+    // Trail
+    if(proj.trail.length>1){
+      ctx.beginPath(); ctx.moveTo(proj.trail[0].x,proj.trail[0].y);
+      proj.trail.forEach(p=>ctx.lineTo(p.x,p.y));
+      ctx.strokeStyle='rgba(0,245,255,0.5)'; ctx.lineWidth=2; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // Theoretical parabola preview (dotted)
+    const a=SIMS.projectile.params.angle*Math.PI/180;
+    const v=SIMS.projectile.params.vel, g=SIMS.projectile.params.grav;
+    const T=2*v*Math.sin(a)/g;
+    ctx.beginPath(); ctx.setLineDash([3,5]);
+    for(let s=0;s<=60;s++){
+      const ti=T*s/60;
+      const xi=60+(v*Math.cos(a)*ti)*sc;
+      const yi=groundY-(v*Math.sin(a)*ti-0.5*g*ti*ti)*sc;
+      s===0?ctx.moveTo(xi,yi):ctx.lineTo(xi,yi);
+      if(yi>groundY)break;
+    }
+    ctx.strokeStyle='rgba(255,224,0,0.25)'; ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
+    // Ball state
+    if(proj.ready) {
+      // Waiting to launch — show ball sitting at origin with a pulsing glow
+      ctx.beginPath(); ctx.arc(60, groundY, 11, 0, Math.PI*2);
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+      ctx.fillStyle = `rgba(0,245,255,${0.5 + pulse * 0.5})`;
+      ctx.shadowBlur = 20 + pulse * 20; ctx.shadowColor = '#00f5ff'; ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('← Click 🚀 LAUNCH to fire!', W / 2, 36);
+    } else if(!proj.done) {
+      // In flight — draw velocity vector and ball
+      const vscale=3;
+      ctx.beginPath(); ctx.moveTo(proj.x,proj.y); ctx.lineTo(proj.x+proj.vx*vscale*sc/30,proj.y-proj.vy*vscale*sc/30);
+      ctx.strokeStyle='rgba(255,224,0,0.6)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(proj.x,proj.y,10,0,Math.PI*2);
+      ctx.fillStyle='#00f5ff'; ctx.shadowBlur=20; ctx.shadowColor='#00f5ff'; ctx.fill(); ctx.shadowBlur=0;
+    } else {
+      // Landed — show range and stats
+      const range=((proj.x-60)/sc).toFixed(1);
+      const maxH=(v*v*Math.sin(a)*Math.sin(a)/(2*g)).toFixed(1);
+      ctx.beginPath(); ctx.arc(proj.x,groundY,12,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,0,110,0.3)'; ctx.fill();
+      ctx.strokeStyle='#ff006e'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle='#ff006e'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+      ctx.fillText('Range: '+range+'m',proj.x,groundY-18);
+      ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px monospace';
+      ctx.fillText('Max height: '+maxH+'m  |  Time: '+T.toFixed(2)+'s', W/2, 40);
+    }
+    // Angle arc at origin
+    const arcR=45;
+    ctx.beginPath(); ctx.arc(60,groundY,-a,0,0,true);
+    ctx.beginPath(); ctx.arc(60,groundY,arcR,-a,0);
+    ctx.strokeStyle='rgba(255,224,0,0.6)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#ffe000'; ctx.font='12px monospace'; ctx.textAlign='left';
+    ctx.fillText(SIMS.projectile.params.angle+'°', 60+arcR*Math.cos(a/2)+4, groundY-arcR*Math.sin(a/2)+4);
+    // Launch direction line
+    ctx.beginPath(); ctx.moveTo(60,groundY); ctx.lineTo(60+60*Math.cos(a),groundY-60*Math.sin(a));
+    ctx.strokeStyle='rgba(255,224,0,0.4)'; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+};
+
+// PENDULUM
+let pend = {angle: Math.PI/4, omega:0, trail:[]};
+SIMS.pendulum = {
+  name: 'Pendulum',
+  theory: '⏰ <b>Simple Pendulum</b>: A mass on a string swings back and forth under gravity — a classic example of Simple Harmonic Motion (SHM). The period T = 2π√(L/g) depends only on length and gravity, NOT on mass or amplitude (for small angles). Damping gradually removes energy. Try changing gravity to simulate the Moon (1.6 m/s²) or Jupiter (24.8 m/s²)!',
+  controls: `
+    <div class="control-group"><div class="control-label">Length (m)</div><div class="control-row"><input type="range" id="c-len" min="50" max="250" value="150" oninput="updateCtrl(this,'len')"><span class="control-value" id="v-len">150</span></div></div>
+    <div class="control-group"><div class="control-label">Gravity (m/s²)</div><div class="control-row"><input type="range" id="c-grav" min="1" max="25" value="9.8" step="0.1" oninput="updateCtrl(this,'grav')"><span class="control-value" id="v-grav">9.8</span></div></div>
+    <div class="control-group"><div class="control-label">Damping</div><div class="control-row"><input type="range" id="c-damp" min="0" max="0.05" value="0.005" step="0.001" oninput="updateCtrl(this,'damp')"><span class="control-value" id="v-damp">0.005</span></div></div>`,
+  params: {len:150, grav:9.8, damp:0.005},
+  init() { pend = {angle: Math.PI/3, omega:0, trail:[]}; t=0; },
+  update(dt) {
+    const {len,grav,damp} = SIMS.pendulum.params;
+    const alpha = -(grav/len)*Math.sin(pend.angle) - damp*pend.omega;
+    pend.omega += alpha * dt * 40;
+    pend.angle += pend.omega * dt * 40;
+    const pivot = {x:W/2, y:60};
+    const bob = {x: pivot.x + len*Math.sin(pend.angle), y: pivot.y + len*Math.cos(pend.angle)};
+    pend.trail.push({...bob}); if(pend.trail.length>200) pend.trail.shift();
+    t += dt;
+    const speed = Math.abs(pend.omega)*len;
+    document.getElementById('xVal').textContent = (len*Math.sin(pend.angle)).toFixed(1)+'px';
+    document.getElementById('yVal').textContent = (len*Math.cos(pend.angle)).toFixed(1)+'px';
+    document.getElementById('vVal').textContent = speed.toFixed(1);
+    document.getElementById('timeVal').textContent = t.toFixed(2)+'s';
+    document.getElementById('keVal').textContent = (pend.omega*pend.omega*len*len/2).toFixed(0);
+  },
+  draw() {
+    const {len} = SIMS.pendulum.params;
+    const pivot = {x:W/2, y:80};
+    const bob = {x: pivot.x+len*Math.sin(pend.angle), y: pivot.y+len*Math.cos(pend.angle)};
+    if(pend.trail.length>2){
+      ctx.beginPath(); ctx.moveTo(pend.trail[0].x,pend.trail[0].y);
+      pend.trail.forEach((p,i)=>{ctx.strokeStyle=`rgba(191,95,255,${i/pend.trail.length*0.5})`;ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);});
+    }
+    // Rod
+    ctx.beginPath(); ctx.moveTo(pivot.x,pivot.y); ctx.lineTo(bob.x,bob.y);
+    ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=2; ctx.stroke();
+    // Pivot
+    ctx.beginPath(); ctx.arc(pivot.x,pivot.y,8,0,Math.PI*2);
+    ctx.fillStyle='#ffe000'; ctx.shadowBlur=10; ctx.shadowColor='#ffe000'; ctx.fill(); ctx.shadowBlur=0;
+    // Bob
+    ctx.beginPath(); ctx.arc(bob.x,bob.y,18,0,Math.PI*2);
+    ctx.fillStyle='#bf5fff'; ctx.shadowBlur=20; ctx.shadowColor='#bf5fff'; ctx.fill(); ctx.shadowBlur=0;
+    // Period label
+    const T = 2*Math.PI*Math.sqrt(len/SIMS.pendulum.params.grav);
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px monospace'; ctx.textAlign='left';
+    ctx.fillText('T = '+T.toFixed(2)+'s', 20,30);
+    ctx.fillText('θ = '+(pend.angle*180/Math.PI).toFixed(1)+'°', 20,48);
+  }
+};
+
+// WAVE INTERFERENCE
+let waveT = 0;
+SIMS.wave = {
+  name: 'Wave Interference',
+  theory: '〰️ <b>Wave Interference & Superposition</b>: When two waves overlap, their amplitudes add (superposition principle). If crests align → constructive interference (bigger wave). If crests meet troughs → destructive interference (cancellation). When f1 ≈ f2, you see <i>beats</i>. The resulting waveform (green) is the sum of both waves at each point.',
+  controls: `
+    <div class="control-group"><div class="control-label">Freq 1 (Hz)</div><div class="control-row"><input type="range" id="c-f1" min="0.5" max="5" value="2" step="0.1" oninput="updateCtrl(this,'f1')"><span class="control-value" id="v-f1">2.0</span></div></div>
+    <div class="control-group"><div class="control-label">Freq 2 (Hz)</div><div class="control-row"><input type="range" id="c-f2" min="0.5" max="5" value="3" step="0.1" oninput="updateCtrl(this,'f2')"><span class="control-value" id="v-f2">3.0</span></div></div>
+    <div class="control-group"><div class="control-label">Amplitude</div><div class="control-row"><input type="range" id="c-amp" min="10" max="80" value="40" oninput="updateCtrl(this,'amp')"><span class="control-value" id="v-amp">40</span></div></div>`,
+  params: {f1:2, f2:3, amp:40},
+  init() { waveT=0; t=0; },
+  update(dt) {
+    waveT += dt;
+    t += dt;
+    document.getElementById('timeVal').textContent = t.toFixed(2)+'s';
+    document.getElementById('xVal').textContent = SIMS.wave.params.f1.toFixed(1)+' Hz';
+    document.getElementById('yVal').textContent = SIMS.wave.params.f2.toFixed(1)+' Hz';
+  },
+  draw() {
+    const {f1,f2,amp} = SIMS.wave.params;
+    const cy1 = H*0.28, cy2 = H*0.55, cy3 = H*0.82;
+    // Wave 1
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const y = cy1 + amp*Math.sin(2*Math.PI*f1*(x/W - waveT*0.5));
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='#00f5ff'; ctx.lineWidth=2.5; ctx.shadowBlur=8; ctx.shadowColor='#00f5ff'; ctx.stroke(); ctx.shadowBlur=0;
+    // Wave 2
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const y = cy2 + amp*Math.sin(2*Math.PI*f2*(x/W - waveT*0.5));
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='#ff006e'; ctx.lineWidth=2.5; ctx.shadowBlur=8; ctx.shadowColor='#ff006e'; ctx.stroke(); ctx.shadowBlur=0;
+    // Superposition
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const y = cy3 + (amp/2)*(Math.sin(2*Math.PI*f1*(x/W - waveT*0.5)) + Math.sin(2*Math.PI*f2*(x/W - waveT*0.5)));
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='#39ff14'; ctx.lineWidth=2.5; ctx.shadowBlur=8; ctx.shadowColor='#39ff14'; ctx.stroke(); ctx.shadowBlur=0;
+    // Labels
+    ctx.font='12px monospace'; ctx.textAlign='left';
+    ctx.fillStyle='#00f5ff'; ctx.fillText(`Wave 1: f=${f1}Hz`,10,cy1-amp-12);
+    ctx.fillStyle='#ff006e'; ctx.fillText(`Wave 2: f=${f2}Hz`,10,cy2-amp-12);
+    ctx.fillStyle='#39ff14'; ctx.fillText('Superposition (sum)',10,cy3-amp/2-12);
+  }
+};
+
+// SPRING
+let spring = {x:0, v:0};
+SIMS.spring = {
+  name: 'Spring-Mass System',
+  theory: '🌀 <b>Spring-Mass (Hooke\'s Law)</b>: A mass attached to a spring oscillates because F = −kx (the restoring force is proportional to displacement). The period T = 2π√(m/k) — heavier masses oscillate slower, stiffer springs faster. Damping gradually removes energy each cycle. KE and PE continually convert between each other.',
+  controls:`
+    <div class="control-group"><div class="control-label">Spring k (N/m)</div><div class="control-row"><input type="range" id="c-k" min="1" max="50" value="10" oninput="updateCtrl(this,'k')"><span class="control-value" id="v-k">10</span></div></div>
+    <div class="control-group"><div class="control-label">Mass (kg)</div><div class="control-row"><input type="range" id="c-mass" min="0.5" max="20" value="5" step="0.5" oninput="updateCtrl(this,'mass')"><span class="control-value" id="v-mass">5</span></div></div>
+    <div class="control-group"><div class="control-label">Damping</div><div class="control-row"><input type="range" id="c-damp" min="0" max="5" value="0.5" step="0.1" oninput="updateCtrl(this,'damp')"><span class="control-value" id="v-damp">0.5</span></div></div>`,
+  params:{k:10,mass:5,damp:0.5},
+  init(){spring={x:100,v:0};t=0;},
+  update(dt){
+    const {k,mass,damp}=SIMS.spring.params;
+    const F=-k*spring.x-damp*spring.v;
+    spring.v+=F/mass*dt*15;
+    spring.x+=spring.v*dt*15;
+    t+=dt;
+    document.getElementById('xVal').textContent=spring.x.toFixed(1)+'px';
+    document.getElementById('vVal').textContent=spring.v.toFixed(1)+' m/s';
+    document.getElementById('keVal').textContent=(0.5*mass*spring.v*spring.v/10).toFixed(1)+' J';
+    document.getElementById('timeVal').textContent=t.toFixed(2)+'s';
+  },
+  draw(){
+    const cx=W/2+spring.x, cy=H/2;
+    const wallX=80;
+    // Wall
+    ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.fillRect(wallX-15,cy-80,15,160);
+    for(let i=0;i<8;i++){ctx.beginPath();ctx.moveTo(wallX-15,cy-70+i*20);ctx.lineTo(wallX-28,cy-60+i*20);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    // Spring zigzag
+    const nCoils=14;const sx=wallX,ex=cx-25;
+    ctx.beginPath();ctx.moveTo(sx,cy);
+    for(let i=0;i<=nCoils;i++){
+      const px=sx+(ex-sx)*(i/nCoils);
+      const py=cy+(i%2===0?-18:18);
+      ctx.lineTo(px,py);
+    }
+    ctx.lineTo(ex,cy);
+    ctx.strokeStyle='rgba(0,245,255,0.8)';ctx.lineWidth=2.5;ctx.shadowBlur=8;ctx.shadowColor='#00f5ff';ctx.stroke();ctx.shadowBlur=0;
+    // Equilibrium line
+    ctx.setLineDash([6,6]);ctx.strokeStyle='rgba(255,224,0,0.3)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(W/2,H/2-70);ctx.lineTo(W/2,H/2+70);ctx.stroke();ctx.setLineDash([]);
+    // Mass
+    ctx.fillStyle='rgba(255,0,110,0.8)';ctx.shadowBlur=20;ctx.shadowColor='#ff006e';
+    ctx.fillRect(cx-25,cy-30,50,60);ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.textAlign='center';
+    ctx.fillText(SIMS.spring.params.mass+'kg',cx,cy+5);
+    // PE label
+    const PE=(0.5*SIMS.spring.params.k*spring.x*spring.x/100).toFixed(1);
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='12px monospace';ctx.textAlign='left';
+    ctx.fillText('PE = '+PE+' J',20,30);
+    const T=2*Math.PI*Math.sqrt(SIMS.spring.params.mass/SIMS.spring.params.k);
+    ctx.fillText('T = '+T.toFixed(2)+'s',20,48);
+  }
+};
+
+// REFRACTION
+SIMS.refraction = {
+  name:'Light Refraction (Snell\'s Law)',
+  theory: '🔮 <b>Snell\'s Law of Refraction</b>: When light crosses from one medium to another, it bends. n₁·sin(θ₁) = n₂·sin(θ₂). If n₂ > n₁ (denser medium), the ray bends toward the normal. If n₁ > n₂ and θ₁ exceeds the critical angle θ_c = arcsin(n₂/n₁), all light is reflected back — Total Internal Reflection (TIR). This is how optical fibres work!',
+  controls:`
+    <div class="control-group"><div class="control-label">Incident Angle (°)</div><div class="control-row"><input type="range" id="c-angle" min="1" max="89" value="45" oninput="updateCtrl(this,'angle')"><span class="control-value" id="v-angle">45</span></div></div>
+    <div class="control-group"><div class="control-label">n1 (top medium)</div><div class="control-row"><input type="range" id="c-n1" min="1" max="3" value="1" step="0.1" oninput="updateCtrl(this,'n1')"><span class="control-value" id="v-n1">1.0</span></div></div>
+    <div class="control-group"><div class="control-label">n2 (bottom medium)</div><div class="control-row"><input type="range" id="c-n2" min="1" max="3" value="1.5" step="0.1" oninput="updateCtrl(this,'n2')"><span class="control-value" id="v-n2">1.5</span></div></div>`,
+  params:{angle:45,n1:1,n2:1.5},
+  init(){t=0;},
+  update(dt){
+    t+=dt;
+    const {angle,n1,n2}=SIMS.refraction.params;
+    const theta1=angle*Math.PI/180;
+    const sinTheta2=(n1/n2)*Math.sin(theta1);
+    const critAngle=n1<n2?'-':(Math.asin(n2/n1)*180/Math.PI).toFixed(1)+'°';
+    document.getElementById('xVal').textContent=angle+'°';
+    document.getElementById('yVal').textContent=Math.abs(sinTheta2)<=1?(Math.asin(sinTheta2)*180/Math.PI).toFixed(1)+'°':'TIR';
+    document.getElementById('vVal').textContent='Critical: '+critAngle;
+    document.getElementById('timeVal').textContent=n1+'/'+n2;
+  },
+  draw(){
+    const {angle,n1,n2}=SIMS.refraction.params;
+    const interfaceY=H/2;
+    // Media
+    ctx.fillStyle='rgba(0,245,255,0.04)';ctx.fillRect(0,0,W,interfaceY);
+    ctx.fillStyle='rgba(191,95,255,0.07)';ctx.fillRect(0,interfaceY,W,H-interfaceY);
+    // Labels
+    ctx.fillStyle='rgba(0,245,255,0.5)';ctx.font='14px monospace';ctx.textAlign='left';ctx.fillText('n₁ = '+n1.toFixed(1)+' (Air/Glass)',15,interfaceY-20);
+    ctx.fillStyle='rgba(191,95,255,0.7)';ctx.fillText('n₂ = '+n2.toFixed(1)+' (Glass/Water)',15,interfaceY+30);
+    // Interface line
+    ctx.setLineDash([8,8]);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,interfaceY);ctx.lineTo(W,interfaceY);ctx.stroke();ctx.setLineDash([]);
+    // Normal
+    ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.beginPath();ctx.moveTo(W/2,interfaceY-150);ctx.lineTo(W/2,interfaceY+150);ctx.stroke();ctx.setLineDash([]);
+    // Incident ray
+    const theta1=angle*Math.PI/180;
+    const sinT2=(n1/n2)*Math.sin(theta1);
+    const cx=W/2, cy=interfaceY;
+    const len=160;
+    ctx.beginPath();ctx.moveTo(cx-Math.sin(theta1)*len,cy-Math.cos(theta1)*len);ctx.lineTo(cx,cy);
+    ctx.strokeStyle='#00f5ff';ctx.lineWidth=3;ctx.shadowBlur=12;ctx.shadowColor='#00f5ff';ctx.stroke();ctx.shadowBlur=0;
+    // Reflected ray
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.sin(theta1)*len,cy-Math.cos(theta1)*len);
+    ctx.strokeStyle='rgba(0,245,255,0.4)';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.stroke();ctx.setLineDash([]);
+    // Refracted ray (or TIR)
+    if(Math.abs(sinT2)<=1){
+      const theta2=Math.asin(sinT2);
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.sin(theta2)*len,cy+Math.cos(theta2)*len);
+      ctx.strokeStyle='#bf5fff';ctx.lineWidth=3;ctx.shadowBlur=12;ctx.shadowColor='#bf5fff';ctx.stroke();ctx.shadowBlur=0;
+      // Angle labels
+      ctx.fillStyle='#ffe000';ctx.font='bold 13px monospace';ctx.textAlign='left';
+      ctx.fillText('θ₁='+angle+'°',cx+10,cy-40);
+      ctx.fillText('θ₂='+(theta2*180/Math.PI).toFixed(1)+'°',cx+10,cy+50);
+    } else {
+      ctx.fillStyle='#ff006e';ctx.font='bold 15px monospace';ctx.textAlign='center';
+      ctx.fillText('TOTAL INTERNAL REFLECTION',W/2,cy+60);
+    }
+  }
+};
+
+// SOUND HARMONICS
+let soundT=0;
+SIMS.sound = {
+  name:'Sound Harmonics',
+  theory: '🔊 <b>Sound Harmonics & Overtones</b>: A vibrating string or air column produces a fundamental frequency f₀ plus integer multiples called harmonics (2f₀, 3f₀…). Their amplitudes decrease as 1/n. The sum of all harmonics creates the composite waveform — that is what gives each instrument its unique timbre (tone colour).',
+  controls:`
+    <div class="control-group"><div class="control-label">Fundamental (Hz)</div><div class="control-row"><input type="range" id="c-f0" min="50" max="500" value="200" oninput="updateCtrl(this,'f0')"><span class="control-value" id="v-f0">200</span></div></div>
+    <div class="control-group"><div class="control-label">Harmonics</div><div class="control-row"><input type="range" id="c-harm" min="1" max="8" value="4" oninput="updateCtrl(this,'harm')"><span class="control-value" id="v-harm">4</span></div></div>
+    <div class="control-group"><div class="control-label">Amplitude</div><div class="control-row"><input type="range" id="c-amp" min="10" max="50" value="30" oninput="updateCtrl(this,'amp')"><span class="control-value" id="v-amp">30</span></div></div>`,
+  params:{f0:200,harm:4,amp:30},
+  init(){soundT=0;t=0;},
+  update(dt){soundT+=dt;t+=dt;document.getElementById('timeVal').textContent=t.toFixed(2)+'s';document.getElementById('xVal').textContent=SIMS.sound.params.f0+'Hz';document.getElementById('yVal').textContent=SIMS.sound.params.harm+' harmonics';},
+  draw(){
+    const {f0,harm,amp}=SIMS.sound.params;
+    const n=harm;const rowH=H/(n+2);
+    for(let h=1;h<=n;h++){
+      const cy=rowH*h+rowH/2;
+      const a=amp/h;
+      const hue=200+h*30;
+      ctx.beginPath();
+      for(let x=0;x<W;x++){
+        const y=cy+a*Math.sin(2*Math.PI*h*(x/W*3-soundT*0.3));
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.strokeStyle=`hsl(${hue},100%,65%)`;ctx.lineWidth=2;ctx.shadowBlur=8;ctx.shadowColor=`hsl(${hue},100%,65%)`;ctx.stroke();ctx.shadowBlur=0;
+      ctx.fillStyle=`hsl(${hue},100%,65%)`;ctx.font='11px monospace';ctx.textAlign='left';
+      ctx.fillText(`H${h}: ${f0*h}Hz`,8,cy-a-5);
+    }
+    // Composite at bottom
+    const cy=rowH*(n+1)+rowH/2;
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      let y=cy;
+      for(let h=1;h<=n;h++) y+=amp/h*Math.sin(2*Math.PI*h*(x/W*3-soundT*0.3));
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.shadowBlur=10;ctx.shadowColor='#fff';ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.fillText('Composite waveform',8,cy-55);
+  }
+};
+
+// GRAVITY WELL
+let bodies = [];
+SIMS.gravity = {
+  name:'Gravity Well (N-Body)',
+  theory: '🌍 <b>N-Body Gravity (Newton\'s Law)</b>: Every mass attracts every other mass with force F = G·m₁·m₂/r². With multiple bodies, orbits become complex and chaotic. Trail lines show each body\'s history. Try increasing G or adding more bodies to see orbital resonances and ejections.',
+  controls:`
+    <div class="control-group"><div class="control-label">G Constant</div><div class="control-row"><input type="range" id="c-G" min="100" max="5000" value="1000" oninput="updateCtrl(this,'G')"><span class="control-value" id="v-G">1000</span></div></div>
+    <div class="control-group"><div class="control-label">Bodies</div><div class="control-row"><input type="range" id="c-n" min="2" max="12" value="4" oninput="updateCtrl(this,'n')"><span class="control-value" id="v-n">4</span></div></div>`,
+  params:{G:1000,n:4},
+  init(){
+    bodies=[];
+    const n=SIMS.gravity.params.n;
+    for(let i=0;i<n;i++){
+      const angle=2*Math.PI*i/n;
+      const r=Math.min(W,H)*0.25;
+      bodies.push({x:W/2+r*Math.cos(angle),y:H/2+r*Math.sin(angle),vx:-Math.sin(angle)*2,vy:Math.cos(angle)*2,m:10+Math.random()*20,hue:i/n*360,trail:[]});
+    }
+    t=0;
+  },
+  update(dt){
+    const G=SIMS.gravity.params.G;
+    bodies.forEach(b=>{
+      bodies.forEach(other=>{
+        if(b===other)return;
+        const dx=other.x-b.x,dy=other.y-b.y;
+        const r=Math.hypot(dx,dy);
+        if(r<20)return;
+        const F=G*b.m*other.m/(r*r);
+        b.vx+=F*dx/r/b.m*dt;
+        b.vy+=F*dy/r/b.m*dt;
+      });
+      b.x+=b.vx;b.y+=b.vy;
+      if(b.x<0||b.x>W)b.vx*=-0.8;
+      if(b.y<0||b.y>H)b.vy*=-0.8;
+      b.trail.push({x:b.x,y:b.y});
+      if(b.trail.length>80)b.trail.shift();
+    });
+    t+=dt;document.getElementById('timeVal').textContent=t.toFixed(2)+'s';
+    document.getElementById('xVal').textContent=bodies.length+' bodies';
+  },
+  draw(){
+    bodies.forEach(b=>{
+      if(b.trail.length>1){
+        b.trail.forEach((p,i)=>{
+          if(i===0)return;
+          ctx.beginPath();ctx.moveTo(b.trail[i-1].x,b.trail[i-1].y);ctx.lineTo(p.x,p.y);
+          ctx.strokeStyle=`hsla(${b.hue},100%,65%,${i/b.trail.length*0.4})`;ctx.lineWidth=1.5;ctx.stroke();
+        });
+      }
+      ctx.beginPath();ctx.arc(b.x,b.y,Math.sqrt(b.m)*1.5,0,Math.PI*2);
+      ctx.fillStyle=`hsl(${b.hue},100%,65%)`;ctx.shadowBlur=15;ctx.shadowColor=`hsl(${b.hue},100%,65%)`;ctx.fill();ctx.shadowBlur=0;
+    });
+  }
+};
+
+// COLLISION
+let balls = [];
+SIMS.collision = {
+  name:'Elastic Collisions',
+  theory: '💥 <b>Elastic Collisions</b>: Momentum p = mv is always conserved. In a perfectly elastic collision (restitution = 1), kinetic energy is also conserved. Reduce restitution to model inelastic collisions where KE is lost as heat/sound. Total momentum of all balls remains constant throughout.',
+  controls:`
+    <div class="control-group"><div class="control-label">Restitution</div><div class="control-row"><input type="range" id="c-res" min="0" max="1" value="1" step="0.05" oninput="updateCtrl(this,'res')"><span class="control-value" id="v-res">1.0</span></div></div>
+    <div class="control-group"><div class="control-label">Balls</div><div class="control-row"><input type="range" id="c-n" min="2" max="20" value="8" oninput="updateCtrl(this,'n')"><span class="control-value" id="v-n">8</span></div></div>`,
+  params:{res:1,n:8},
+  init(){
+    balls=[];
+    for(let i=0;i<SIMS.collision.params.n;i++){
+      balls.push({x:60+Math.random()*(W-120),y:60+Math.random()*(H-120),vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,r:15+Math.random()*10,m:5+Math.random()*10,hue:Math.random()*360});
+    }
+    t=0;
+  },
+  update(dt){
+    const res=SIMS.collision.params.res;
+    balls.forEach(b=>{
+      b.x+=b.vx;b.y+=b.vy;
+      if(b.x-b.r<0){b.x=b.r;b.vx=Math.abs(b.vx)*res;}
+      if(b.x+b.r>W){b.x=W-b.r;b.vx=-Math.abs(b.vx)*res;}
+      if(b.y-b.r<0){b.y=b.r;b.vy=Math.abs(b.vy)*res;}
+      if(b.y+b.r>H){b.y=H-b.r;b.vy=-Math.abs(b.vy)*res;}
+    });
+    for(let i=0;i<balls.length;i++){
+      for(let j=i+1;j<balls.length;j++){
+        const a=balls[i],b=balls[j];
+        const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+        if(d<a.r+b.r){
+          const nx=dx/d,ny=dy/d;
+          const overlap=(a.r+b.r-d)/2;
+          a.x-=nx*overlap;a.y-=ny*overlap;b.x+=nx*overlap;b.y+=ny*overlap;
+          const dvx=a.vx-b.vx,dvy=a.vy-b.vy;
+          const dot=dvx*nx+dvy*ny;
+          const imp=2*res*dot/(a.m+b.m);
+          a.vx-=imp*b.m*nx;a.vy-=imp*b.m*ny;
+          b.vx+=imp*a.m*nx;b.vy+=imp*a.m*ny;
+        }
+      }
+    }
+    t+=dt;document.getElementById('timeVal').textContent=t.toFixed(2)+'s';
+    const totalKE=balls.reduce((s,b)=>s+0.5*b.m*(b.vx*b.vx+b.vy*b.vy),0);
+    document.getElementById('keVal').textContent=totalKE.toFixed(0)+' J';
+  },
+  draw(){
+    balls.forEach(b=>{
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      const speed=Math.hypot(b.vx,b.vy);
+      ctx.fillStyle=`hsl(${b.hue+speed*20},100%,65%)`;ctx.shadowBlur=12;ctx.shadowColor=ctx.fillStyle;ctx.fill();ctx.shadowBlur=0;
+    });
+  }
+};
+
+// DIFFRACTION / PRISM
+SIMS.diffraction = {
+  name:'Light Spectrum / Prism',
+  theory:'🌈 <b>Light Dispersion through a Prism</b>: White light is made of all visible wavelengths (colours). When it enters glass, each wavelength bends by a different angle (dispersion) because the refractive index n varies with wavelength — a property called <i>chromatic dispersion</i>. Violet (380 nm) bends most, red (700 nm) least. The deviation δ = (n−1)·A where A is the prism apex angle. Adjust the prism angle to see how it changes the spread.',
+  controls:`
+    <div class="control-group"><div class="control-label">Prism Apex Angle (°)</div><div class="control-row"><input type="range" id="c-pa" min="10" max="80" value="45" oninput="updateCtrl(this,'pa')"><span class="control-value" id="v-pa">45</span></div></div>
+    <div class="control-group"><div class="control-label">Incident Angle (°)</div><div class="control-row"><input type="range" id="c-ia" min="0" max="60" value="30" oninput="updateCtrl(this,'ia')"><span class="control-value" id="v-ia">30</span></div></div>`,
+  params:{pa:45, ia:30},
+  init(){t=0;},
+  update(dt){
+    t+=dt;
+    const {pa,ia}=SIMS.diffraction.params;
+    document.getElementById('xVal').textContent='Apex: '+pa+'°';
+    document.getElementById('yVal').textContent='Incident: '+ia+'°';
+    document.getElementById('timeVal').textContent=t.toFixed(2)+'s';
+  },
+  draw(){
+    const {pa, ia} = SIMS.diffraction.params;
+    const apexRad = pa * Math.PI/180;
+    const cx = W*0.38, cy = H/2;
+    const halfBase = Math.tan(apexRad/2) * 110;
+    const prismTop = {x:cx, y:cy-110};
+    const prismBL  = {x:cx-halfBase, y:cy+70};
+    const prismBR  = {x:cx+halfBase, y:cy+70};
+    // Draw prism
+    ctx.beginPath(); ctx.moveTo(prismTop.x,prismTop.y); ctx.lineTo(prismBR.x,prismBR.y); ctx.lineTo(prismBL.x,prismBL.y); ctx.closePath();
+    const prismGrad=ctx.createLinearGradient(cx-halfBase,cy,cx+halfBase,cy);
+    prismGrad.addColorStop(0,'rgba(180,220,255,0.12)'); prismGrad.addColorStop(1,'rgba(180,180,255,0.06)');
+    ctx.fillStyle=prismGrad; ctx.fill();
+    ctx.strokeStyle='rgba(180,220,255,0.7)'; ctx.lineWidth=2; ctx.stroke();
+    // Apex angle label
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px monospace'; ctx.textAlign='center';
+    ctx.fillText('A='+pa+'°',prismTop.x,prismTop.y-10);
+    // Left face normal direction
+    const leftFaceAngle = Math.atan2(prismBL.y-prismTop.y, prismBL.x-prismTop.x) + Math.PI/2;
+    // Entry point on left face
+    const entryT = 0.45;
+    const entryX = prismTop.x*(1-entryT)+prismBL.x*entryT;
+    const entryY = prismTop.y*(1-entryT)+prismBL.y*entryT;
+    // Incident ray from left
+    const incRad = ia * Math.PI/180;
+    const incDirX = Math.cos(incRad + leftFaceAngle);
+    const incDirY = Math.sin(incRad + leftFaceAngle);
+    ctx.beginPath(); ctx.moveTo(entryX-incDirX*140,entryY-incDirY*140); ctx.lineTo(entryX,entryY);
+    ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=4; ctx.shadowBlur=10; ctx.shadowColor='#fff'; ctx.stroke(); ctx.shadowBlur=0;
+    // Normal line at entry
+    ctx.setLineDash([5,5]); ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(entryX-Math.cos(leftFaceAngle)*40,entryY-Math.sin(leftFaceAngle)*40);
+    ctx.lineTo(entryX+Math.cos(leftFaceAngle)*60,entryY+Math.sin(leftFaceAngle)*60); ctx.stroke(); ctx.setLineDash([]);
+    // Colors array with refractive indices
+    const spectrum=[
+      {c:'#ff0000',n:1.513,label:'700nm Red'},
+      {c:'#ff7700',n:1.516,label:'620nm Orange'},
+      {c:'#ffff00',n:1.519,label:'580nm Yellow'},
+      {c:'#00ff00',n:1.523,label:'530nm Green'},
+      {c:'#0088ff',n:1.531,label:'470nm Blue'},
+      {c:'#4400cc',n:1.538,label:'430nm Indigo'},
+      {c:'#8800ff',n:1.545,label:'400nm Violet'},
+    ];
+    // Right face direction
+    const rightFaceAngle = Math.atan2(prismBR.y-prismTop.y, prismBR.x-prismTop.x);
+    const rightNormal = rightFaceAngle - Math.PI/2;
+    // Refract each colour and draw ray through prism to right face
+    const exitT = 0.45;
+    const exitX = prismTop.x*(1-exitT)+prismBR.x*exitT;
+    const exitY = prismTop.y*(1-exitT)+prismBR.y*exitT;
+    spectrum.forEach((sp,i)=>{
+      const deviation = (sp.n - 1) * apexRad + (i-3)*0.025*(apexRad/0.785);
+      const outAngle = rightNormal + deviation;
+      const rayLen = W*0.5;
+      ctx.beginPath(); ctx.moveTo(entryX,entryY); ctx.lineTo(exitX,exitY);
+      ctx.strokeStyle=sp.c; ctx.lineWidth=2.5; ctx.globalAlpha=0.7; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(exitX,exitY);
+      ctx.lineTo(exitX+Math.cos(outAngle)*rayLen, exitY+Math.sin(outAngle)*rayLen);
+      ctx.strokeStyle=sp.c; ctx.lineWidth=3; ctx.shadowBlur=10; ctx.shadowColor=sp.c; ctx.stroke(); ctx.shadowBlur=0;
+      ctx.globalAlpha=1;
+      // Label at end
+      const ex=exitX+Math.cos(outAngle)*(rayLen*0.85), ey=exitY+Math.sin(outAngle)*(rayLen*0.85);
+      if(ex>0&&ex<W&&ey>0&&ey<H){
+        ctx.fillStyle=sp.c; ctx.font='11px monospace'; ctx.textAlign='left';
+        ctx.fillText(sp.label, Math.min(ex,W-80), ey+4);
+      }
+    });
+    // Info
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px monospace'; ctx.textAlign='left';
+    ctx.fillText('White light → dispersed spectrum  |  n varies with λ (Cauchy\'s equation)',15,H-15);
+  }
+};
+
+// DOPPLER EFFECT
+let dopplerT = 0, dopplerSource = {x:100, vx:3};
+SIMS.doppler = {
+  name:'Doppler Effect',
+  theory: '🔉 <b>Doppler Effect</b>: When a sound source moves, wavefronts pile up in front (higher frequency = blue-shift) and stretch behind (lower frequency = red-shift). The observed frequency f_obs = f₀·v/(v − v_source). When source speed equals wave speed, a shock wave (Mach 1) forms. This explains ambulance sirens, radar guns, and redshift in astronomy.',
+  controls:`
+    <div class="control-group"><div class="control-label">Source Speed</div><div class="control-row"><input type="range" id="c-sv" min="0.5" max="8" value="3" step="0.5" oninput="updateCtrl(this,'sv')"><span class="control-value" id="v-sv">3</span></div></div>
+    <div class="control-group"><div class="control-label">Wave Speed</div><div class="control-row"><input type="range" id="c-wv" min="5" max="20" value="10" oninput="updateCtrl(this,'wv')"><span class="control-value" id="v-wv">10</span></div></div>`,
+  params:{sv:3,wv:10},
+  init(){dopplerT=0;dopplerSource={x:100,vx:SIMS.doppler.params.sv};t=0;SIMS.doppler._waves=[];},
+  _waves:[],
+  update(dt){
+    const p=SIMS.doppler.params;
+    dopplerSource.vx=p.sv;
+    dopplerSource.x+=dopplerSource.vx;
+    if(dopplerSource.x>W+20){dopplerSource.x=-20;SIMS.doppler._waves=[];}
+    dopplerT+=dt;
+    if(dopplerT>0.06){dopplerT=0;SIMS.doppler._waves.push({cx:dopplerSource.x,cy:H/2,r:0});}
+    SIMS.doppler._waves.forEach(w=>{w.r+=p.wv;});
+    SIMS.doppler._waves=SIMS.doppler._waves.filter(w=>w.r<Math.max(W,H));
+    const fObs=1/(1-p.sv/p.wv);
+    t+=dt;document.getElementById('timeVal').textContent=t.toFixed(2)+'s';
+    document.getElementById('xVal').textContent=p.sv.toFixed(1)+' m/s (source)';
+    document.getElementById('yVal').textContent=fObs>0?fObs.toFixed(2)+'× f₀':'Mach wave';
+    document.getElementById('vVal').textContent=p.wv.toFixed(1)+' m/s (waves)';
+  },
+  draw(){
+    ctx.fillStyle='rgba(0,245,255,0.05)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(255,255,255,0.04)';ctx.fillRect(0,H/2-1,W,2);
+    SIMS.doppler._waves.forEach((w,i)=>{
+      const alpha=Math.max(0,1-w.r/Math.max(W,H));
+      ctx.beginPath();ctx.arc(w.cx,w.cy,w.r,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(0,245,255,${alpha*0.5})`;ctx.lineWidth=1.5;ctx.stroke();
+    });
+    ctx.beginPath();ctx.arc(dopplerSource.x,H/2,16,0,Math.PI*2);
+    ctx.fillStyle='#ff006e';ctx.shadowBlur=20;ctx.shadowColor='#ff006e';ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.font='11px monospace';ctx.textAlign='center';ctx.fillText('♪',dopplerSource.x,H/2+4);
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='13px monospace';ctx.textAlign='left';
+    ctx.fillText('← compressed waves (blue-shift)',20,H/2-30);
+    ctx.fillText('stretched waves (red-shift) →',W-280,H/2+50);
+    ctx.fillStyle='#ffe000';ctx.fillText('Mach = '+( SIMS.doppler.params.sv/SIMS.doppler.params.wv).toFixed(2),20,30);
+  }
+};
+
+// LENS & MIRROR OPTICS
+SIMS.lens = {
+  name:'Thin Lens & Mirror',
+  theory: '🔭 <b>Thin Lens Equation</b>: 1/v − 1/u = 1/f. Object distance u, image distance v, focal length f. When v > 0 the image is real and inverted; when v < 0 it is virtual and upright. Magnification m = −v/u. A converging lens (f > 0) is used in cameras and eyes; a diverging lens (f < 0) in spectacles for myopia.',
+  controls:`
+    <div class="control-group"><div class="control-label">Focal Length f (px)</div><div class="control-row"><input type="range" id="c-f" min="40" max="200" value="100" oninput="updateCtrl(this,'f')"><span class="control-value" id="v-f">100</span></div></div>
+    <div class="control-group"><div class="control-label">Object Distance u (px)</div><div class="control-row"><input type="range" id="c-u" min="50" max="350" value="180" oninput="updateCtrl(this,'u')"><span class="control-value" id="v-u">180</span></div></div>
+    <div class="control-group"><div class="control-label">Mode</div><div class="control-row"><input type="range" id="c-mode" min="0" max="1" value="0" step="1" oninput="updateCtrl(this,'mode')"><span class="control-value" id="v-mode">Lens</span></div></div>`,
+  params:{f:100,u:180,mode:0},
+  init(){t=0;},
+  update(dt){
+    t+=dt;
+    const {f,u}=SIMS.lens.params;
+    const v=1/(1/f-1/u);
+    const m=-v/u;
+    document.getElementById('xVal').textContent='v = '+v.toFixed(1)+'px';
+    document.getElementById('yVal').textContent='m = '+m.toFixed(2);
+    document.getElementById('vVal').textContent=v>0?'Real Image':'Virtual Image';
+    document.getElementById('keVal').textContent='f = '+f+'px';
+    // update mode label
+    const mEl=document.getElementById('v-mode');
+    if(mEl)mEl.textContent=SIMS.lens.params.mode<0.5?'Lens':'Mirror';
+  },
+  draw(){
+    const {f,u,mode}=SIMS.lens.params;
+    const cx=W/2,cy=H/2;
+    const lensX=cx;
+    const objX=lensX-u;
+    const v=1/(1/f-1/u);
+    const imgX=lensX+v;
+    const m=-v/u;
+    const objH=60, imgH=objH*m;
+    // Optical axis
+    ctx.setLineDash([6,4]);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();ctx.setLineDash([]);
+    // Focal points
+    [[lensX+f,'F'],[lensX-f,"F'"]].forEach(([fx,label])=>{
+      ctx.beginPath();ctx.arc(fx,cy,5,0,Math.PI*2);ctx.fillStyle='#ffe000';ctx.fill();
+      ctx.fillStyle='#ffe000';ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText(label,fx,cy+20);
+    });
+    // Lens element
+    if(mode<0.5){
+      ctx.strokeStyle='rgba(0,245,255,0.7)';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(lensX,cy-90);ctx.lineTo(lensX,cy+90);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(lensX-8,cy-90);ctx.lineTo(lensX,cy-80);ctx.lineTo(lensX+8,cy-90);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(lensX-8,cy+90);ctx.lineTo(lensX,cy+80);ctx.lineTo(lensX+8,cy+90);ctx.stroke();
+    } else {
+      ctx.strokeStyle='rgba(191,95,255,0.7)';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(lensX,cy-90);ctx.lineTo(lensX,cy+90);ctx.stroke();
+    }
+    // Object arrow
+    if(objX>10&&objX<W-10){
+      ctx.strokeStyle='#00f5ff';ctx.lineWidth=3;ctx.shadowBlur=8;ctx.shadowColor='#00f5ff';
+      ctx.beginPath();ctx.moveTo(objX,cy);ctx.lineTo(objX,cy-objH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(objX-8,cy-objH+12);ctx.lineTo(objX,cy-objH);ctx.lineTo(objX+8,cy-objH+12);ctx.stroke();
+      ctx.shadowBlur=0;ctx.fillStyle='#00f5ff';ctx.font='11px monospace';ctx.textAlign='center';ctx.fillText('Object',objX,cy+18);
+    }
+    // Image arrow
+    if(imgX>10&&imgX<W-10){
+      const isReal=v>0;
+      ctx.strokeStyle=isReal?'#ff006e':'rgba(255,0,110,0.4)';
+      ctx.lineWidth=isReal?3:1.5;ctx.shadowBlur=isReal?8:0;ctx.shadowColor='#ff006e';
+      ctx.setLineDash(isReal?[]:[6,4]);
+      ctx.beginPath();ctx.moveTo(imgX,cy);ctx.lineTo(imgX,cy-imgH);ctx.stroke();
+      ctx.setLineDash([]);ctx.shadowBlur=0;
+      ctx.fillStyle=isReal?'#ff006e':'rgba(255,0,110,0.5)';
+      ctx.font='11px monospace';ctx.textAlign='center';ctx.fillText(isReal?'Real Image':'Virtual',imgX,cy+18);
+    }
+    // Rays from object top
+    if(objX>10&&imgX>10&&imgX<W-10){
+      ctx.save();ctx.strokeStyle='rgba(255,224,0,0.45)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+      // Ray 1: parallel to axis → through focal point
+      ctx.beginPath();ctx.moveTo(objX,cy-objH);ctx.lineTo(lensX,cy-objH);ctx.lineTo(imgX,cy-imgH);ctx.stroke();
+      // Ray 2: through center of lens
+      ctx.beginPath();ctx.moveTo(objX,cy-objH);ctx.lineTo(imgX,cy-imgH);ctx.stroke();
+      ctx.setLineDash([]);ctx.restore();
+    }
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='12px monospace';ctx.textAlign='left';
+    ctx.fillText('1/v - 1/u = 1/f (Thin Lens Eq.)',15,H-20);
+  }
+};
+
+// ELECTRIC FIELD
+let charges=[];
+SIMS.electric = {
+  name:'Electric Field Lines',
+  theory: '⚡ <b>Electric Field Lines</b>: Field lines show the direction a positive test charge would move. They start on positive charges (+) and end on negative (−). Density of lines indicates field strength: F = kq₁q₂/r² (Coulomb\'s law). Drag the charges to see how the field shape changes. Opposite charges attract; like charges repel.',
+  controls:`
+    <div class="control-group"><div class="control-label">Charges</div><div class="control-row"><input type="range" id="c-n" min="1" max="6" value="2" oninput="updateCtrl(this,'n')"><span class="control-value" id="v-n">2</span></div></div>
+    <div class="control-group"><div class="control-label">Field Lines</div><div class="control-row"><input type="range" id="c-lines" min="4" max="20" value="12" oninput="updateCtrl(this,'lines')"><span class="control-value" id="v-lines">12</span></div></div>`,
+  params:{n:2,lines:12},
+  init(){
+    charges=[];
+    const n=SIMS.electric.params.n;
+    for(let i=0;i<n;i++){
+      const angle=2*Math.PI*i/n;
+      charges.push({x:W/2+150*Math.cos(angle),y:H/2+100*Math.sin(angle),q:i%2===0?1:-1,dragging:false});
+    }
+    t=0;
+  },
+  update(dt){t+=dt;document.getElementById('timeVal').textContent=t.toFixed(2)+'s';},
+  draw(){
+    const nLines=SIMS.electric.params.lines;
+    // Draw field lines from positive charges
+    charges.filter(c=>c.q>0).forEach(c=>{
+      for(let l=0;l<nLines;l++){
+        const startAngle=2*Math.PI*l/nLines;
+        let x=c.x+18*Math.cos(startAngle),y=c.y+18*Math.sin(startAngle);
+        ctx.beginPath();ctx.moveTo(x,y);
+        for(let step=0;step<200;step++){
+          let ex=0,ey=0;
+          charges.forEach(ch=>{
+            const dx=x-ch.x,dy=y-ch.y,r2=dx*dx+dy*dy;
+            if(r2<4)return;
+            const k=ch.q*10000/r2;
+            ex+=k*dx/Math.sqrt(r2);ey+=k*dy/Math.sqrt(r2);
+          });
+          const mag=Math.hypot(ex,ey)||1;
+          x+=3*ex/mag;y+=3*ey/mag;
+          ctx.lineTo(x,y);
+          if(x<0||x>W||y<0||y>H)break;
+          // Stop near negative charge
+          const nearNeg=charges.some(ch=>ch.q<0&&Math.hypot(x-ch.x,y-ch.y)<20);
+          if(nearNeg)break;
+        }
+        ctx.strokeStyle='rgba(0,245,255,0.35)';ctx.lineWidth=1.2;ctx.stroke();
+      }
+    });
+    // Draw charges
+    charges.forEach(c=>{
+      ctx.beginPath();ctx.arc(c.x,c.y,18,0,Math.PI*2);
+      const col=c.q>0?'#ff006e':'#00f5ff';
+      ctx.fillStyle=col;ctx.shadowBlur=20;ctx.shadowColor=col;ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#fff';ctx.font='bold 16px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(c.q>0?'+':'−',c.x,c.y);ctx.textBaseline='alphabetic';
+    });
+    // Equipotential hint
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';ctx.textAlign='left';
+    ctx.fillText('Field lines: + → −',15,H-20);
+  }
+};
+// Allow dragging charges
+SIMS.electric._mousedown = function(e,canvas){
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  charges.forEach(c=>{if(Math.hypot(mx-c.x,my-c.y)<20)c.dragging=true;});
+};
+SIMS.electric._mouseup = function(){charges.forEach(c=>c.dragging=false);};
+SIMS.electric._mousemove = function(e,canvas){
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  charges.forEach(c=>{if(c.dragging){c.x=mx;c.y=my;}});
+};
+
+// LCR CIRCUIT
+let lcrT=0,lcrQ=0,lcrI=0;
+SIMS.lcr = {
+  name:'LCR Circuit Resonance',
+  theory: '🔌 <b>LCR Circuit Resonance</b>: An inductor (L), capacitor (C), and resistor (R) in series oscillate because energy alternates between the magnetic field of L and the electric field of C. Resonant frequency f₀ = 1/(2π√LC). Resistance damps the oscillation. At resonance, impedance is minimum and current maximum — used in radio tuning circuits.',
+  controls:`
+    <div class="control-group"><div class="control-label">Inductance L (H)</div><div class="control-row"><input type="range" id="c-L" min="0.1" max="5" value="1" step="0.1" oninput="updateCtrl(this,'L')"><span class="control-value" id="v-L">1.0</span></div></div>
+    <div class="control-group"><div class="control-label">Capacitance C (F)</div><div class="control-row"><input type="range" id="c-C" min="0.01" max="1" value="0.1" step="0.01" oninput="updateCtrl(this,'C')"><span class="control-value" id="v-C">0.1</span></div></div>
+    <div class="control-group"><div class="control-label">Resistance R (Ω)</div><div class="control-row"><input type="range" id="c-R" min="0" max="5" value="0.5" step="0.1" oninput="updateCtrl(this,'R')"><span class="control-value" id="v-R">0.5</span></div></div>`,
+  params:{L:1,C:0.1,R:0.5},
+  _history:[],
+  init(){lcrT=0;lcrQ=1;lcrI=0;SIMS.lcr._history=[];t=0;},
+  update(dt){
+    const {L,C,R}=SIMS.lcr.params;
+    const steps=20;const h=dt/steps;
+    for(let i=0;i<steps;i++){
+      const dI=-R/L*lcrI - lcrQ/(L*C);
+      const dQ=lcrI;
+      lcrI+=dI*h*5; lcrQ+=dQ*h*5;
+    }
+    t+=dt;lcrT=t;
+    SIMS.lcr._history.push({t:lcrT,Q:lcrQ,I:lcrI});
+    if(SIMS.lcr._history.length>400)SIMS.lcr._history.shift();
+    const f0=1/(2*Math.PI*Math.sqrt(L*C));
+    document.getElementById('timeVal').textContent=t.toFixed(2)+'s';
+    document.getElementById('xVal').textContent='f₀ = '+f0.toFixed(2)+' Hz';
+    document.getElementById('yVal').textContent='Q = '+lcrQ.toFixed(3);
+    document.getElementById('vVal').textContent='I = '+lcrI.toFixed(3)+' A';
+    document.getElementById('keVal').textContent=(0.5*L*lcrI*lcrI+lcrQ*lcrQ/(2*SIMS.lcr.params.C)).toFixed(3)+' J';
+  },
+  draw(){
+    const h=SIMS.lcr._history;if(!h.length)return;
+    const rows=[{key:'Q',color:'#00f5ff',label:'Charge Q',cy:H*0.3},{key:'I',color:'#ff006e',label:'Current I',cy:H*0.7}];
+    rows.forEach(({key,color,label,cy})=>{
+      const vals=h.map(x=>x[key]);
+      const mx=Math.max(1,Math.max(...vals.map(Math.abs)));
+      const amp=H*0.18;
+      ctx.beginPath();
+      h.forEach((p,i)=>{
+        const x=W*i/h.length;
+        const y=cy-p[key]/mx*amp;
+        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      });
+      ctx.strokeStyle=color;ctx.lineWidth=2;ctx.shadowBlur=8;ctx.shadowColor=color;ctx.stroke();ctx.shadowBlur=0;
+      ctx.fillStyle=color;ctx.font='12px monospace';ctx.textAlign='left';ctx.fillText(label,8,cy-amp-10);
+    });
+    const {L,C}=SIMS.lcr.params;
+    const f0=1/(2*Math.PI*Math.sqrt(L*C));
+    ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='12px monospace';ctx.textAlign='right';
+    ctx.fillText('Resonant freq: f₀ = 1/(2π√LC) = '+f0.toFixed(2)+'Hz',W-15,H-15);
+  }
+};
+
+// IDEAL GAS / MAXWELL-BOLTZMANN
+let gasMolecules=[];
+SIMS.gas = {
+  name:'Ideal Gas — Maxwell-Boltzmann',
+  theory: '💨 <b>Ideal Gas & Maxwell-Boltzmann Distribution</b>: Gas molecules move randomly at different speeds. The distribution of speeds follows the Maxwell-Boltzmann curve — most molecules cluster near the most probable speed v_p = √(2kT/m). Higher temperature shifts the peak right (faster average speeds). The average KE = (3/2)kT per molecule (kinetic theory).',
+  controls:`
+    <div class="control-group"><div class="control-label">Temperature (K)</div><div class="control-row"><input type="range" id="c-T" min="100" max="2000" value="500" oninput="updateCtrl(this,'T')"><span class="control-value" id="v-T">500</span></div></div>
+    <div class="control-group"><div class="control-label">N Molecules</div><div class="control-row"><input type="range" id="c-n" min="20" max="200" value="80" oninput="updateCtrl(this,'n')"><span class="control-value" id="v-n">80</span></div></div>`,
+  params:{T:500,n:80},
+  init(){
+    const n=SIMS.gas.params.n;
+    const v0=Math.sqrt(SIMS.gas.params.T)*0.3;
+    gasMolecules=Array.from({length:n},()=>{
+      const angle=Math.random()*Math.PI*2;
+      const speed=v0*(0.5+Math.random()*1.5);
+      return {x:40+Math.random()*(W-80),y:40+Math.random()*(H*0.6-80),vx:speed*Math.cos(angle),vy:speed*Math.sin(angle),r:5,color:`hsl(${Math.random()*60+180},100%,65%)`};
+    });
+    t=0;
+  },
+  update(dt){
+    const boxH=H*0.65;
+    const v0=Math.sqrt(SIMS.gas.params.T)*0.3;
+    gasMolecules.forEach(m=>{
+      m.x+=m.vx;m.y+=m.vy;
+      if(m.x<m.r){m.x=m.r;m.vx=Math.abs(m.vx);}
+      if(m.x>W-m.r){m.x=W-m.r;m.vx=-Math.abs(m.vx);}
+      if(m.y<m.r){m.y=m.r;m.vy=Math.abs(m.vy);}
+      if(m.y>boxH-m.r){m.y=boxH-m.r;m.vy=-Math.abs(m.vy);}
+      // Random thermal kick
+      if(Math.random()<0.01){const a=Math.random()*Math.PI*2;const s=v0*(0.5+Math.random()*1.5);m.vx=s*Math.cos(a);m.vy=s*Math.sin(a);}
+    });
+    t+=dt;
+    const avgKE=gasMolecules.reduce((s,m)=>s+0.5*(m.vx*m.vx+m.vy*m.vy),0)/gasMolecules.length;
+    document.getElementById('timeVal').textContent=t.toFixed(2)+'s';
+    document.getElementById('xVal').textContent=SIMS.gas.params.T+' K';
+    document.getElementById('yVal').textContent=gasMolecules.length+' molecules';
+    document.getElementById('keVal').textContent=avgKE.toFixed(1)+' J';
+  },
+  draw(){
+    const boxH=H*0.65;
+    // Box
+    ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;ctx.strokeRect(1,1,W-2,boxH);
+    ctx.fillStyle='rgba(0,245,255,0.03)';ctx.fillRect(1,1,W-2,boxH);
+    // Molecules
+    gasMolecules.forEach(m=>{
+      const speed=Math.hypot(m.vx,m.vy);
+      const hue=Math.min(240,Math.max(0,240-speed*2));
+      ctx.beginPath();ctx.arc(m.x,m.y,m.r,0,Math.PI*2);
+      ctx.fillStyle=`hsl(${hue},100%,65%)`;ctx.shadowBlur=6;ctx.shadowColor=ctx.fillStyle;ctx.fill();ctx.shadowBlur=0;
+    });
+    // Maxwell-Boltzmann distribution histogram (below box)
+    const histY=boxH+20;const histH=H-histY-20;
+    const bins=20;const binW=(W-60)/bins;
+    const speeds=gasMolecules.map(m=>Math.hypot(m.vx,m.vy));
+    const maxSpeed=Math.max(...speeds);
+    const hist=new Array(bins).fill(0);
+    speeds.forEach(s=>{const b=Math.floor(s/maxSpeed*bins*0.99);if(hist[b]!==undefined)hist[b]++;});
+    const maxBin=Math.max(...hist)||1;
+    ctx.fillStyle='rgba(0,245,255,0.12)';ctx.fillRect(30,histY,W-60,histH);
+    hist.forEach((h,i)=>{
+      const bh=h/maxBin*histH;
+      ctx.fillStyle=`hsl(${200+i*3},100%,65%)`;
+      ctx.fillRect(30+i*binW,histY+histH-bh,binW-2,bh);
+    });
+    ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='11px monospace';ctx.textAlign='left';
+    ctx.fillText('Maxwell-Boltzmann Speed Distribution',35,histY+histH+15);
+    ctx.fillStyle='rgba(255,224,0,0.7)';ctx.font='12px monospace';
+    ctx.fillText('T = '+SIMS.gas.params.T+' K',15,30);
+  }
+};
+
+// ATOM VISUALIZER
+let atomAngle = 0;
+SIMS.atom = {
+  name:'Atom Visualizer',
+  theory:'⚛️ <b>Atomic Structure</b>: Atoms have a dense nucleus of protons (+) and neutrons (neutral), surrounded by electrons (−) in shells. The proton count = atomic number (Z), defining the element. Electrons fill shells: n=1 holds 2, n=2 holds 8, n=3 holds 18, n=4 holds 32. Mass number A = Z + N. When electrons ≠ protons the atom becomes an <b>ion</b>. Add or remove electrons/protons/neutrons to explore different elements and isotopes!',
+  controls:`
+    <div class="control-group"><div class="control-label">Protons (Z)</div><div class="control-row"><input type="range" id="c-Z" min="1" max="92" value="6" oninput="updateCtrl(this,'Z')"><span class="control-value" id="v-Z">6</span></div></div>
+    <div class="control-group"><div class="control-label">Neutrons (N)</div><div class="control-row"><input type="range" id="c-N" min="0" max="150" value="6" oninput="updateCtrl(this,'N')"><span class="control-value" id="v-N">6</span></div></div>
+    <div class="control-group"><div class="control-label">Electrons (e⁻)</div><div class="control-row"><input type="range" id="c-E" min="0" max="92" value="6" oninput="updateCtrl(this,'E')"><span class="control-value" id="v-E">6</span></div></div>`,
+  params:{Z:6,N:6,E:6},
+  _eAngles:[],
+  init(){
+    atomAngle=0;t=0;
+    SIMS.atom._eAngles=Array.from({length:20},(_,i)=>i*(2*Math.PI/20));
+  },
+  update(dt){
+    atomAngle+=dt*1.2;t+=dt;
+    const {Z,N,E}=SIMS.atom.params;
+    const SYMS=['?','H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr','Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe','Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U'];
+    const NAMES=['?','Hydrogen','Helium','Lithium','Beryllium','Boron','Carbon','Nitrogen','Oxygen','Fluorine','Neon','Sodium','Magnesium','Aluminium','Silicon','Phosphorus','Sulfur','Chlorine','Argon','Potassium','Calcium','Scandium','Titanium','Vanadium','Chromium','Manganese','Iron','Cobalt','Nickel','Copper','Zinc','Gallium','Germanium','Arsenic','Selenium','Bromine','Krypton','Rubidium','Strontium','Yttrium','Zirconium','Niobium','Molybdenum','Technetium','Ruthenium','Rhodium','Palladium','Silver','Cadmium','Indium','Tin','Antimony','Tellurium','Iodine','Xenon','Caesium','Barium','Lanthanum','Cerium','Praseodymium','Neodymium','Promethium','Samarium','Europium','Gadolinium','Terbium','Dysprosium','Holmium','Erbium','Thulium','Ytterbium','Lutetium','Hafnium','Tantalum','Tungsten','Rhenium','Osmium','Iridium','Platinum','Gold','Mercury','Thallium','Lead','Bismuth','Polonium','Astatine','Radon','Francium','Radium','Actinium','Thorium','Protactinium','Uranium'];
+    const el=SYMS[Math.min(Z,SYMS.length-1)]||'?';
+    const elName=NAMES[Math.min(Z,NAMES.length-1)]||'Unknown';
+    const charge=Z-E;
+    const massNum=Z+N;
+    document.getElementById('simName').textContent=`Atom — ${el} (Z=${Z})`;
+    document.getElementById('timeVal').textContent=`${el} — ${elName}`;
+    document.getElementById('xVal').textContent=`A=${massNum} (mass no.)`;
+    document.getElementById('yVal').textContent=`Charge: ${charge===0?'neutral (atom)':charge>0?'+'+charge+' ion':charge+' ion'}`;
+    document.getElementById('vVal').textContent=`${Z} p⁺  ${N} n⁰  ${E} e⁻`;
+    document.getElementById('keVal').textContent=`Shell config: ${SIMS.atom._shellConfig(E)}`;
+  },
+  _shellConfig(e){
+    const caps=[2,8,8,18]; let rem=e; const out=[];
+    for(let i=0;i<caps.length&&rem>0;i++){const n=Math.min(rem,caps[i]);out.push(n);rem-=n;}
+    return out.join(' | ');
+  },
+  draw(){
+    const {Z,N,E}=SIMS.atom.params;
+    const SYMS=['?','H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr','Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe','Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U'];
+    const NAMES=['?','Hydrogen','Helium','Lithium','Beryllium','Boron','Carbon','Nitrogen','Oxygen','Fluorine','Neon','Sodium','Magnesium','Aluminium','Silicon','Phosphorus','Sulfur','Chlorine','Argon','Potassium','Calcium','Scandium','Titanium','Vanadium','Chromium','Manganese','Iron','Cobalt','Nickel','Copper','Zinc','Gallium','Germanium','Arsenic','Selenium','Bromine','Krypton','Rubidium','Strontium','Yttrium','Zirconium','Niobium','Molybdenum','Technetium','Ruthenium','Rhodium','Palladium','Silver','Cadmium','Indium','Tin','Antimony','Tellurium','Iodine','Xenon','Caesium','Barium','Lanthanum','Cerium','Praseodymium','Neodymium','Promethium','Samarium','Europium','Gadolinium','Terbium','Dysprosium','Holmium','Erbium','Thulium','Ytterbium','Lutetium','Hafnium','Tantalum','Tungsten','Rhenium','Osmium','Iridium','Platinum','Gold','Mercury','Thallium','Lead','Bismuth','Polonium','Astatine','Radon','Francium','Radium','Actinium','Thorium','Protactinium','Uranium'];
+    const elSym=SYMS[Math.min(Z,SYMS.length-1)]||'?';
+    const elFull=NAMES[Math.min(Z,NAMES.length-1)]||'Unknown';
+    const cx=W/2, cy=H/2;
+    const nucleusR=Math.max(18, Math.cbrt(Z+N)*9);
+    // Nucleus glow
+    const nGrad=ctx.createRadialGradient(cx,cy,0,cx,cy,nucleusR*3);
+    nGrad.addColorStop(0,'rgba(255,120,0,0.3)'); nGrad.addColorStop(1,'transparent');
+    ctx.fillStyle=nGrad; ctx.beginPath(); ctx.arc(cx,cy,nucleusR*3,0,Math.PI*2); ctx.fill();
+    // Draw nucleons (pack into nucleus)
+    const total=Z+N;
+    for(let i=0;i<total;i++){
+      const a=(i/total)*Math.PI*2*2.618+i*0.8;
+      const rOff=Math.sqrt(i)*3.5;
+      const nx=cx+Math.cos(a)*Math.min(rOff,nucleusR*0.85);
+      const ny=cy+Math.sin(a)*Math.min(rOff,nucleusR*0.85);
+      ctx.beginPath(); ctx.arc(nx,ny,Math.max(2,5-nucleusR*0.02),0,Math.PI*2);
+      ctx.fillStyle=i<Z?'#ff5555':'#888888';
+      ctx.shadowBlur=i<Z?8:4; ctx.shadowColor=i<Z?'#ff0000':'#555';
+      ctx.fill(); ctx.shadowBlur=0;
+    }
+    // Nucleus ring
+    ctx.beginPath(); ctx.arc(cx,cy,nucleusR,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,120,0,0.6)'; ctx.lineWidth=2; ctx.stroke();
+    // Electron shells — Bohr model caps: 2,8,18,32,32,18,8
+    const shellCaps=[2,8,18,32,32,18,8];
+    const shellColors=['#00f5ff','#39ff14','#bf5fff','#ffe000','#ff6b00','#ff006e','#fff'];
+    const maxShellR = Math.min(W,H)*0.44;
+    const shellSpacing = nucleusR<30 ? 48 : 40;
+    let eLeft=E, shellIdx=0;
+    const shellData=[];
+    while(eLeft>0 && shellIdx<shellCaps.length){
+      const inShell=Math.min(eLeft,shellCaps[shellIdx]);
+      shellData.push({r:nucleusR+shellSpacing*(shellIdx+1), count:inShell, shell:shellIdx+1});
+      eLeft-=inShell; shellIdx++;
+    }
+    shellData.forEach(sh=>{
+      const r=Math.min(sh.r, maxShellR - sh.shell*5);
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.strokeStyle=shellColors[sh.shell-1]+'44'; ctx.lineWidth=1;
+      ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px monospace'; ctx.textAlign='left';
+      ctx.fillText('n='+sh.shell, cx+r+4, cy+4);
+      for(let e=0;e<sh.count;e++){
+        const speed=(7-sh.shell)*0.3+0.2;
+        const a=(e/sh.count)*Math.PI*2 + atomAngle*speed;
+        const ex=cx+Math.cos(a)*r, ey=cy+Math.sin(a)*r;
+        ctx.beginPath(); ctx.arc(ex,ey,5,0,Math.PI*2);
+        const ec=shellColors[sh.shell-1];
+        ctx.fillStyle=ec; ctx.shadowBlur=14; ctx.shadowColor=ec; ctx.fill(); ctx.shadowBlur=0;
+        ctx.fillStyle='#000'; ctx.font='bold 9px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('−',ex,ey); ctx.textBaseline='alphabetic';
+      }
+    });
+    // Info legend box (bottom-left)
+    const charge=Z-E;
+    const bx=12, by=H-130;
+    ctx.fillStyle='rgba(6,6,18,0.88)';
+    if(ctx.roundRect) ctx.roundRect(bx,by,180,115,7); else ctx.rect(bx,by,180,115);
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='#ffe000'; ctx.font='bold 15px monospace'; ctx.textAlign='left';
+    ctx.fillText(`${elSym}  (Z=${Z})  ${elFull}`,bx+8,by+20);
+    ctx.fillStyle='#ff6666'; ctx.font='12px monospace';
+    ctx.fillText(`● ${Z} Proton${Z!==1?'s':''}`,bx+8,by+38);
+    ctx.fillStyle='#aaaaaa';
+    ctx.fillText(`● ${N} Neutron${N!==1?'s':''}`,bx+8,by+54);
+    ctx.fillStyle='#00f5ff';
+    ctx.fillText(`● ${E} Electron${E!==1?'s':''}`,bx+8,by+70);
+    ctx.fillStyle='#888'; ctx.fillText(`Mass number A = ${Z+N}`,bx+8,by+86);
+    ctx.fillStyle=charge===0?'#39ff14':charge>0?'#ff006e':'#00f5ff';
+    ctx.fillText(charge===0?'Neutral atom':charge>0?`${elSym}${charge}⁺ ion`:` ${elSym}${Math.abs(charge)}⁻ ion`,bx+8,by+102);
+  }
+};
+
+// ---- CIRCULAR MOTION ----
+SIMS.circular = {
+  name: 'Circular Motion',
+  theory: `⭕ <b>Circular Motion</b>: An object moving in a circle requires a centripetal (centre-seeking) force. <b>F = mv²/r = mω²r</b> where v is speed, r is radius, m is mass, ω = v/r is angular velocity. Period T = 2πr/v. The velocity is always tangent to the circle; the force is always directed toward the centre. Without centripetal force, the object flies off tangentially (Newton's 1st Law).`,
+  controls: `
+    <div class="control-group"><div class="control-label">Speed (m/s)</div><div class="control-row"><input type="range" id="c-cspeed" min="1" max="20" value="6" step="0.5" oninput="updateCtrl(this,'cspeed')"><span class="control-value" id="v-cspeed">6</span></div></div>
+    <div class="control-group"><div class="control-label">Radius (m)</div><div class="control-row"><input type="range" id="c-cradius" min="40" max="200" value="120" oninput="updateCtrl(this,'cradius')"><span class="control-value" id="v-cradius">120</span></div></div>
+    <div class="control-group"><div class="control-label">Mass (kg)</div><div class="control-row"><input type="range" id="c-cmass" min="1" max="50" value="10" oninput="updateCtrl(this,'cmass')"><span class="control-value" id="v-cmass">10</span></div></div>
+    <button class="btn btn-cyan btn-sm" onclick="SIMS.circular.releaseToggle()" id="circReleaseBtn">🔓 Release</button>`,
+  params: { cspeed:6, cradius:120, cmass:10 },
+  angle: 0, released: false, rx: 0, ry: 0, vx: 0, vy: 0,
+  releaseToggle() {
+    this.released = !this.released;
+    document.getElementById('circReleaseBtn').textContent = this.released ? '🔒 Catch' : '🔓 Release';
+    if(!this.released) this.init();
+  },
+  init() { this.angle=0; this.released=false; const {cradius}=this.params; this.rx=W/2+cradius; this.ry=H/2; this.vx=0; this.vy=0; const btn=document.getElementById('circReleaseBtn'); if(btn)btn.textContent='🔓 Release'; },
+  update(dt) {
+    const {cspeed,cradius,cmass} = this.params;
+    const omega = cspeed / cradius;
+    if(!this.released) {
+      this.angle += omega * dt;
+      this.rx = W/2 + Math.cos(this.angle)*cradius;
+      this.ry = H/2 + Math.sin(this.angle)*cradius;
+      this.vx = -Math.sin(this.angle)*cspeed;
+      this.vy =  Math.cos(this.angle)*cspeed;
+    } else {
+      this.rx += this.vx*dt*20;
+      this.ry += this.vy*dt*20;
+    }
+    const fc = cmass*cspeed*cspeed/cradius;
+    document.getElementById('xVal').textContent  = cradius+'m';
+    document.getElementById('yVal').textContent  = fc.toFixed(1)+' N';
+    document.getElementById('vVal').textContent  = cspeed+' m/s';
+    document.getElementById('keVal').textContent = (0.5*cmass*cspeed*cspeed).toFixed(0)+' J';
+    document.getElementById('timeVal').textContent = (2*Math.PI*cradius/cspeed).toFixed(2)+'s';
+  },
+  draw() {
+    const {cradius} = this.params;
+    const cx=W/2, cy=H/2;
+    // Orbit circle
+    if(!this.released){
+      ctx.beginPath(); ctx.arc(cx,cy,cradius,0,Math.PI*2);
+      ctx.strokeStyle='rgba(0,245,255,0.2)'; ctx.lineWidth=1.5; ctx.setLineDash([6,6]); ctx.stroke(); ctx.setLineDash([]);
+      // String
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(this.rx,this.ry);
+      ctx.strokeStyle='rgba(255,224,0,0.6)'; ctx.lineWidth=2; ctx.stroke();
+      // Centripetal force arrow (pointing toward centre)
+      const fx=cx-this.rx, fy=cy-this.ry;
+      const flen=Math.hypot(fx,fy); if(flen>0){
+        const scale=60/flen;
+        ctx.beginPath(); ctx.moveTo(this.rx,this.ry); ctx.lineTo(this.rx+fx*scale,this.ry+fy*scale);
+        ctx.strokeStyle='#ff006e'; ctx.lineWidth=3; ctx.shadowBlur=8; ctx.shadowColor='#ff006e'; ctx.stroke(); ctx.shadowBlur=0;
+        // Arrowhead
+        const ax=this.rx+fx*scale, ay=this.ry+fy*scale;
+        const ang=Math.atan2(fy,fx);
+        ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax-14*Math.cos(ang-0.35),ay-14*Math.sin(ang-0.35)); ctx.lineTo(ax-14*Math.cos(ang+0.35),ay-14*Math.sin(ang+0.35)); ctx.closePath();
+        ctx.fillStyle='#ff006e'; ctx.fill();
+      }
+      // Velocity arrow (tangent)
+      const vs=50/Math.hypot(this.vx,this.vy);
+      ctx.beginPath(); ctx.moveTo(this.rx,this.ry); ctx.lineTo(this.rx+this.vx*vs,this.ry+this.vy*vs);
+      ctx.strokeStyle='#39ff14'; ctx.lineWidth=3; ctx.shadowBlur=8; ctx.shadowColor='#39ff14'; ctx.stroke(); ctx.shadowBlur=0;
+    }
+    // Centre dot
+    ctx.beginPath(); ctx.arc(cx,cy,8,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fill();
+    // Ball
+    const g=ctx.createRadialGradient(this.rx-4,this.ry-4,0,this.rx,this.ry,14);
+    g.addColorStop(0,'#fffcd0'); g.addColorStop(0.5,'#00f5ff'); g.addColorStop(1,'#0050a0');
+    ctx.beginPath(); ctx.arc(this.rx,this.ry,14,0,Math.PI*2);
+    ctx.fillStyle=g; ctx.shadowBlur=20; ctx.shadowColor='#00f5ff'; ctx.fill(); ctx.shadowBlur=0;
+    // Labels
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='11px monospace'; ctx.textAlign='left';
+    if(!this.released){
+      ctx.fillStyle='#ff006e'; ctx.fillText('Fc (centripetal)',this.rx+20,this.ry-6);
+      ctx.fillStyle='#39ff14'; ctx.fillText('v (velocity)',this.rx+this.vx*50/Math.hypot(this.vx,this.vy)+8,this.ry+this.vy*50/Math.hypot(this.vx,this.vy)-4);
+    }
+  }
+};
+
+// ---- NEWTON'S COOLING ----
+let coolData=[];
+SIMS.cooling = {
+  name: "Newton's Cooling Law",
+  theory: `🌡️ <b>Newton's Cooling Law</b>: The rate of heat loss of a body is proportional to the temperature difference between it and its surroundings. <b>T(t) = T_env + (T₀ − T_env)·e^(−k·t)</b> where T₀ is initial temperature, T_env is ambient temperature, and k is the cooling constant. Higher k = faster cooling. This models coffee cooling, body temperature, etc.`,
+  controls: `
+    <div class="control-group"><div class="control-label">Initial Temp (°C)</div><div class="control-row"><input type="range" id="c-t0" min="40" max="200" value="100" oninput="updateCtrl(this,'t0')"><span class="control-value" id="v-t0">100</span></div></div>
+    <div class="control-group"><div class="control-label">Ambient Temp (°C)</div><div class="control-row"><input type="range" id="c-tenv" min="0" max="40" value="20" oninput="updateCtrl(this,'tenv')"><span class="control-value" id="v-tenv">20</span></div></div>
+    <div class="control-group"><div class="control-label">Cooling constant k</div><div class="control-row"><input type="range" id="c-kval" min="0.01" max="0.5" value="0.05" step="0.01" oninput="updateCtrl(this,'kval')"><span class="control-value" id="v-kval">0.05</span></div></div>`,
+  params: { t0:100, tenv:20, kval:0.05 },
+  simT:0,
+  init() { this.simT=0; coolData=[]; },
+  update(dt) {
+    this.simT += dt*2;
+    const {t0,tenv,kval} = this.params;
+    const T = tenv + (t0-tenv)*Math.exp(-kval*this.simT);
+    coolData.push({t:this.simT, T});
+    if(coolData.length>600) coolData.shift();
+    document.getElementById('timeVal').textContent = this.simT.toFixed(1)+'s';
+    document.getElementById('xVal').textContent    = T.toFixed(1)+'°C';
+    document.getElementById('yVal').textContent    = tenv+'°C';
+    document.getElementById('vVal').textContent    = (-kval*(T-tenv)).toFixed(3)+'°C/s';
+    document.getElementById('keVal').textContent   = (t0-tenv).toFixed(0)+'°C';
+  },
+  draw() {
+    const {t0,tenv} = this.params;
+    const pad=60, bottom=H-60;
+    const tMax=coolData.length>1?coolData[coolData.length-1].t:1;
+    const tRange=Math.max(tMax,10);
+    const tempRange=t0-tenv;
+    // Axes
+    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(pad,30); ctx.lineTo(pad,bottom); ctx.lineTo(W-20,bottom); ctx.stroke();
+    // Axis labels
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='11px monospace'; ctx.textAlign='center';
+    ctx.fillText('Time (s)', (pad+W-20)/2, bottom+28);
+    ctx.save(); ctx.translate(16,H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Temperature (°C)',0,0); ctx.restore();
+    // Grid & ticks
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+    for(let i=0;i<=5;i++){
+      const y=bottom-(i/5)*(bottom-30);
+      ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-20,y); ctx.stroke();
+      const tv=tenv+(tempRange*i/5);
+      ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='10px monospace'; ctx.textAlign='right';
+      ctx.fillText(tv.toFixed(0)+'°',pad-5,y+3);
+    }
+    // Ambient line
+    const ayPx=bottom-(tenv-tenv)/(t0-tenv+0.1)*(bottom-30);
+    const ambY=bottom;
+    ctx.beginPath(); ctx.moveTo(pad,ambY); ctx.lineTo(W-20,ambY);
+    ctx.strokeStyle='rgba(255,100,0,0.35)'; ctx.lineWidth=1.5; ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,100,0,0.6)'; ctx.font='10px monospace'; ctx.textAlign='left';
+    ctx.fillText('T_env='+tenv+'°C',pad+4,ambY-4);
+    // Curve
+    if(coolData.length>1){
+      ctx.beginPath();
+      coolData.forEach((d,i)=>{
+        const x=pad+(d.t/tRange)*(W-20-pad);
+        const y=bottom-((d.T-tenv)/Math.max(1,t0-tenv))*(bottom-30);
+        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      });
+      const g=ctx.createLinearGradient(pad,30,W-20,30);
+      g.addColorStop(0,'#ff4444'); g.addColorStop(1,'#00f5ff');
+      ctx.strokeStyle=g; ctx.lineWidth=3; ctx.shadowBlur=10; ctx.shadowColor='#ff4444'; ctx.stroke(); ctx.shadowBlur=0;
+      // Current dot
+      const last=coolData[coolData.length-1];
+      const cx2=pad+(last.t/tRange)*(W-20-pad);
+      const cy2=bottom-((last.T-tenv)/Math.max(1,t0-tenv))*(bottom-30);
+      ctx.beginPath(); ctx.arc(cx2,cy2,7,0,Math.PI*2);
+      ctx.fillStyle='#fff'; ctx.shadowBlur=14; ctx.shadowColor='#ff4444'; ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle='#fff'; ctx.font='bold 11px monospace'; ctx.textAlign='left';
+      ctx.fillText(last.T.toFixed(1)+'°C',cx2+10,cy2+4);
+    }
+  }
+};
+
+// ---- BUOYANCY ----
+SIMS.buoyancy = {
+  name: 'Buoyancy — Archimedes',
+  theory: `🌊 <b>Archimedes' Principle</b>: An object submerged in a fluid experiences an upward buoyant force equal to the weight of fluid displaced. <b>F_b = ρ_fluid × V_submerged × g</b>. Net force = F_b − mg. If ρ_obj < ρ_fluid, the object floats; if ρ_obj > ρ_fluid, it sinks. The object floats when it displaces fluid equal to its own weight.`,
+  controls: `
+    <div class="control-group"><div class="control-label">Object density (kg/m³)</div><div class="control-row"><input type="range" id="c-objDens" min="100" max="20000" value="800" step="50" oninput="updateCtrl(this,'objDens')"><span class="control-value" id="v-objDens">800</span></div></div>
+    <div class="control-group"><div class="control-label">Fluid density (kg/m³)</div><div class="control-row"><input type="range" id="c-fluidDens" min="500" max="15000" value="1000" step="50" oninput="updateCtrl(this,'fluidDens')"><span class="control-value" id="v-fluidDens">1000</span></div></div>
+    <div class="control-group"><div class="control-label">Object size (m)</div><div class="control-row"><input type="range" id="c-objSize" min="20" max="80" value="40" oninput="updateCtrl(this,'objSize')"><span class="control-value" id="v-objSize">40</span></div></div>`,
+  params: { objDens:800, fluidDens:1000, objSize:40 },
+  objY:0, objVY:0,
+  init() { this.objY = H*0.3; this.objVY=0; },
+  update(dt) {
+    const {objDens,fluidDens,objSize} = this.params;
+    const g=9.8, r=objSize/2;
+    const V=Math.pow(objSize/50,3)*0.1;
+    const m=objDens*V;
+    const fluidTop=H*0.45;
+    const submerged=Math.min(1, Math.max(0,(this.objY+r-fluidTop)/(objSize)));
+    const Fb=fluidDens*V*submerged*g;
+    const Fg=m*g;
+    const Fnet=(Fb-Fg);
+    // Scale: 1 N causes 0.003 px/s² acceleration in screen space
+    this.objVY -= Fnet*0.003*dt;
+    this.objVY *= 0.96;
+    this.objY  += this.objVY*dt;
+    this.objY   = Math.max(r+20, Math.min(H-100-r, this.objY));
+    const ratio=objDens/fluidDens;
+    document.getElementById('xVal').textContent  = objDens+' kg/m³';
+    document.getElementById('yVal').textContent  = fluidDens+' kg/m³';
+    document.getElementById('vVal').textContent  = ratio>1?'SINKS':'FLOATS';
+    document.getElementById('keVal').textContent = (Fb*1000).toFixed(0)+'mN';
+    document.getElementById('timeVal').textContent = (submerged*100).toFixed(0)+'%';
+  },
+  draw() {
+    const {objDens,fluidDens,objSize} = this.params;
+    const fluidTop=H*0.45;
+    // Fluid
+    const grad=ctx.createLinearGradient(0,fluidTop,0,H-60);
+    grad.addColorStop(0,'rgba(0,100,200,0.35)');grad.addColorStop(1,'rgba(0,50,150,0.7)');
+    ctx.fillStyle=grad; ctx.fillRect(0,fluidTop,W,H-60-fluidTop);
+    // Fluid surface line
+    ctx.beginPath(); ctx.moveTo(0,fluidTop); ctx.lineTo(W,fluidTop);
+    ctx.strokeStyle='rgba(0,200,255,0.6)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='rgba(0,200,255,0.5)'; ctx.font='11px monospace'; ctx.textAlign='left';
+    ctx.fillText('Fluid surface — ρ='+fluidDens+' kg/m³', 12, fluidTop-6);
+    // Ground
+    ctx.fillStyle='rgba(100,80,40,0.7)'; ctx.fillRect(0,H-60,W,60);
+    ctx.strokeStyle='rgba(150,120,60,0.4)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,H-60); ctx.lineTo(W,H-60); ctx.stroke();
+    // Object
+    const r=objSize/2, cx2=W/2, cy2=this.objY;
+    const isSubmerged=cy2+r>fluidTop;
+    const ratio=objDens/fluidDens;
+    let objCol=ratio>1?'#ff4444':ratio<0.95?'#39ff14':'#ffe000';
+    const objGrad=ctx.createRadialGradient(cx2-r*.3,cy2-r*.3,0,cx2,cy2,r);
+    objGrad.addColorStop(0,objCol+'ff');objGrad.addColorStop(0.5,objCol+'aa');objGrad.addColorStop(1,objCol+'55');
+    ctx.beginPath(); ctx.arc(cx2,cy2,r,0,Math.PI*2);
+    ctx.fillStyle=objGrad; ctx.shadowBlur=16; ctx.shadowColor=objCol; ctx.fill(); ctx.shadowBlur=0;
+    // Forces
+    const V=Math.pow(objSize/50,3)*0.1;
+    const m=objDens*V;
+    const submerged=Math.min(1,Math.max(0,(cy2+r-fluidTop)/objSize));
+    const Fb=fluidDens*V*submerged*9.8;
+    const Fg=m*9.8;
+    const sc=Math.min(120,Math.max(10,30/Math.max(Fb,Fg)*100));
+    // Weight arrow (down)
+    const wLen=Math.min(80,Fg*sc);
+    ctx.beginPath(); ctx.moveTo(cx2,cy2+r+5); ctx.lineTo(cx2,cy2+r+5+wLen);
+    ctx.strokeStyle='#ff006e'; ctx.lineWidth=3; ctx.shadowBlur=8; ctx.shadowColor='#ff006e'; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.fillStyle='#ff006e'; ctx.font='bold 11px monospace'; ctx.textAlign='center';
+    ctx.fillText('W=mg',cx2,cy2+r+5+wLen+14);
+    // Buoyancy arrow (up)
+    if(submerged>0){
+      const bLen=Math.min(80,Fb*sc);
+      ctx.beginPath(); ctx.moveTo(cx2,cy2-r-5); ctx.lineTo(cx2,cy2-r-5-bLen);
+      ctx.strokeStyle='#00f5ff'; ctx.lineWidth=3; ctx.shadowBlur=8; ctx.shadowColor='#00f5ff'; ctx.stroke(); ctx.shadowBlur=0;
+      ctx.fillStyle='#00f5ff'; ctx.font='bold 11px monospace'; ctx.textAlign='center';
+      ctx.fillText('Fb',cx2,cy2-r-5-bLen-8);
+    }
+    // Status label
+    const status=ratio>1?'SINKS (ρ_obj > ρ_fluid)':ratio<1?'FLOATS (ρ_obj < ρ_fluid)':'NEUTRAL';
+    const sCol=ratio>1?'#ff4444':ratio<1?'#39ff14':'#ffe000';
+    ctx.fillStyle=sCol; ctx.font='bold 14px monospace'; ctx.textAlign='center';
+    ctx.fillText(status, W/2, 40);
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='11px monospace';
+    ctx.fillText('Density ratio ρ_obj/ρ_fluid = '+(ratio).toFixed(2), W/2, 58);
+  }
+};
+
+// ---- MAGNETIC FIELD ----
+SIMS.magnet = {
+  name: 'Magnetic Field — Bar Magnet',
+  theory: `🧲 <b>Magnetic Field Lines</b>: A bar magnet creates a dipole field. Field lines exit the North pole, curve around, and re-enter the South pole. The field strength B at a point follows the dipole formula: <b>B ∝ 1/r³</b>. Inside the magnet, lines travel from S to N. A compass needle aligns with the local field direction. Opposite poles attract; like poles repel.`,
+  controls: `
+    <div class="control-group"><div class="control-label">Magnet strength</div><div class="control-row"><input type="range" id="c-mstr" min="500" max="5000" value="2000" step="100" oninput="updateCtrl(this,'mstr')"><span class="control-value" id="v-mstr">2000</span></div></div>
+    <div class="control-group"><div class="control-label">Field lines</div><div class="control-row"><input type="range" id="c-mlines" min="8" max="24" value="16" step="2" oninput="updateCtrl(this,'mlines')"><span class="control-value" id="v-mlines">16</span></div></div>`,
+  params: { mstr:2000, mlines:16 },
+  magAngle:0,
+  init() { this.magAngle=0; },
+  update(dt) {
+    this.magAngle += dt*0.3;
+    document.getElementById('xVal').textContent  = 'N pole';
+    document.getElementById('yVal').textContent  = 'S pole';
+    document.getElementById('vVal').textContent  = this.params.mstr+' arb';
+    document.getElementById('keVal').textContent = '1/r³';
+    document.getElementById('timeVal').textContent = (t+dt).toFixed(1)+'s';
+  },
+  getField(x,y,cx,cy,strength) {
+    // Dipole: two monopoles
+    const dx=60, dy=0;
+    // North pole at (cx+dx, cy), South at (cx-dx, cy)
+    const nrx=cx+dx-x, nry=cy+dy-y;
+    const srx=cx-dx-x, sry=cy-dy-y;
+    const nr3=Math.pow(Math.hypot(nrx,nry),3)+1;
+    const sr3=Math.pow(Math.hypot(srx,sry),3)+1;
+    return {
+      bx: strength*(-nrx/nr3 + srx/sr3),
+      by: strength*(-nry/nr3 + sry/sr3)
+    };
+  },
+  draw() {
+    const cx=W/2, cy=H/2;
+    const {mstr,mlines} = this.params;
+    const dx=60;
+    // Draw field lines using RK4 integration
+    for(let li=0;li<mlines;li++){
+      const startAngle=(li/mlines)*Math.PI*2;
+      const r=18;
+      let x=cx+dx+Math.cos(startAngle)*r;
+      let y=cy+Math.sin(startAngle)*r;
+      ctx.beginPath(); ctx.moveTo(x,y);
+      for(let step=0;step<500;step++){
+        const {bx,by}=this.getField(x,y,cx,cy,mstr);
+        const blen=Math.hypot(bx,by);
+        if(blen<0.01)break;
+        const nx=bx/blen*4, ny=by/blen*4;
+        x+=nx; y+=ny;
+        if(x<10||x>W-10||y<10||y>H-10)break;
+        const toS=Math.hypot(x-(cx-dx),y-cy);
+        if(toS<20)break;
+        ctx.lineTo(x,y);
+      }
+      const hue=Math.round(li/mlines*240);
+      ctx.strokeStyle=`hsla(${hue},90%,65%,0.5)`;
+      ctx.lineWidth=1.5; ctx.stroke();
+    }
+    // Iron filing effect (dots following field)
+    for(let ix=0;ix<W;ix+=22){
+      for(let iy=0;iy<H;iy+=22){
+        const dist=Math.hypot(ix-cx,iy-cy);
+        if(dist<90)continue;
+        const {bx,by}=this.getField(ix,iy,cx,cy,mstr);
+        const blen=Math.hypot(bx,by)+0.001;
+        const nx=bx/blen, ny=by/blen;
+        const intensity=Math.min(1,mstr/(blen*5e5));
+        if(intensity<0.02)continue;
+        ctx.save(); ctx.translate(ix,iy); ctx.rotate(Math.atan2(ny,nx));
+        ctx.fillStyle=`rgba(180,200,255,${intensity*0.5})`;
+        ctx.fillRect(-5,-1,10,2);
+        ctx.restore();
+      }
+    }
+    // Magnet body
+    ctx.fillStyle='#222'; ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
+    ctx.fillRect(cx-dx-16,cy-16,32,32);
+    ctx.strokeRect(cx-dx-16,cy-16,32,32);
+    ctx.fillRect(cx+dx-16,cy-16,32,32);
+    ctx.strokeRect(cx+dx-16,cy-16,32,32);
+    // N pole
+    const ng=ctx.createRadialGradient(cx+dx,cy,0,cx+dx,cy,18);
+    ng.addColorStop(0,'rgba(255,50,50,0.9)');ng.addColorStop(1,'rgba(180,0,0,0.5)');
+    ctx.fillStyle=ng; ctx.fillRect(cx+dx-16,cy-16,32,32);
+    ctx.fillStyle='#fff'; ctx.font='bold 16px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('N',cx+dx,cy); 
+    // S pole
+    const sg=ctx.createRadialGradient(cx-dx,cy,0,cx-dx,cy,18);
+    sg.addColorStop(0,'rgba(50,100,255,0.9)');sg.addColorStop(1,'rgba(0,50,200,0.5)');
+    ctx.fillStyle=sg; ctx.fillRect(cx-dx-16,cy-16,32,32);
+    ctx.fillStyle='#fff'; ctx.fillText('S',cx-dx,cy);
+    ctx.textBaseline='alphabetic';
+    // Legend
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='11px monospace'; ctx.textAlign='left';
+    ctx.fillText('Field lines exit N → curve around → re-enter S',12,H-24);
+  }
+};
+
+// ---- ENGINE ----
+let lastTime = 0;
+function loop(ts) {
+  animId = requestAnimationFrame(loop);
+  const resized = syncSize();
+  if (!W || !H) return; // canvas not ready yet, keep waiting
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  if (resized) { initSim(); return; } // re-init sim if canvas was resized
+  if (!running) return;
+  ctx.fillStyle = 'rgba(4,4,14,0.25)'; ctx.fillRect(0, 0, W, H);
+  const sim = SIMS[currentSim];
+  if (sim) { sim.update(dt); sim.draw(); }
+}
+
+function toggleTheory(){
+  const p=document.getElementById('theoryPanel');
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function initSim(){
+  ctx.clearRect(0,0,W,H);
+  const sim=SIMS[currentSim];
+  if(!sim)return;
+  document.getElementById('simName').textContent=sim.name;
+  document.getElementById('simControls').innerHTML=sim.controls||'';
+  // Update theory panel
+  const tp=document.getElementById('theoryPanel');
+  if(sim.theory){ tp.innerHTML=sim.theory; }
+  else { tp.innerHTML='<span style="color:var(--text-dim)">// No theory description for this simulation yet.</span>'; }
+  // Set initial control values
+  Object.entries(sim.params).forEach(([k,v])=>{
+    const el=document.getElementById('c-'+k);
+    const vEl=document.getElementById('v-'+k);
+    if(el){el.value=v;}
+    if(vEl){vEl.textContent=v;}
+  });
+  sim.init();
+}
+
+function selectSim(el){
+  document.querySelectorAll('.sim-item').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  currentSim=el.dataset.sim;
+  initSim();
+}
+
+function updateCtrl(el,key){
+  const sim=SIMS[currentSim];
+  if(!sim)return;
+  sim.params[key]=parseFloat(el.value);
+  const vEl=document.getElementById('v-'+key);
+  if(vEl)vEl.textContent=el.value;
+  if(currentSim==='gravity'&&key==='n')sim.init();
+  if(currentSim==='collision'&&key==='n')sim.init();
+  if(currentSim==='electric'&&key==='n')sim.init();
+  if(currentSim==='gas'&&key==='n')sim.init();
+  if(currentSim==='gas'&&key==='T')sim.init();
+  // When projectile params change while ready/landed, reinit to update preview parabola
+  if(currentSim==='projectile'&&(proj.ready||proj.done))sim.init();
+  // When paused, force a clean redraw so static sims (prism, refraction, lens) update immediately
+  if(!running && sim.draw) {
+    ctx.fillStyle='#04040e'; ctx.fillRect(0,0,W,H);
+    sim.draw();
+  }
+}
+
+// Electric field charge dragging
+const simCanvas = document.getElementById('simCanvas');
+simCanvas.addEventListener('mousedown',e=>{if(SIMS[currentSim]&&SIMS[currentSim]._mousedown)SIMS[currentSim]._mousedown(e,simCanvas);});
+simCanvas.addEventListener('mouseup',e=>{if(SIMS[currentSim]&&SIMS[currentSim]._mouseup)SIMS[currentSim]._mouseup(e,simCanvas);});
+simCanvas.addEventListener('mousemove',e=>{if(SIMS[currentSim]&&SIMS[currentSim]._mousemove)SIMS[currentSim]._mousemove(e,simCanvas);});
+
+document.getElementById('playBtn').onclick=()=>{running=true;showToast('Simulation running','success');};
+document.getElementById('pauseBtn').onclick=()=>{running=false;showToast('Paused','info');};
+document.getElementById('resetBtn').onclick=()=>{initSim();showToast('Reset!','info');};
+
+// Start the loop — syncSize() inside loop handles waiting for real dimensions
+window.addEventListener('load', () => {
+  requestAnimationFrame(ts => { lastTime = ts; loop(ts); });
+});
+
+// ── Mobile sidebar toggle ──────────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('labSidebar');
+  const btn = document.getElementById('sidebarToggle');
+  const isOpen = sb.classList.toggle('open');
+  btn.textContent = isOpen ? '✕ CLOSE ▴' : '☰ EXPERIMENTS ▾';
+}
+
+// Auto-close sidebar when a sim is picked on mobile/tablet
+const _origSelectSim = selectSim;
+selectSim = function(el) {
+  _origSelectSim(el);
+  if (window.innerWidth <= 900) {
+    const sb = document.getElementById('labSidebar');
+    const btn = document.getElementById('sidebarToggle');
+    sb.classList.remove('open');
+    if (btn) btn.textContent = '☰ EXPERIMENTS ▾';
+  }
+};
+</script>
+</body>
+</html>

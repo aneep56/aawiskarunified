@@ -1,0 +1,3020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Block Coder — Aawiskar Playground</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Blockly -->
+  <script src="https://unpkg.com/blockly@10.4.3/blockly.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- TensorFlow.js + ml5.js for real AI blocks -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ml5@1.2.1/dist/ml5.min.js"></script>
+
+  <style>
+    /* ── Block Coder Layout ── */
+    .bc-root {
+      display: flex;
+      height: calc(100vh - 106px);
+      overflow: hidden;
+    }
+
+    /* LEFT SIDEBAR */
+    .bc-sidebar {
+      width: 230px;
+      min-width: 180px;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 10;
+    }
+    .bc-sidebar-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .bc-sidebar-header h3 {
+      font-family: var(--font-display);
+      font-size: .75rem;
+      color: var(--purple);
+      letter-spacing: .08em;
+      margin: 0 0 2px;
+    }
+    .bc-sidebar-header p { font-size: .72rem; color: var(--text-muted); margin: 0; }
+
+    .bc-project-list { padding: 10px 10px 0; }
+    .bc-project-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background .15s;
+      font-size: .78rem;
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+    }
+    .bc-project-item:hover { background: var(--bg-hover); }
+    .bc-project-item.active {
+      background: rgba(180,60,255,.12);
+      border-color: rgba(180,60,255,.35);
+      color: var(--purple);
+    }
+    .bc-project-item .pi-icon { font-size: 1rem; }
+    .bc-project-item .pi-label { flex: 1; font-weight: 500; }
+    .bc-project-item .pi-badge {
+      font-size: .62rem; background: var(--purple); color: #000;
+      padding: 1px 5px; border-radius: 10px; font-weight: 700;
+    }
+
+    .bc-divider { height: 1px; background: var(--border); margin: 10px 0; }
+
+    .bc-stat-box {
+      margin: 0 10px 10px;
+      background: rgba(180,60,255,.07);
+      border: 1px solid rgba(180,60,255,.2);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .bc-stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .bc-stat-label { font-size: .7rem; color: var(--text-muted); }
+    .bc-stat-val { font-size: .7rem; font-family: var(--font-mono); color: var(--purple); font-weight: 700; }
+
+    /* CENTER: Blockly + toolbar */
+    .bc-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .bc-toolbar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .bc-toolbar .tbar-title {
+      font-family: var(--font-display);
+      font-size: .72rem;
+      color: var(--text-muted);
+      letter-spacing: .06em;
+      margin-right: 4px;
+    }
+    .bc-toolbar .spacer { flex: 1; }
+    .bc-toolbar select {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: .75rem;
+      padding: 4px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .bc-workspace-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    #blocklyDiv {
+      position: absolute;
+      top:0;right:0;bottom:0;left:0;
+    }
+
+    /* RIGHT PANEL */
+    .bc-right {
+      width: 340px;
+      min-width: 260px;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    /* Tabs */
+    .bc-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-darker);
+    }
+    .bc-tab {
+      flex: 1;
+      padding: 9px 4px;
+      font-family: var(--font-mono);
+      font-size: .7rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      text-align: center;
+      border-bottom: 2px solid transparent;
+      transition: all .15s;
+      letter-spacing: .04em;
+    }
+    .bc-tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+    .bc-tab:hover:not(.active) { color: var(--text-primary); }
+
+    .bc-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .bc-panel.active { display: flex; }
+
+    /* PREVIEW panel */
+    #previewPanel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .preview-canvas-wrap {
+      flex: 1;
+      position: relative;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      display: block;
+      image-rendering: pixelated;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .preview-overlay {
+      position: absolute; top:0;right:0;bottom:0;left:0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,.7);
+      gap: 10px;
+    }
+    .preview-overlay .ov-icon { font-size: 2rem; }
+    .preview-overlay .ov-text {
+      font-family: var(--font-display);
+      font-size: .8rem;
+      color: var(--text-muted);
+      letter-spacing: .06em;
+    }
+    .preview-controls {
+      display: flex; gap: 6px;
+      padding: 8px 10px;
+      background: var(--bg-darker);
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .preview-controls .ctrl-key {
+      display: flex; align-items: center; gap: 4px;
+      font-size: .68rem; color: var(--text-muted);
+    }
+    .ctrl-key kbd {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: var(--font-mono);
+      font-size: .65rem;
+      color: var(--text-primary);
+    }
+
+    /* CODE panel */
+    #codePanel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-view-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 12px;
+      background: var(--bg-darker);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-view-header span { font-family: var(--font-mono); font-size: .7rem; color: var(--text-muted); }
+    #generatedCode {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      line-height: 1.7;
+      color: var(--cyan);
+      white-space: pre;
+      background: transparent;
+    }
+    #generatedCode .kw { color: var(--purple); }
+    #generatedCode .fn { color: #e6c07b; }
+    #generatedCode .str { color: #98c379; }
+    #generatedCode .num { color: #d19a66; }
+    #generatedCode .cmt { color: var(--text-muted); font-style: italic; }
+
+    /* CONSOLE panel */
+    #consolePanel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .console-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+    }
+    .console-line {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      line-height: 1.8;
+      padding: 1px 0;
+      border-bottom: 1px solid rgba(255,255,255,.03);
+    }
+    .console-line.info { color: var(--cyan); }
+    .console-line.success { color: var(--green); }
+    .console-line.warn { color: #f0b03a; }
+    .console-line.error { color: #ff5555; }
+    .console-line.log { color: var(--text-secondary); }
+    .console-input-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      border-top: 1px solid var(--border);
+    }
+    .console-prompt { font-family: var(--font-mono); font-size: .75rem; color: var(--green); }
+    .console-input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      color: var(--text-primary);
+    }
+
+    /* Blockly theme overrides */
+    .blocklyToolboxDiv {
+      background: var(--bg-darker) !important;
+      border-right: 1px solid var(--border) !important;
+    }
+    .blocklyTreeLabel {
+      font-family: var(--font-body) !important;
+      font-size: .78rem !important;
+    }
+    .blocklyMainBackground { stroke: var(--border) !important; }
+
+    /* XP Bar in sidebar */
+    .bc-xp-section {
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    /* Template cards */
+    .template-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 10px;
+    }
+    .template-card {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s;
+    }
+    .template-card:hover {
+      border-color: var(--purple);
+      background: rgba(180,60,255,.1);
+    }
+    .template-card .tc-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+    .template-card .tc-name { font-size: .68rem; color: var(--text-secondary); font-weight: 600; }
+
+    .bc-sidebar-section-title {
+      padding: 8px 12px 4px;
+      font-family: var(--font-display);
+      font-size: .62rem;
+      color: var(--text-muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    /* AI Blocks badge */
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      color: #fff;
+      font-size: .6rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      letter-spacing: .04em;
+    }
+
+    /* Running indicator */
+    .running-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1s infinite;
+      display: inline-block;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.7); }
+    }
+
+    /* Score overlay on canvas */
+    .game-info-bar {
+      display: flex; gap: 14px;
+      padding: 5px 12px;
+      background: rgba(0,0,0,.8);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: .7rem;
+    }
+    .game-info-item { display: flex; gap: 5px; align-items: center; }
+    .gi-label { color: var(--text-muted); }
+    .gi-val { color: var(--cyan); font-weight: 700; }
+
+    @media (max-width: 900px) {
+      .bc-sidebar { display: none; }
+      .bc-right { width: 280px; }
+    }
+    @media (max-width: 600px) {
+      .bc-root { flex-direction: column; }
+      .bc-right { width: 100%; height: 260px; border-left: none; border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="favicon.png" alt="Aawiskar Logo">
+    </div>
+    <div>
+      <div class="nav-logo-text">AAWISKAR <span>PLAYGROUND</span></div>
+      <div class="nav-logo-sub">A product of Aawiskar RoboLabs Pvt. Ltd.</div>
+    </div>
+  </a>
+  <button class="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-module-strip">
+  <a href="index.html" class="module-pill">🏠 Home</a>
+  <div class="module-pill-sep"></div>
+  <a href="python.html" class="module-pill">🐍 Python IDE</a>
+  <a href="ml.html" class="module-pill">🧠 ML Studio</a>
+  <a href="block.html" class="module-pill active">🎮 Block Coder</a>
+  <a href="arduino.html" class="module-pill">⚡ Arduino Gen</a>
+  <div class="module-pill-sep"></div>
+  <a href="cv.html" class="module-pill">👁️ CV Studio</a>
+  <a href="webide.html" class="module-pill">🌐 Web IDE</a>
+  <a href="physics.html" class="module-pill">🔬 Physics Lab</a>
+  <a href="maths.html" class="module-pill">📐 Maths Lab</a>
+  <a href="astronomy.html" class="module-pill">🪐 Astronomy</a>
+</div>
+<div id="mobile-menu" class="mobile-menu">
+  <button class="mobile-menu-close">✕</button>
+  <a href="index.html">🏠 Home</a>
+  <a href="python.html">🐍 Python IDE</a>
+  <a href="ml.html">🧠 ML Studio</a>
+  <a href="block.html">🎮 Block Coder</a>
+  <a href="arduino.html">⚡ Arduino Gen</a>
+  <a href="cv.html">👁️ CV Studio</a>
+  <a href="webide.html">🌐 Web IDE</a>
+  <a href="physics.html">🔬 Physics Lab</a>
+  <a href="maths.html">📐 Maths Lab</a>
+  <a href="astronomy.html">🪐 Astronomy</a>
+</div>
+
+<div class="bc-root">
+
+  <!-- SIDEBAR -->
+  <aside class="bc-sidebar">
+    <div class="bc-sidebar-header">
+      <h3>🎮 BLOCK CODER</h3>
+      <p>Drag blocks · learn to code</p>
+    </div>
+
+    <!-- Learning Projects -->
+    <div class="bc-sidebar-section-title">🌱 Beginner</div>
+    <div class="bc-project-list" id="projectList">
+      <div class="bc-project-item active" onclick="loadProject('hello')" data-proj="hello">
+        <span class="pi-icon">👋</span>
+        <span class="pi-label">Hello World</span>
+        <span class="pi-badge">NEW</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('variables')" data-proj="variables">
+        <span class="pi-icon">📦</span>
+        <span class="pi-label">Variables</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('loops')" data-proj="loops">
+        <span class="pi-icon">🔄</span>
+        <span class="pi-label">Loops</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('conditions')" data-proj="conditions">
+        <span class="pi-icon">🔀</span>
+        <span class="pi-label">If / Else</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('functions')" data-proj="functions">
+        <span class="pi-icon">⚙️</span>
+        <span class="pi-label">Functions</span>
+      </div>
+    </div>
+
+    <div class="bc-sidebar-section-title">🔢 Math & Logic</div>
+    <div class="bc-project-list">
+      <div class="bc-project-item" onclick="loadProject('calculator')" data-proj="calculator">
+        <span class="pi-icon">🧮</span>
+        <span class="pi-label">Calculator</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('countdown')" data-proj="countdown">
+        <span class="pi-icon">⏱️</span>
+        <span class="pi-label">Countdown Timer</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('fibonacci')" data-proj="fibonacci">
+        <span class="pi-icon">🐚</span>
+        <span class="pi-label">Fibonacci</span>
+      </div>
+    </div>
+
+    <div class="bc-sidebar-section-title">🎨 Drawing & Art</div>
+    <div class="bc-project-list">
+      <div class="bc-project-item" onclick="loadProject('shapes')" data-proj="shapes">
+        <span class="pi-icon">🔺</span>
+        <span class="pi-label">Draw Shapes</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('paint')" data-proj="paint">
+        <span class="pi-icon">🖌️</span>
+        <span class="pi-label">Paint Canvas</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('pattern')" data-proj="pattern">
+        <span class="pi-icon">🌟</span>
+        <span class="pi-label">Patterns</span>
+      </div>
+    </div>
+
+    <div class="bc-sidebar-section-title">🕹️ Mini Games</div>
+    <div class="bc-project-list">
+      <div class="bc-project-item" onclick="loadProject('quiz')" data-proj="quiz">
+        <span class="pi-icon">🧠</span>
+        <span class="pi-label">Quiz Game</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('dodge')" data-proj="dodge">
+        <span class="pi-icon">🎯</span>
+        <span class="pi-label">Dodge!</span>
+      </div>
+      <div class="bc-project-item" onclick="loadProject('catch')" data-proj="catch">
+        <span class="pi-icon">🪣</span>
+        <span class="pi-label">Catch It</span>
+      </div>
+    </div>
+
+    <div class="bc-sidebar-section-title">✏️ Free Build</div>
+    <div class="bc-project-list">
+      <div class="bc-project-item" onclick="loadProject('blank')" data-proj="blank">
+        <span class="pi-icon">✨</span>
+        <span class="pi-label">Blank Canvas</span>
+      </div>
+    </div>
+
+    <div class="bc-divider"></div>
+
+    <!-- Stats -->
+    <div class="bc-stat-box">
+      <div class="bc-stat-row">
+        <span class="bc-stat-label">Projects Run</span>
+        <span class="bc-stat-val" id="statRuns">0</span>
+      </div>
+      <div class="bc-stat-row">
+        <span class="bc-stat-label">Blocks Used</span>
+        <span class="bc-stat-val" id="statBlocks">0</span>
+      </div>
+    </div>
+
+    <!-- XP Bar -->
+    <div class="bc-xp-section">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:.68rem;color:var(--text-muted);">Level <span id="sideLevel">1</span></span>
+        <span style="font-size:.68rem;color:var(--purple);font-family:var(--font-mono);" id="sideXpText">0 XP</span>
+      </div>
+      <div style="height:4px;background:var(--bg-hover);border-radius:2px;overflow:hidden;">
+        <div id="sideXpBar" style="height:100%;background:linear-gradient(90deg,var(--purple),var(--pink));width:0%;transition:width .5s;"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WORKSPACE -->
+  <div class="bc-main">
+    <!-- Toolbar -->
+    <div class="bc-toolbar">
+      <span class="tbar-title">BLOCK CODER</span>
+      <button class="btn btn-purple" onclick="runCode()" id="runBtn" title="Run (Ctrl+Enter)">▶ Run</button>
+      <button class="btn btn-ghost" onclick="stopGame()" id="stopBtn" style="display:none;">⏹ Stop</button>
+      <button class="btn btn-ghost" onclick="clearWorkspace()">🗑 Clear</button>
+      <button class="btn btn-ghost" onclick="undoWorkspace()">↩ Undo</button>
+      <button class="btn btn-ghost" onclick="saveProject()">💾 Save</button>
+      <div class="spacer"></div>
+      <select id="themeSelect" onchange="changeBlocklyTheme(this.value)">
+        <option value="dark">Dark Theme</option>
+        <option value="classic">Classic</option>
+        <option value="neon">Neon</option>
+      </select>
+    </div>
+
+    <!-- Blockly Canvas -->
+    <div class="bc-workspace-wrap">
+      <div id="blocklyDiv"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="bc-right">
+    <div class="bc-tabs">
+      <button class="bc-tab active" onclick="switchBcTab('console', this)">⌘ Console</button>
+      <button class="bc-tab" onclick="switchBcTab('preview', this)">🎮 Preview</button>
+      <button class="bc-tab" onclick="switchBcTab('code', this)">{ } Code</button>
+    </div>
+
+    <!-- CONSOLE TAB (now first/default) -->
+    <div class="bc-panel active" id="bcTab-console">
+      <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%">
+        <div class="code-view-header" style="justify-content:space-between">
+          <span>📟 Output Console</span>
+          <button class="btn btn-ghost" style="font-size:.65rem;padding:2px 8px;" onclick="clearConsole()">Clear</button>
+        </div>
+        <div id="consoleOutput" style="flex:1;overflow-y:auto;padding:.75rem 1rem;font-family:var(--font-mono);font-size:.8rem;line-height:1.8;background:#04040e;">
+          <div class="console-line log" style="color:var(--neon-cyan)">// Block Coder Console — ready</div>
+          <div class="console-line log" style="color:var(--text-dim)">// Select a project and click ▶ Run</div>
+          <div class="console-line log" style="color:var(--text-dim)">// Use print blocks to see output here</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREVIEW TAB -->
+    <div class="bc-panel" id="bcTab-preview">
+      <div id="previewPanel" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="game-info-bar">
+          <div class="game-info-item"><span class="gi-label">Score</span><span class="gi-val" id="gameScore">0</span></div>
+          <div class="game-info-item"><span class="gi-label">Lives</span><span class="gi-val" id="gameLives">3</span></div>
+          <div class="game-info-item"><span class="gi-label">Level</span><span class="gi-val" id="gameLevel">1</span></div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:6px;" id="runningIndicator">
+            <span class="running-dot"></span>
+            <span style="font-size:.65rem;color:var(--green);">RUNNING</span>
+          </div>
+        </div>
+        <div class="preview-canvas-wrap">
+          <canvas id="gameCanvas" width="300" height="260"></canvas>
+          <div class="preview-overlay" id="previewOverlay">
+            <span class="ov-icon">🎮</span>
+            <span class="ov-text">USE DRAWING PROJECTS<br>TO SEE CANVAS OUTPUT</span>
+          </div>
+        </div>
+        <div class="preview-controls">
+          <div class="ctrl-key"><kbd>▲▼◀▶</kbd> Move</div>
+          <div class="ctrl-key"><kbd>Space</kbd> Action</div>
+          <div class="ctrl-key"><kbd>R</kbd> Restart</div>
+          <div class="ctrl-key"><kbd>Ctrl+Enter</kbd> Run</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CODE TAB -->
+    <div class="bc-panel" id="bcTab-code">
+      <div id="codePanel" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="code-view-header">
+          <span>generated_code.js</span>
+          <button class="btn btn-ghost" style="font-size:.65rem;padding:2px 8px;" onclick="copyGeneratedCode()">Copy</button>
+        </div>
+        <div id="generatedCode">// Run your blocks to see generated JavaScript here
+// ← Select a project from the sidebar
+// ↑ Click ▶ Run to execute</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BLOCKLY TOOLBOX XML -->
+<xml id="toolbox" style="display:none">
+  <category name="📢 Output" colour="#00b4d8">
+    <label text="— Print to Console —"></label>
+    <block type="bc_print">
+      <value name="TEXT"><block type="text"><field name="TEXT">Hello, World!</field></block></value>
+    </block>
+    <block type="bc_print_var"></block>
+    <block type="bc_print_num"></block>
+    <block type="bc_alert">
+      <value name="TEXT"><block type="text"><field name="TEXT">Done!</field></block></value>
+    </block>
+    <label text="— Canvas Draw —"></label>
+    <block type="bc_draw_text">
+      <field name="TEXT">Hello!</field><field name="X">10</field><field name="Y">20</field>
+      <field name="COLOR">white</field><field name="SIZE">16</field>
+    </block>
+  </category>
+  <category name="🔁 Logic" colour="#5c81a6">
+    <block type="controls_if"></block>
+    <block type="controls_ifelse"></block>
+    <block type="logic_compare"></block>
+    <block type="logic_operation"></block>
+    <block type="logic_negate"></block>
+    <block type="logic_boolean"></block>
+  </category>
+  <category name="🔄 Loops" colour="#5ba55b">
+    <block type="controls_repeat_ext">
+      <value name="TIMES"><block type="math_number"><field name="NUM">10</field></block></value>
+    </block>
+    <block type="controls_whileUntil"></block>
+    <block type="controls_for">
+      <value name="FROM"><block type="math_number"><field name="NUM">1</field></block></value>
+      <value name="TO"><block type="math_number"><field name="NUM">10</field></block></value>
+      <value name="BY"><block type="math_number"><field name="NUM">1</field></block></value>
+    </block>
+    <block type="controls_forEach"></block>
+  </category>
+  <category name="🔢 Math" colour="#5c68a6">
+    <block type="math_number"><field name="NUM">0</field></block>
+    <block type="math_arithmetic"></block>
+    <block type="math_single"></block>
+    <block type="math_round"></block>
+    <block type="math_modulo"></block>
+    <block type="math_random_int">
+      <value name="FROM"><block type="math_number"><field name="NUM">1</field></block></value>
+      <value name="TO"><block type="math_number"><field name="NUM">100</field></block></value>
+    </block>
+    <block type="math_constrain"></block>
+  </category>
+  <category name="📝 Variables" colour="#a55b80" custom="VARIABLE"></category>
+  <category name="⚙️ Functions" colour="#995ba5" custom="PROCEDURE"></category>
+  <category name="📋 Lists" colour="#745ba5">
+    <block type="lists_create_empty"></block>
+    <block type="lists_create_with"></block>
+    <block type="lists_repeat"></block>
+    <block type="lists_length"></block>
+    <block type="lists_getIndex"></block>
+    <block type="lists_setIndex"></block>
+    <block type="lists_indexOf"></block>
+  </category>
+  <category name="💬 Text" colour="#5ba58c">
+    <block type="text"><field name="TEXT">abc</field></block>
+    <block type="text_join"></block>
+    <block type="text_length"></block>
+    <block type="text_isEmpty"></block>
+    <block type="text_indexOf"></block>
+    <block type="text_charAt"></block>
+    <block type="text_getSubstring"></block>
+    <block type="text_changeCase"></block>
+    <block type="text_trim"></block>
+  </category>
+  <sep></sep>
+  <category name="✏️ Draw" colour="#10b981">
+    <block type="bc_setup">
+      <field name="WIDTH">300</field><field name="HEIGHT">260</field><field name="BG">black</field>
+    </block>
+    <block type="bc_clear"></block>
+    <block type="bc_fill_bg"><field name="COLOR">#060612</field></block>
+    <block type="bc_draw_rect">
+      <field name="X">10</field><field name="Y">10</field><field name="W">50</field><field name="H">50</field><field name="COLOR">#00d4ff</field>
+    </block>
+    <block type="bc_draw_circle">
+      <field name="X">100</field><field name="Y">100</field><field name="R">20</field><field name="COLOR">#ff00aa</field>
+    </block>
+    <block type="bc_draw_text">
+      <field name="TEXT">Hello!</field><field name="X">10</field><field name="Y">20</field><field name="COLOR">white</field><field name="SIZE">16</field>
+    </block>
+    <block type="bc_draw_line"></block>
+    <block type="bc_draw_emoji">
+      <field name="EMOJI">🚀</field><field name="X">100</field><field name="Y">100</field><field name="SIZE">24</field>
+    </block>
+  </category>
+  <category name="🎮 Game" colour="#7c3aed">
+    <block type="bc_game_loop"></block>
+    <block type="bc_on_keypress"></block>
+    <block type="bc_get_score"></block>
+    <block type="bc_set_score"></block>
+    <block type="bc_add_score"></block>
+    <block type="bc_set_lives"></block>
+    <block type="bc_game_over"></block>
+    <block type="bc_restart"></block>
+  </category>
+  <category name="🟦 Sprites" colour="#0ea5e9">
+    <block type="bc_create_sprite">
+      <field name="NAME">player</field><field name="X">150</field><field name="Y">200</field>
+      <field name="W">30</field><field name="H">30</field><field name="COLOR">#00d4ff</field>
+    </block>
+    <block type="bc_move_sprite"></block>
+    <block type="bc_set_pos"></block>
+    <block type="bc_get_x"></block>
+    <block type="bc_get_y"></block>
+    <block type="bc_draw_sprite"></block>
+    <block type="bc_check_bounds"></block>
+  </category>
+  <category name="💥 Physics" colour="#f59e0b">
+    <block type="bc_collide"></block>
+    <block type="bc_distance"></block>
+    <block type="bc_gravity"></block>
+    <block type="bc_bounce"></block>
+    <block type="bc_velocity"></block>
+  </category>
+  <category name="🔊 Sound" colour="#ec4899">
+    <block type="bc_play_beep"><field name="FREQ">440</field><field name="DUR">0.1</field></block>
+    <block type="bc_play_tone"></block>
+    <block type="bc_win_sound"></block>
+  </category>
+  <category name="📷 Camera / CV" colour="#e63946">
+    <label text="— Camera Setup —"></label>
+    <block type="bc_cam_start"></block>
+    <block type="bc_cam_stop"></block>
+    <block type="bc_cam_draw">
+      <field name="X">0</field><field name="Y">0</field><field name="W">300</field><field name="H">220</field>
+    </block>
+    <label text="— Object Detection (COCO-SSD) —"></label>
+    <block type="bc_obj_load"></block>
+    <block type="bc_obj_detect"></block>
+    <block type="bc_obj_count"></block>
+    <block type="bc_obj_label">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_obj_x">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_obj_y">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_obj_confidence">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_obj_draw_boxes"></block>
+    <label text="— Image Classifier (MobileNet) —"></label>
+    <block type="bc_img_load_classifier"></block>
+    <block type="bc_img_classify"></block>
+    <block type="bc_img_label"></block>
+    <block type="bc_img_confidence"></block>
+  </category>
+
+  <category name="🤚 Hand Gestures" colour="#f4a261">
+    <label text="— Hand Pose Detection —"></label>
+    <block type="bc_hand_start"></block>
+    <block type="bc_hand_detected"></block>
+    <block type="bc_hand_x"></block>
+    <block type="bc_hand_y"></block>
+    <block type="bc_hand_gesture"></block>
+    <block type="bc_hand_fingers_up"></block>
+    <block type="bc_hand_draw"></block>
+    <label text="— Finger Landmarks —"></label>
+    <block type="bc_finger_x">
+      <field name="FINGER">INDEX_FINGER_TIP</field>
+    </block>
+    <block type="bc_finger_y">
+      <field name="FINGER">INDEX_FINGER_TIP</field>
+    </block>
+    <label text="— Pose (Body) —"></label>
+    <block type="bc_pose_start"></block>
+    <block type="bc_pose_x">
+      <field name="PART">nose</field>
+    </block>
+    <block type="bc_pose_y">
+      <field name="PART">nose</field>
+    </block>
+  </category>
+
+  <category name="😊 Face Detection" colour="#e9c46a">
+    <label text="— Face Detection —"></label>
+    <block type="bc_face_start"></block>
+    <block type="bc_face_detected"></block>
+    <block type="bc_face_count"></block>
+    <block type="bc_face_x">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_face_y">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_face_width">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_face_draw_boxes"></block>
+    <label text="— Face Mesh —"></label>
+    <block type="bc_facemesh_start"></block>
+    <block type="bc_facemesh_point_x">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_facemesh_point_y">
+      <value name="IDX"><block type="math_number"><field name="NUM">0</field></block></value>
+    </block>
+    <block type="bc_facemesh_draw"></block>
+  </category>
+
+  <category name="🎤 Speech / Audio" colour="#2a9d8f">
+    <label text="— Speech Recognition —"></label>
+    <block type="bc_speech_start"></block>
+    <block type="bc_speech_stop"></block>
+    <block type="bc_speech_transcript"></block>
+    <block type="bc_speech_heard">
+      <field name="WORD">hello</field>
+    </block>
+    <block type="bc_speech_confidence"></block>
+    <label text="— Text to Speech —"></label>
+    <block type="bc_speak">
+      <value name="TEXT"><block type="text"><field name="TEXT">Hello world!</field></block></value>
+    </block>
+    <block type="bc_speak_rate">
+      <value name="TEXT"><block type="text"><field name="TEXT">Hello!</field></block></value>
+      <value name="RATE"><block type="math_number"><field name="NUM">1</field></block></value>
+    </block>
+    <block type="bc_speak_stop"></block>
+    <label text="— Audio Analysis —"></label>
+    <block type="bc_audio_start_mic"></block>
+    <block type="bc_audio_volume"></block>
+    <block type="bc_audio_is_loud">
+      <value name="THRESH"><block type="math_number"><field name="NUM">50</field></block></value>
+    </block>
+  </category>
+
+  <category name="📝 Text / NLP" colour="#457b9d">
+    <label text="— Sentiment Analysis —"></label>
+    <block type="bc_nlp_sentiment">
+      <value name="TEXT"><block type="text"><field name="TEXT">I love learning!</field></block></value>
+    </block>
+    <block type="bc_nlp_sentiment_score">
+      <value name="TEXT"><block type="text"><field name="TEXT">This is great!</field></block></value>
+    </block>
+    <label text="— Text Analysis —"></label>
+    <block type="bc_nlp_word_count">
+      <value name="TEXT"><block type="text"><field name="TEXT">Hello World</field></block></value>
+    </block>
+    <block type="bc_nlp_contains">
+      <value name="TEXT"><block type="text"><field name="TEXT">Hello World</field></block></value>
+      <value name="WORD"><block type="text"><field name="TEXT">hello</field></block></value>
+    </block>
+    <block type="bc_nlp_extract_numbers">
+      <value name="TEXT"><block type="text"><field name="TEXT">I have 3 cats and 2 dogs</field></block></value>
+    </block>
+    <block type="bc_nlp_language">
+      <value name="TEXT"><block type="text"><field name="TEXT">Bonjour le monde</field></block></value>
+    </block>
+    <label text="— Text Generation —"></label>
+    <block type="bc_nlp_autocomplete">
+      <value name="TEXT"><block type="text"><field name="TEXT">the cat</field></block></value>
+    </block>
+    <block type="bc_nlp_rhyme">
+      <value name="WORD"><block type="text"><field name="TEXT">cat</field></block></value>
+    </block>
+    <block type="bc_nlp_reverse">
+      <value name="TEXT"><block type="text"><field name="TEXT">Hello</field></block></value>
+    </block>
+    <label text="— Simulated AI Chat —"></label>
+    <block type="bc_ai_ask">
+      <value name="Q"><block type="text"><field name="TEXT">What is 2+2?</field></block></value>
+    </block>
+    <block type="bc_ai_sentiment_old">
+      <field name="TEXT">I love coding!</field>
+    </block>
+    <block type="bc_ai_classify_old">
+      <value name="NUM"><block type="math_number"><field name="NUM">42</field></block></value>
+    </block>
+  </category>
+
+  <category name="🤖 Game AI" colour="#6a0572">
+    <label text="— Movement AI —"></label>
+    <block type="bc_ai_chase_player">
+      <field name="NAME">enemy</field>
+      <value name="SPD"><block type="math_number"><field name="NUM">2</field></block></value>
+    </block>
+    <block type="bc_ai_move_towards">
+      <field name="NAME">enemy</field>
+      <value name="TX"><block type="math_number"><field name="NUM">150</field></block></value>
+      <value name="TY"><block type="math_number"><field name="NUM">130</field></block></value>
+      <value name="SPD"><block type="math_number"><field name="NUM">2</field></block></value>
+    </block>
+    <block type="bc_ai_avoid">
+      <field name="NAME">enemy</field>
+      <value name="TX"><block type="math_number"><field name="NUM">150</field></block></value>
+      <value name="TY"><block type="math_number"><field name="NUM">130</field></block></value>
+      <value name="SPD"><block type="math_number"><field name="NUM">2</field></block></value>
+    </block>
+    <block type="bc_ai_patrol">
+      <field name="NAME">guard</field>
+      <value name="X1"><block type="math_number"><field name="NUM">20</field></block></value>
+      <value name="Y1"><block type="math_number"><field name="NUM">130</field></block></value>
+      <value name="X2"><block type="math_number"><field name="NUM">280</field></block></value>
+      <value name="Y2"><block type="math_number"><field name="NUM">130</field></block></value>
+      <value name="SPD"><block type="math_number"><field name="NUM">2</field></block></value>
+    </block>
+    <block type="bc_ai_random_move">
+      <field name="NAME">ghost</field>
+      <value name="SPD"><block type="math_number"><field name="NUM">2</field></block></value>
+    </block>
+    <label text="— Combat AI —"></label>
+    <block type="bc_ai_shoot">
+      <field name="NAME">enemy</field>
+      <field name="TARGET">player</field>
+      <field name="COLOR">#ff006e</field>
+    </block>
+  </category>
+</xml>
+
+<script src="script.js"></script>
+<script>
+
+// ══════════════════════════════════════════════════
+//  GAME ENGINE (runs inside iframe/canvas)
+// ══════════════════════════════════════════════════
+const CANVAS = document.getElementById('gameCanvas');
+const CTX = CANVAS.getContext('2d');
+
+// Global game state accessible to generated code
+const GS = {
+  score: 0,
+  lives: 3,
+  level: 1,
+  running: false,
+  sprites: {},
+  keys: {},
+  loopFn: null,
+  animId: null,
+  audioCtx: null,
+};
+
+// Key tracking
+window.addEventListener('keydown', e => {
+  GS.keys[e.key] = true;
+  GS.keys[e.code] = true;
+  if (e.key === 'r' || e.key === 'R') { if (GS.running) restartGame(); }
+  if (e.ctrlKey && e.key === "Enter") runCode();
+});
+window.addEventListener('keyup', e => {
+  GS.keys[e.key] = false;
+  GS.keys[e.code] = false;
+});
+
+function getAudioCtx() {
+  if (!GS.audioCtx) GS.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return GS.audioCtx;
+}
+
+// ── Game API (called by generated code) ──
+const Game = {
+  setup(w, h, bg) {
+    CANVAS.width = w || 300;
+    CANVAS.height = h || 260;
+    GS.bg = bg || 'black';
+    GS.score = 0; GS.lives = 3; GS.level = 1;
+    updateGameHUD();
+  },
+  loop(fn) { GS.loopFn = fn; },
+  onKey(key, fn) {
+    window.addEventListener('keydown', e => { if (e.key === key || e.code === key) fn(); });
+  },
+  getScore() { return GS.score; },
+  setScore(v) { GS.score = v; updateGameHUD(); },
+  addScore(v) { GS.score += v; updateGameHUD(); },
+  setLives(v) { GS.lives = v; updateGameHUD(); },
+  getLives() { return GS.lives; },
+  setLevel(v) { GS.level = v; updateGameHUD(); },
+  gameOver(msg) {
+    GS.running = false;
+    cancelAnimationFrame(GS.animId);
+    CTX.fillStyle = 'rgba(0,0,0,0.7)';
+    CTX.fillRect(0,0,CANVAS.width,CANVAS.height);
+    CTX.fillStyle = '#ff4466';
+    CTX.font = 'bold 24px Orbitron, sans-serif';
+    CTX.textAlign = 'center';
+    CTX.fillText('GAME OVER', CANVAS.width/2, CANVAS.height/2 - 20);
+    CTX.fillStyle = '#aaa';
+    CTX.font = '14px Rajdhani, sans-serif';
+    CTX.fillText(msg || `Score: ${GS.score}`, CANVAS.width/2, CANVAS.height/2 + 15);
+    CTX.fillText('Press R to restart', CANVAS.width/2, CANVAS.height/2 + 35);
+    CTX.textAlign = 'left';
+    consoleLog(`💀 Game Over! Final score: ${GS.score}`, 'warn');
+    document.getElementById('runningIndicator').style.display = 'none';
+    document.getElementById('runBtn').style.display = '';
+    document.getElementById('stopBtn').style.display = 'none';
+  },
+
+  // ── Sprites ──
+  createSprite(name, x, y, w, h, color) {
+    GS.sprites[name] = { x, y, w, h, color, vx:0, vy:0, angle:0, visible:true };
+    return GS.sprites[name];
+  },
+  getSprite(name) { return GS.sprites[name]; },
+  moveSprite(name, dx, dy) {
+    const s = GS.sprites[name]; if (!s) return;
+    s.x += dx; s.y += dy;
+  },
+  setPos(name, x, y) {
+    const s = GS.sprites[name]; if (!s) return;
+    s.x = x; s.y = y;
+  },
+  getX(name) { return GS.sprites[name]?.x || 0; },
+  getY(name) { return GS.sprites[name]?.y || 0; },
+  rotate(name, deg) { if (GS.sprites[name]) GS.sprites[name].angle = deg; },
+  setVelocity(name, vx, vy) {
+    const s = GS.sprites[name]; if (!s) return;
+    s.vx = vx; s.vy = vy;
+  },
+  applyVelocity(name) {
+    const s = GS.sprites[name]; if (!s) return;
+    s.x += s.vx; s.y += s.vy;
+  },
+  drawSprite(name) {
+    const s = GS.sprites[name]; if (!s || !s.visible) return;
+    CTX.save();
+    CTX.translate(s.x + s.w/2, s.y + s.h/2);
+    CTX.rotate(s.angle * Math.PI/180);
+    CTX.fillStyle = s.color;
+    CTX.fillRect(-s.w/2, -s.h/2, s.w, s.h);
+    CTX.restore();
+  },
+  checkBounds(name, margin) {
+    const s = GS.sprites[name]; if (!s) return;
+    const m = margin || 0;
+    if (s.x < m) s.x = m;
+    if (s.y < m) s.y = m;
+    if (s.x + s.w > CANVAS.width - m) s.x = CANVAS.width - m - s.w;
+    if (s.y + s.h > CANVAS.height - m) s.y = CANVAS.height - m - s.h;
+  },
+
+  // ── Physics ──
+  collide(a, b) {
+    const sa = GS.sprites[a], sb = GS.sprites[b];
+    if (!sa || !sb) return false;
+    return sa.x < sb.x+sb.w && sa.x+sa.w > sb.x &&
+           sa.y < sb.y+sb.h && sa.y+sa.h > sb.y;
+  },
+  distance(a, b) {
+    const sa = GS.sprites[a], sb = GS.sprites[b];
+    if (!sa || !sb) return 9999;
+    const dx = (sa.x+sa.w/2)-(sb.x+sb.w/2);
+    const dy = (sa.y+sa.h/2)-(sb.y+sb.h/2);
+    return Math.sqrt(dx*dx+dy*dy);
+  },
+  applyGravity(name, strength) {
+    const s = GS.sprites[name]; if (!s) return;
+    s.vy = (s.vy || 0) + (strength || 0.5);
+    s.y += s.vy;
+  },
+  bounce(name) {
+    const s = GS.sprites[name]; if (!s) return;
+    if (s.x <= 0 || s.x+s.w >= CANVAS.width) s.vx = -(s.vx||0);
+    if (s.y <= 0 || s.y+s.h >= CANVAS.height) s.vy = -(s.vy||0);
+  },
+
+  // ── Draw ──
+  clear() {
+    CTX.fillStyle = GS.bg || 'black';
+    CTX.fillRect(0,0,CANVAS.width,CANVAS.height);
+  },
+  fillBg(color) {
+    CTX.fillStyle = color;
+    CTX.fillRect(0,0,CANVAS.width,CANVAS.height);
+  },
+  drawRect(x, y, w, h, color) {
+    CTX.fillStyle = color;
+    CTX.fillRect(x, y, w, h);
+  },
+  drawCircle(x, y, r, color) {
+    CTX.beginPath();
+    CTX.arc(x, y, r, 0, Math.PI*2);
+    CTX.fillStyle = color;
+    CTX.fill();
+  },
+  drawText(text, x, y, color, size) {
+    CTX.fillStyle = color || 'white';
+    CTX.font = `${size||16}px Rajdhani, sans-serif`;
+    CTX.fillText(text, x, y);
+  },
+  drawLine(x1, y1, x2, y2, color, width) {
+    CTX.beginPath();
+    CTX.moveTo(x1, y1);
+    CTX.lineTo(x2, y2);
+    CTX.strokeStyle = color || 'white';
+    CTX.lineWidth = width || 1;
+    CTX.stroke();
+  },
+  drawEmoji(emoji, x, y, size) {
+    CTX.font = `${size||24}px serif`;
+    CTX.fillText(emoji, x, y);
+  },
+
+  // ── Sound ──
+  playBeep(freq, dur) {
+    try {
+      const ac = getAudioCtx();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.frequency.value = freq || 440;
+      gain.gain.setValueAtTime(0.15, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (dur || 0.1));
+      osc.start(ac.currentTime);
+      osc.stop(ac.currentTime + (dur || 0.1));
+    } catch(e) {}
+  },
+  playTone(freq, dur, type) {
+    try {
+      const ac = getAudioCtx();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = type || 'sine';
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.12, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+      osc.start(); osc.stop(ac.currentTime + dur);
+    } catch(e) {}
+  },
+  playExplosion() {
+    try {
+      const ac = getAudioCtx();
+      const buf = ac.createBuffer(1, ac.sampleRate * 0.3, ac.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i=0; i<data.length; i++) data[i] = (Math.random()*2-1)*Math.exp(-i/5000);
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      src.connect(ac.destination);
+      src.start();
+    } catch(e) {}
+  },
+  playWin() {
+    [523,659,784,1047].forEach((f,i) => setTimeout(()=>Game.playBeep(f, 0.15), i*120));
+  },
+
+  // ── AI Blocks ──
+  aiMoveTowards(name, tx, ty, speed) {
+    const s = GS.sprites[name]; if (!s) return;
+    const dx = tx - s.x, dy = ty - s.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist > speed) { s.x += (dx/dist)*speed; s.y += (dy/dist)*speed; }
+  },
+  aiAvoid(name, tx, ty, speed) {
+    const s = GS.sprites[name]; if (!s) return;
+    const dx = s.x - tx, dy = s.y - ty;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist < 100) { s.x += (dx/dist)*speed; s.y += (dy/dist)*speed; }
+  },
+  aiChasePlayer(name, speed) {
+    const player = GS.sprites['player'];
+    if (!player) return;
+    Game.aiMoveTowards(name, player.x, player.y, speed);
+  },
+  aiPatrol(name, x1, y1, x2, y2, speed) {
+    const s = GS.sprites[name]; if (!s) return;
+    if (!s._patrol) s._patrol = { target: 'b' };
+    const tx = s._patrol.target === 'b' ? x2 : x1;
+    const ty = s._patrol.target === 'b' ? y2 : y1;
+    const dx = tx - s.x, dy = ty - s.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist < speed+1) s._patrol.target = s._patrol.target === 'b' ? 'a' : 'b';
+    else { s.x += (dx/dist)*speed; s.y += (dy/dist)*speed; }
+  },
+  aiRandomMove(name, speed) {
+    const s = GS.sprites[name]; if (!s) return;
+    if (!s._rdir || Math.random() < 0.02) s._rdir = Math.random()*Math.PI*2;
+    s.x += Math.cos(s._rdir)*speed;
+    s.y += Math.sin(s._rdir)*speed;
+  },
+  aiPathfind(name, tx, ty, speed) { Game.aiMoveTowards(name, tx, ty, speed); },
+  aiShoot(name, targetName, bulletColor) {
+    const s = GS.sprites[name]; const t = GS.sprites[targetName]; if (!s || !t) return;
+    const bname = `_bullet_${Date.now()}`;
+    Game.createSprite(bname, s.x+s.w/2, s.y+s.h/2, 6, 6, bulletColor || '#ff0');
+    const sp = GS.sprites[bname];
+    const dx = t.x-s.x, dy = t.y-s.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    sp.vx = (dx/dist)*5; sp.vy = (dy/dist)*5;
+    return bname;
+  },
+  aiSentiment(text) {
+    const pos = ['love','great','awesome','good','happy','fun','cool','nice'];
+    const neg = ['hate','bad','awful','terrible','sad','boring','ugly'];
+    const words = text.toLowerCase().split(/\s+/);
+    let score = 0;
+    words.forEach(w => { if(pos.includes(w)) score++; if(neg.includes(w)) score--; });
+    return score > 0 ? 'positive' : score < 0 ? 'negative' : 'neutral';
+  },
+  aiClassify(num) {
+    if (num < 0) return 'negative';
+    if (num === 0) return 'zero';
+    if (num < 10) return 'small';
+    if (num < 100) return 'medium';
+    return 'large';
+  },
+  isKeyDown(key) {
+    return GS.keys[key] || GS.keys['Key'+key.toUpperCase()] || false;
+  },
+};
+
+// ══════════════════════════════════════════════════
+//  BLOCKLY CUSTOM BLOCKS
+// ══════════════════════════════════════════════════
+function defineCustomBlocks() {
+  const defs = [
+    // OUTPUT / PRINT
+    { type:'bc_print', msg:'print %1',
+      args:[{type:'input_value',name:'TEXT'}],
+      colour:180, tooltip:'Print text to the console output', previousStatement:null, nextStatement:null },
+    { type:'bc_print_var', msg:'print variable %1',
+      args:[{type:'field_variable',name:'VAR'}],
+      colour:180, tooltip:'Print a variable value to console', previousStatement:null, nextStatement:null },
+    { type:'bc_print_num', msg:'print number %1',
+      args:[{type:'input_value',name:'NUM',check:'Number'}],
+      colour:180, previousStatement:null, nextStatement:null },
+    { type:'bc_alert', msg:'show message %1',
+      args:[{type:'input_value',name:'TEXT'}],
+      colour:180, tooltip:'Show a popup message', previousStatement:null, nextStatement:null },
+    // GAME
+    { type:'bc_setup', msg:'Setup canvas %1 × %2 background %3',
+      args:[{type:'field_number',name:'WIDTH',value:300},{type:'field_number',name:'HEIGHT',value:260},{type:'field_input',name:'BG',text:'black'}],
+      colour:110, tooltip:'Initialize the game canvas', nextStatement:null },
+    { type:'bc_game_loop', msg:'Every frame do %1 %2',
+      args:[{type:'input_dummy'},{type:'input_statement',name:'BODY'}],
+      colour:110, tooltip:'Code that runs every frame', previousStatement:null, nextStatement:null },
+    { type:'bc_on_keypress', msg:'When key %1 pressed do %2 %3',
+      args:[{type:'field_input',name:'KEY',text:'ArrowRight'},{type:'input_dummy'},{type:'input_statement',name:'BODY'}],
+      colour:110, previousStatement:null, nextStatement:null },
+    { type:'bc_get_score', msg:'score', output:'Number', colour:110 },
+    { type:'bc_set_score', msg:'set score to %1', args:[{type:'input_value',name:'VAL',check:'Number'}], colour:110, previousStatement:null, nextStatement:null },
+    { type:'bc_add_score', msg:'add %1 to score', args:[{type:'input_value',name:'VAL',check:'Number'}], colour:110, previousStatement:null, nextStatement:null },
+    { type:'bc_set_lives', msg:'set lives to %1', args:[{type:'input_value',name:'VAL',check:'Number'}], colour:110, previousStatement:null, nextStatement:null },
+    { type:'bc_game_over', msg:'game over with message %1', args:[{type:'input_value',name:'MSG',check:'String'}], colour:110, previousStatement:null, nextStatement:null },
+    { type:'bc_restart', msg:'restart game', colour:110, previousStatement:null, nextStatement:null },
+
+    // SPRITES
+    { type:'bc_create_sprite', msg:'create sprite %1 at x %2 y %3 size %4 × %5 color %6',
+      args:[{type:'field_input',name:'NAME',text:'player'},{type:'field_number',name:'X',value:150},{type:'field_number',name:'Y',value:200},{type:'field_number',name:'W',value:30},{type:'field_number',name:'H',value:30},{type:'field_colour',name:'COLOR',colour:'#00d4ff'}],
+      colour:200, previousStatement:null, nextStatement:null },
+    { type:'bc_move_sprite', msg:'move sprite %1 by dx %2 dy %3',
+      args:[{type:'field_input',name:'NAME',text:'player'},{type:'input_value',name:'DX',check:'Number'},{type:'input_value',name:'DY',check:'Number'}],
+      colour:200, previousStatement:null, nextStatement:null },
+    { type:'bc_set_pos', msg:'set %1 position to x %2 y %3',
+      args:[{type:'field_input',name:'NAME',text:'player'},{type:'input_value',name:'X',check:'Number'},{type:'input_value',name:'Y',check:'Number'}],
+      colour:200, previousStatement:null, nextStatement:null },
+    { type:'bc_get_x', msg:'x of %1', args:[{type:'field_input',name:'NAME',text:'player'}], output:'Number', colour:200 },
+    { type:'bc_get_y', msg:'y of %1', args:[{type:'field_input',name:'NAME',text:'player'}], output:'Number', colour:200 },
+    { type:'bc_draw_sprite', msg:'draw sprite %1', args:[{type:'field_input',name:'NAME',text:'player'}], colour:200, previousStatement:null, nextStatement:null },
+    { type:'bc_rotate_sprite', msg:'rotate %1 by %2 degrees', args:[{type:'field_input',name:'NAME',text:'player'},{type:'input_value',name:'DEG',check:'Number'}], colour:200, previousStatement:null, nextStatement:null },
+    { type:'bc_check_bounds', msg:'keep %1 in bounds margin %2', args:[{type:'field_input',name:'NAME',text:'player'},{type:'input_value',name:'MARGIN',check:'Number'}], colour:200, previousStatement:null, nextStatement:null },
+
+    // PHYSICS
+    { type:'bc_collide', msg:'%1 collides with %2',
+      args:[{type:'field_input',name:'A',text:'player'},{type:'field_input',name:'B',text:'enemy'}],
+      output:'Boolean', colour:45 },
+    { type:'bc_distance', msg:'distance from %1 to %2',
+      args:[{type:'field_input',name:'A',text:'player'},{type:'field_input',name:'B',text:'goal'}],
+      output:'Number', colour:45 },
+    { type:'bc_gravity', msg:'apply gravity to %1 strength %2',
+      args:[{type:'field_input',name:'NAME',text:'player'},{type:'input_value',name:'STR',check:'Number'}],
+      colour:45, previousStatement:null, nextStatement:null },
+    { type:'bc_bounce', msg:'bounce %1 off walls', args:[{type:'field_input',name:'NAME',text:'ball'}], colour:45, previousStatement:null, nextStatement:null },
+    { type:'bc_velocity', msg:'set %1 velocity to vx %2 vy %3',
+      args:[{type:'field_input',name:'NAME',text:'ball'},{type:'input_value',name:'VX',check:'Number'},{type:'input_value',name:'VY',check:'Number'}],
+      colour:45, previousStatement:null, nextStatement:null },
+
+    // DRAW
+    { type:'bc_clear', msg:'clear canvas', colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_fill_bg', msg:'fill background %1', args:[{type:'field_colour',name:'COLOR',colour:'#060612'}], colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_draw_rect', msg:'draw rect x %1 y %2 w %3 h %4 color %5',
+      args:[{type:'field_number',name:'X',value:10},{type:'field_number',name:'Y',value:10},{type:'field_number',name:'W',value:50},{type:'field_number',name:'H',value:50},{type:'field_colour',name:'COLOR',colour:'#00d4ff'}],
+      colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_draw_circle', msg:'draw circle x %1 y %2 radius %3 color %4',
+      args:[{type:'field_number',name:'X',value:100},{type:'field_number',name:'Y',value:100},{type:'field_number',name:'R',value:20},{type:'field_colour',name:'COLOR',colour:'#ff00aa'}],
+      colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_draw_text', msg:'draw text %1 at x %2 y %3 color %4 size %5',
+      args:[{type:'field_input',name:'TEXT',text:'Hello!'},{type:'field_number',name:'X',value:10},{type:'field_number',name:'Y',value:20},{type:'field_colour',name:'COLOR',colour:'#ffffff'},{type:'field_number',name:'SIZE',value:16}],
+      colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_draw_line', msg:'draw line from %1 %2 to %3 %4 color %5',
+      args:[{type:'input_value',name:'X1',check:'Number'},{type:'input_value',name:'Y1',check:'Number'},{type:'input_value',name:'X2',check:'Number'},{type:'input_value',name:'Y2',check:'Number'},{type:'field_colour',name:'COLOR',colour:'#ffffff'}],
+      colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_draw_emoji', msg:'draw emoji %1 at x %2 y %3 size %4',
+      args:[{type:'field_input',name:'EMOJI',text:'🚀'},{type:'field_number',name:'X',value:100},{type:'field_number',name:'Y',value:100},{type:'field_number',name:'SIZE',value:24}],
+      colour:160, previousStatement:null, nextStatement:null },
+
+    // SOUND
+    { type:'bc_play_beep', msg:'play beep freq %1 Hz duration %2 s',
+      args:[{type:'field_number',name:'FREQ',value:440},{type:'field_number',name:'DUR',value:0.1}],
+      colour:330, previousStatement:null, nextStatement:null },
+    { type:'bc_play_tone', msg:'play tone %1 Hz for %2 s type %3',
+      args:[{type:'input_value',name:'FREQ',check:'Number'},{type:'input_value',name:'DUR',check:'Number'},{type:'field_dropdown',name:'TYPE',options:[['sine','sine'],['square','square'],['sawtooth','sawtooth'],['triangle','triangle']]}],
+      colour:330, previousStatement:null, nextStatement:null },
+    { type:'bc_explosion_sound', msg:'play explosion sound', colour:330, previousStatement:null, nextStatement:null },
+    { type:'bc_win_sound', msg:'play win sound', colour:330, previousStatement:null, nextStatement:null },
+
+    // ── AI: Game AI (kept) ──
+    { type:'bc_ai_move_towards', msg:'Game AI: move %1 towards x %2 y %3 speed %4',
+      args:[{type:'field_input',name:'NAME',text:'enemy'},{type:'input_value',name:'TX',check:'Number'},{type:'input_value',name:'TY',check:'Number'},{type:'input_value',name:'SPD',check:'Number'}],
+      colour:90, previousStatement:null, nextStatement:null },
+    { type:'bc_ai_avoid', msg:'Game AI: %1 avoid x %2 y %3 speed %4',
+      args:[{type:'field_input',name:'NAME',text:'player'},{type:'input_value',name:'TX',check:'Number'},{type:'input_value',name:'TY',check:'Number'},{type:'input_value',name:'SPD',check:'Number'}],
+      colour:90, previousStatement:null, nextStatement:null },
+    { type:'bc_ai_pathfind', msg:'Game AI: pathfind %1 to x %2 y %3 speed %4',
+      args:[{type:'field_input',name:'NAME',text:'enemy'},{type:'input_value',name:'TX',check:'Number'},{type:'input_value',name:'TY',check:'Number'},{type:'input_value',name:'SPD',check:'Number'}],
+      colour:90, previousStatement:null, nextStatement:null },
+    { type:'bc_ai_random_move', msg:'Game AI: random walk %1 speed %2',
+      args:[{type:'field_input',name:'NAME',text:'ghost'},{type:'input_value',name:'SPD',check:'Number'}],
+      colour:90, previousStatement:null, nextStatement:null },
+    { type:'bc_ai_chase_player', msg:'Game AI: %1 chase player speed %2',
+      args:[{type:'field_input',name:'NAME',text:'enemy'},{type:'input_value',name:'SPD',check:'Number'}],
+      colour:90, previousStatement:null, nextStatement:null },
+    { type:'bc_ai_patrol', msg:'Game AI: patrol %1 from %2 %3 to %4 %5 speed %6',
+      args:[{type:'field_input',name:'NAME',text:'guard'},{type:'input_value',name:'X1',check:'Number'},{type:'input_value',name:'Y1',check:'Number'},{type:'input_value',name:'X2',check:'Number'},{type:'input_value',name:'Y2',check:'Number'},{type:'input_value',name:'SPD',check:'Number'}],
+      colour:90, previousStatement:null, nextStatement:null },
+    { type:'bc_ai_shoot', msg:'Game AI: %1 shoot at %2 color %3',
+      args:[{type:'field_input',name:'NAME',text:'turret'},{type:'field_input',name:'TARGET',text:'player'},{type:'field_colour',name:'COLOR',colour:'#ffff00'}],
+      colour:90, previousStatement:null, nextStatement:null },
+    // old sentiment/classify kept as aliases
+    { type:'bc_ai_sentiment_old', msg:'AI: sentiment of "%1"',
+      args:[{type:'field_input',name:'TEXT',text:'I love this!'}], output:'String', colour:90 },
+    { type:'bc_ai_classify_old', msg:'AI: classify number %1',
+      args:[{type:'input_value',name:'NUM',check:'Number'}], output:'String', colour:90 },
+
+    // ── CAMERA / COMPUTER VISION ──
+    { type:'bc_cam_start', msg:'📷 start camera', colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_cam_stop', msg:'📷 stop camera', colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_cam_draw', msg:'📷 draw camera at x %1 y %2 width %3 height %4',
+      args:[{type:'field_number',name:'X',value:0},{type:'field_number',name:'Y',value:0},{type:'field_number',name:'W',value:300},{type:'field_number',name:'H',value:220}],
+      colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_obj_load', msg:'👁️ load object detector', colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_obj_detect', msg:'👁️ detect objects', colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_obj_count', msg:'👁️ number of detected objects', output:'Number', colour:350 },
+    { type:'bc_obj_label', msg:'👁️ label of object %1',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'String', colour:350 },
+    { type:'bc_obj_x', msg:'👁️ x of object %1',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:350 },
+    { type:'bc_obj_y', msg:'👁️ y of object %1',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:350 },
+    { type:'bc_obj_confidence', msg:'👁️ confidence of object %1 (%)',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:350 },
+    { type:'bc_obj_draw_boxes', msg:'👁️ draw detection boxes', colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_img_load_classifier', msg:'🖼️ load image classifier', colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_img_classify', msg:'🖼️ classify camera image', colour:350, previousStatement:null, nextStatement:null },
+    { type:'bc_img_label', msg:'🖼️ top classification label', output:'String', colour:350 },
+    { type:'bc_img_confidence', msg:'🖼️ classification confidence (%)', output:'Number', colour:350 },
+
+    // ── HAND GESTURES ──
+    { type:'bc_hand_start', msg:'🤚 start hand detection', colour:30, previousStatement:null, nextStatement:null },
+    { type:'bc_hand_detected', msg:'🤚 hand is detected', output:'Boolean', colour:30 },
+    { type:'bc_hand_x', msg:'🤚 hand center x', output:'Number', colour:30 },
+    { type:'bc_hand_y', msg:'🤚 hand center y', output:'Number', colour:30 },
+    { type:'bc_hand_gesture', msg:'🤚 hand gesture', output:'String', colour:30 },
+    { type:'bc_hand_fingers_up', msg:'🤚 fingers up count', output:'Number', colour:30 },
+    { type:'bc_hand_draw', msg:'🤚 draw hand skeleton', colour:30, previousStatement:null, nextStatement:null },
+    { type:'bc_finger_x', msg:'☝️ %1 x',
+      args:[{type:'field_dropdown',name:'FINGER',options:[['Index Tip','INDEX_FINGER_TIP'],['Thumb Tip','THUMB_TIP'],['Middle Tip','MIDDLE_FINGER_TIP'],['Ring Tip','RING_FINGER_TIP'],['Pinky Tip','PINKY_TIP'],['Wrist','WRIST']]}],
+      output:'Number', colour:30 },
+    { type:'bc_finger_y', msg:'☝️ %1 y',
+      args:[{type:'field_dropdown',name:'FINGER',options:[['Index Tip','INDEX_FINGER_TIP'],['Thumb Tip','THUMB_TIP'],['Middle Tip','MIDDLE_FINGER_TIP'],['Ring Tip','RING_FINGER_TIP'],['Pinky Tip','PINKY_TIP'],['Wrist','WRIST']]}],
+      output:'Number', colour:30 },
+    { type:'bc_pose_start', msg:'🏃 start pose detection', colour:30, previousStatement:null, nextStatement:null },
+    { type:'bc_pose_x', msg:'🏃 %1 x',
+      args:[{type:'field_dropdown',name:'PART',options:[['nose','nose'],['left eye','left_eye'],['right eye','right_eye'],['left shoulder','left_shoulder'],['right shoulder','right_shoulder'],['left wrist','left_wrist'],['right wrist','right_wrist'],['left hip','left_hip'],['right hip','right_hip']]}],
+      output:'Number', colour:30 },
+    { type:'bc_pose_y', msg:'🏃 %1 y',
+      args:[{type:'field_dropdown',name:'PART',options:[['nose','nose'],['left eye','left_eye'],['right eye','right_eye'],['left shoulder','left_shoulder'],['right shoulder','right_shoulder'],['left wrist','left_wrist'],['right wrist','right_wrist'],['left hip','left_hip'],['right hip','right_hip']]}],
+      output:'Number', colour:30 },
+
+    // ── FACE DETECTION ──
+    { type:'bc_face_start', msg:'😊 start face detection', colour:55, previousStatement:null, nextStatement:null },
+    { type:'bc_face_detected', msg:'😊 face is detected', output:'Boolean', colour:55 },
+    { type:'bc_face_count', msg:'😊 number of faces', output:'Number', colour:55 },
+    { type:'bc_face_x', msg:'😊 face %1 center x',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:55 },
+    { type:'bc_face_y', msg:'😊 face %1 center y',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:55 },
+    { type:'bc_face_width', msg:'😊 face %1 width',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:55 },
+    { type:'bc_face_draw_boxes', msg:'😊 draw face boxes', colour:55, previousStatement:null, nextStatement:null },
+    { type:'bc_facemesh_start', msg:'🕸️ start face mesh', colour:55, previousStatement:null, nextStatement:null },
+    { type:'bc_facemesh_point_x', msg:'🕸️ face mesh point %1 x',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:55 },
+    { type:'bc_facemesh_point_y', msg:'🕸️ face mesh point %1 y',
+      args:[{type:'input_value',name:'IDX',check:'Number'}], output:'Number', colour:55 },
+    { type:'bc_facemesh_draw', msg:'🕸️ draw face mesh', colour:55, previousStatement:null, nextStatement:null },
+
+    // ── SPEECH / AUDIO ──
+    { type:'bc_speech_start', msg:'🎤 start listening', colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_speech_stop', msg:'🎤 stop listening', colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_speech_transcript', msg:'🎤 last heard text', output:'String', colour:160 },
+    { type:'bc_speech_heard', msg:'🎤 heard word "%1"',
+      args:[{type:'field_input',name:'WORD',text:'hello'}], output:'Boolean', colour:160 },
+    { type:'bc_speech_confidence', msg:'🎤 speech confidence (%)', output:'Number', colour:160 },
+    { type:'bc_speak', msg:'🔊 speak %1',
+      args:[{type:'input_value',name:'TEXT'}], colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_speak_rate', msg:'🔊 speak %1 at rate %2',
+      args:[{type:'input_value',name:'TEXT'},{type:'input_value',name:'RATE',check:'Number'}],
+      colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_speak_stop', msg:'🔊 stop speaking', colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_audio_start_mic', msg:'🎙️ start microphone analysis', colour:160, previousStatement:null, nextStatement:null },
+    { type:'bc_audio_volume', msg:'🎙️ microphone volume (0-100)', output:'Number', colour:160 },
+    { type:'bc_audio_is_loud', msg:'🎙️ volume above %1',
+      args:[{type:'input_value',name:'THRESH',check:'Number'}], output:'Boolean', colour:160 },
+
+    // ── TEXT / NLP ──
+    { type:'bc_nlp_sentiment', msg:'📝 sentiment of %1',
+      args:[{type:'input_value',name:'TEXT'}], output:'String', colour:210 },
+    { type:'bc_nlp_sentiment_score', msg:'📝 sentiment score of %1',
+      args:[{type:'input_value',name:'TEXT'}], output:'Number', colour:210 },
+    { type:'bc_nlp_word_count', msg:'📝 word count of %1',
+      args:[{type:'input_value',name:'TEXT'}], output:'Number', colour:210 },
+    { type:'bc_nlp_contains', msg:'📝 %1 contains word %2',
+      args:[{type:'input_value',name:'TEXT'},{type:'input_value',name:'WORD'}], output:'Boolean', colour:210 },
+    { type:'bc_nlp_extract_numbers', msg:'📝 first number in %1',
+      args:[{type:'input_value',name:'TEXT'}], output:'Number', colour:210 },
+    { type:'bc_nlp_language', msg:'📝 detect language of %1',
+      args:[{type:'input_value',name:'TEXT'}], output:'String', colour:210 },
+    { type:'bc_nlp_autocomplete', msg:'📝 autocomplete "%1"',
+      args:[{type:'input_value',name:'TEXT'}], output:'String', colour:210 },
+    { type:'bc_nlp_rhyme', msg:'📝 word that rhymes with %1',
+      args:[{type:'input_value',name:'WORD'}], output:'String', colour:210 },
+    { type:'bc_nlp_reverse', msg:'📝 reverse text %1',
+      args:[{type:'input_value',name:'TEXT'}], output:'String', colour:210 },
+    { type:'bc_ai_ask', msg:'🤖 ask AI: %1',
+      args:[{type:'input_value',name:'Q'}], output:'String', colour:210 },
+  ];
+
+  defs.forEach(def => {
+    if (Blockly.Blocks[def.type]) return;
+    Blockly.Blocks[def.type] = {
+      init() {
+        this.jsonInit({
+          type: def.type,
+          message0: def.msg,
+          args0: def.args || [],
+          colour: def.colour,
+          tooltip: def.tooltip || '',
+          previousStatement: def.previousStatement,
+          nextStatement: def.nextStatement,
+          output: def.output,
+        });
+      }
+    };
+  });
+}
+
+// ── Code Generators ──
+function defineGenerators() {
+  const J = Blockly.JavaScript || Blockly.javascriptGenerator;
+  if (!J) return;
+
+  // Game
+  // OUTPUT
+  J.forBlock['bc_print'] = (b,g) => `__print__(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"});\n`;
+  J.forBlock['bc_print_var'] = (b,g) => `__print__(${g.getVariableName(b.getFieldValue('VAR'))});\n`;
+  J.forBlock['bc_print_num'] = (b,g) => `__print__(${g.valueToCode(b,'NUM',J.ORDER_NONE)||'0'});\n`;
+  J.forBlock['bc_alert'] = (b,g) => `__alert__(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"});\n`;
+
+  J.forBlock['bc_setup'] = (b,g) => `Game.setup(${b.getFieldValue('WIDTH')}, ${b.getFieldValue('HEIGHT')}, '${b.getFieldValue('BG')}');\n`;
+  J.forBlock['bc_game_loop'] = (b,g) => `Game.loop(function(){\n${g.statementToCode(b,'BODY')}});\n`;
+  J.forBlock['bc_on_keypress'] = (b,g) => `Game.onKey('${b.getFieldValue('KEY')}', function(){\n${g.statementToCode(b,'BODY')}});\n`;
+  J.forBlock['bc_get_score'] = (b,g) => ['Game.getScore()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_set_score'] = (b,g) => `Game.setScore(${g.valueToCode(b,'VAL',J.ORDER_NONE)||0});\n`;
+  J.forBlock['bc_add_score'] = (b,g) => `Game.addScore(${g.valueToCode(b,'VAL',J.ORDER_NONE)||0});\n`;
+  J.forBlock['bc_set_lives'] = (b,g) => `Game.setLives(${g.valueToCode(b,'VAL',J.ORDER_NONE)||0});\n`;
+  J.forBlock['bc_game_over'] = (b,g) => `Game.gameOver(${g.valueToCode(b,'MSG',J.ORDER_NONE)||"''"});\n`;
+  J.forBlock['bc_restart'] = () => `restartGame();\n`;
+
+  // Sprites
+  J.forBlock['bc_create_sprite'] = (b,g) => `Game.createSprite('${b.getFieldValue('NAME')}', ${b.getFieldValue('X')}, ${b.getFieldValue('Y')}, ${b.getFieldValue('W')}, ${b.getFieldValue('H')}, '${b.getFieldValue('COLOR')}');\n`;
+  J.forBlock['bc_move_sprite'] = (b,g) => `Game.moveSprite('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'DX',J.ORDER_NONE)||0}, ${g.valueToCode(b,'DY',J.ORDER_NONE)||0});\n`;
+  J.forBlock['bc_set_pos'] = (b,g) => `Game.setPos('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'X',J.ORDER_NONE)||0}, ${g.valueToCode(b,'Y',J.ORDER_NONE)||0});\n`;
+  J.forBlock['bc_get_x'] = (b,g) => [`Game.getX('${b.getFieldValue('NAME')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_get_y'] = (b,g) => [`Game.getY('${b.getFieldValue('NAME')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_draw_sprite'] = (b,g) => `Game.drawSprite('${b.getFieldValue('NAME')}');\n`;
+  J.forBlock['bc_rotate_sprite'] = (b,g) => `Game.rotate('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'DEG',J.ORDER_NONE)||0});\n`;
+  J.forBlock['bc_check_bounds'] = (b,g) => `Game.checkBounds('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'MARGIN',J.ORDER_NONE)||0});\n`;
+
+  // Physics
+  J.forBlock['bc_collide'] = (b,g) => [`Game.collide('${b.getFieldValue('A')}','${b.getFieldValue('B')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_distance'] = (b,g) => [`Game.distance('${b.getFieldValue('A')}','${b.getFieldValue('B')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_gravity'] = (b,g) => `Game.applyGravity('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'STR',J.ORDER_NONE)||0.5});\n`;
+  J.forBlock['bc_bounce'] = (b,g) => `Game.bounce('${b.getFieldValue('NAME')}');\n`;
+  J.forBlock['bc_velocity'] = (b,g) => `Game.setVelocity('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'VX',J.ORDER_NONE)||0}, ${g.valueToCode(b,'VY',J.ORDER_NONE)||0});\n`;
+
+  // Draw
+  J.forBlock['bc_clear'] = () => 'Game.clear();\n';
+  J.forBlock['bc_fill_bg'] = (b,g) => `Game.fillBg('${b.getFieldValue('COLOR')}');\n`;
+  J.forBlock['bc_draw_rect'] = (b,g) => `Game.drawRect(${b.getFieldValue('X')}, ${b.getFieldValue('Y')}, ${b.getFieldValue('W')}, ${b.getFieldValue('H')}, '${b.getFieldValue('COLOR')}');\n`;
+  J.forBlock['bc_draw_circle'] = (b,g) => `Game.drawCircle(${b.getFieldValue('X')}, ${b.getFieldValue('Y')}, ${b.getFieldValue('R')}, '${b.getFieldValue('COLOR')}');\n`;
+  J.forBlock['bc_draw_text'] = (b,g) => `Game.drawText('${b.getFieldValue('TEXT')}', ${b.getFieldValue('X')}, ${b.getFieldValue('Y')}, '${b.getFieldValue('COLOR')}', ${b.getFieldValue('SIZE')});\n`;
+  J.forBlock['bc_draw_line'] = (b,g) => `Game.drawLine(${g.valueToCode(b,'X1',J.ORDER_NONE)||0}, ${g.valueToCode(b,'Y1',J.ORDER_NONE)||0}, ${g.valueToCode(b,'X2',J.ORDER_NONE)||0}, ${g.valueToCode(b,'Y2',J.ORDER_NONE)||0}, '${b.getFieldValue('COLOR')}');\n`;
+  J.forBlock['bc_draw_emoji'] = (b,g) => `Game.drawEmoji('${b.getFieldValue('EMOJI')}', ${b.getFieldValue('X')}, ${b.getFieldValue('Y')}, ${b.getFieldValue('SIZE')});\n`;
+
+  // Sound
+  J.forBlock['bc_play_beep'] = (b,g) => `Game.playBeep(${b.getFieldValue('FREQ')}, ${b.getFieldValue('DUR')});\n`;
+  J.forBlock['bc_play_tone'] = (b,g) => `Game.playTone(${g.valueToCode(b,'FREQ',J.ORDER_NONE)||440}, ${g.valueToCode(b,'DUR',J.ORDER_NONE)||0.2}, '${b.getFieldValue('TYPE')}');\n`;
+  J.forBlock['bc_explosion_sound'] = () => 'Game.playExplosion();\n';
+  J.forBlock['bc_win_sound'] = () => 'Game.playWin();\n';
+
+  // ── Game AI generators ──
+  J.forBlock['bc_ai_move_towards'] = (b,g) => `Game.aiMoveTowards('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'TX',J.ORDER_NONE)||0}, ${g.valueToCode(b,'TY',J.ORDER_NONE)||0}, ${g.valueToCode(b,'SPD',J.ORDER_NONE)||2});\n`;
+  J.forBlock['bc_ai_avoid'] = (b,g) => `Game.aiAvoid('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'TX',J.ORDER_NONE)||0}, ${g.valueToCode(b,'TY',J.ORDER_NONE)||0}, ${g.valueToCode(b,'SPD',J.ORDER_NONE)||2});\n`;
+  J.forBlock['bc_ai_pathfind'] = (b,g) => `Game.aiPathfind('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'TX',J.ORDER_NONE)||0}, ${g.valueToCode(b,'TY',J.ORDER_NONE)||0}, ${g.valueToCode(b,'SPD',J.ORDER_NONE)||2});\n`;
+  J.forBlock['bc_ai_random_move'] = (b,g) => `Game.aiRandomMove('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'SPD',J.ORDER_NONE)||2});\n`;
+  J.forBlock['bc_ai_chase_player'] = (b,g) => `Game.aiChasePlayer('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'SPD',J.ORDER_NONE)||2});\n`;
+  J.forBlock['bc_ai_patrol'] = (b,g) => `Game.aiPatrol('${b.getFieldValue('NAME')}', ${g.valueToCode(b,'X1',J.ORDER_NONE)||0}, ${g.valueToCode(b,'Y1',J.ORDER_NONE)||0}, ${g.valueToCode(b,'X2',J.ORDER_NONE)||0}, ${g.valueToCode(b,'Y2',J.ORDER_NONE)||0}, ${g.valueToCode(b,'SPD',J.ORDER_NONE)||2});\n`;
+  J.forBlock['bc_ai_shoot'] = (b,g) => `Game.aiShoot('${b.getFieldValue('NAME')}', '${b.getFieldValue('TARGET')}', '${b.getFieldValue('COLOR')}');\n`;
+  J.forBlock['bc_ai_sentiment_old'] = (b,g) => [`AI.nlpSentiment('${b.getFieldValue('TEXT')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_ai_classify_old'] = (b,g) => [`AI.classifyNumber(${g.valueToCode(b,'NUM',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+
+  // ── Camera / CV generators ──
+  J.forBlock['bc_cam_start'] = () => 'await AI.camStart();\n';
+  J.forBlock['bc_cam_stop'] = () => 'AI.camStop();\n';
+  J.forBlock['bc_cam_draw'] = (b) => `AI.camDraw(CTX, ${b.getFieldValue('X')}, ${b.getFieldValue('Y')}, ${b.getFieldValue('W')}, ${b.getFieldValue('H')});\n`;
+  J.forBlock['bc_obj_load'] = () => 'await AI.objLoad();\n';
+  J.forBlock['bc_obj_detect'] = () => 'await AI.objDetect();\n';
+  J.forBlock['bc_obj_count'] = () => ['AI.objCount()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_obj_label'] = (b,g) => [`AI.objLabel(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_obj_x'] = (b,g) => [`AI.objX(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_obj_y'] = (b,g) => [`AI.objY(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_obj_confidence'] = (b,g) => [`AI.objConf(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_obj_draw_boxes'] = () => 'AI.objDrawBoxes(CTX);\n';
+  J.forBlock['bc_img_load_classifier'] = () => 'await AI.imgLoadClassifier();\n';
+  J.forBlock['bc_img_classify'] = () => 'await AI.imgClassify();\n';
+  J.forBlock['bc_img_label'] = () => ['AI.imgLabel()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_img_confidence'] = () => ['AI.imgConf()', J.ORDER_FUNCTION_CALL];
+
+  // ── Hand gesture generators ──
+  J.forBlock['bc_hand_start'] = () => 'await AI.handStart();\n';
+  J.forBlock['bc_hand_detected'] = () => ['AI.handDetected()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_hand_x'] = () => ['AI.handX()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_hand_y'] = () => ['AI.handY()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_hand_gesture'] = () => ['AI.handGesture()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_hand_fingers_up'] = () => ['AI.handFingersUp()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_hand_draw'] = () => 'AI.handDraw(CTX);\n';
+  J.forBlock['bc_finger_x'] = (b) => [`AI.fingerX('${b.getFieldValue('FINGER')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_finger_y'] = (b) => [`AI.fingerY('${b.getFieldValue('FINGER')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_pose_start'] = () => 'await AI.poseStart();\n';
+  J.forBlock['bc_pose_x'] = (b) => [`AI.poseX('${b.getFieldValue('PART')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_pose_y'] = (b) => [`AI.poseY('${b.getFieldValue('PART')}')`, J.ORDER_FUNCTION_CALL];
+
+  // ── Face detection generators ──
+  J.forBlock['bc_face_start'] = () => 'await AI.faceStart();\n';
+  J.forBlock['bc_face_detected'] = () => ['AI.faceDetected()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_face_count'] = () => ['AI.faceCount()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_face_x'] = (b,g) => [`AI.faceX(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_face_y'] = (b,g) => [`AI.faceY(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_face_width'] = (b,g) => [`AI.faceWidth(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_face_draw_boxes'] = () => 'AI.faceDrawBoxes(CTX);\n';
+  J.forBlock['bc_facemesh_start'] = () => 'await AI.facemeshStart();\n';
+  J.forBlock['bc_facemesh_point_x'] = (b,g) => [`AI.facemeshX(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_facemesh_point_y'] = (b,g) => [`AI.facemeshY(${g.valueToCode(b,'IDX',J.ORDER_NONE)||0})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_facemesh_draw'] = () => 'AI.facemeshDraw(CTX);\n';
+
+  // ── Speech / Audio generators ──
+  J.forBlock['bc_speech_start'] = () => 'AI.speechStart();\n';
+  J.forBlock['bc_speech_stop'] = () => 'AI.speechStop();\n';
+  J.forBlock['bc_speech_transcript'] = () => ['AI.speechTranscript()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_speech_heard'] = (b) => [`AI.speechHeard('${b.getFieldValue('WORD')}')`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_speech_confidence'] = () => ['AI.speechConf()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_speak'] = (b,g) => `AI.speak(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"});\n`;
+  J.forBlock['bc_speak_rate'] = (b,g) => `AI.speak(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"}, ${g.valueToCode(b,'RATE',J.ORDER_NONE)||1});\n`;
+  J.forBlock['bc_speak_stop'] = () => 'AI.speakStop();\n';
+  J.forBlock['bc_audio_start_mic'] = () => 'await AI.micStart();\n';
+  J.forBlock['bc_audio_volume'] = () => ['AI.micVolume()', J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_audio_is_loud'] = (b,g) => [`AI.micIsLoud(${g.valueToCode(b,'THRESH',J.ORDER_NONE)||50})`, J.ORDER_FUNCTION_CALL];
+
+  // ── Text / NLP generators ──
+  J.forBlock['bc_nlp_sentiment'] = (b,g) => [`AI.nlpSentiment(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_sentiment_score'] = (b,g) => [`AI.nlpSentimentScore(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_word_count'] = (b,g) => [`AI.nlpWordCount(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_contains'] = (b,g) => [`AI.nlpContains(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"}, ${g.valueToCode(b,'WORD',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_extract_numbers'] = (b,g) => [`AI.nlpExtractNumber(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_language'] = (b,g) => [`AI.nlpLanguage(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_autocomplete'] = (b,g) => [`AI.nlpAutocomplete(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_rhyme'] = (b,g) => [`AI.nlpRhyme(${g.valueToCode(b,'WORD',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_nlp_reverse'] = (b,g) => [`AI.nlpReverse(${g.valueToCode(b,'TEXT',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+  J.forBlock['bc_ai_ask'] = (b,g) => [`AI.aiAsk(${g.valueToCode(b,'Q',J.ORDER_NONE)||"''"})`, J.ORDER_FUNCTION_CALL];
+}
+
+// ══════════════════════════════════════════════════
+//  AI RUNTIME ENGINE
+//  Camera, Object Detection, Hand Gesture, Face,
+//  Speech, Audio, NLP — all in one object
+// ══════════════════════════════════════════════════
+const AI = (() => {
+  // ── Internal state ──
+  let _video = null, _stream = null;
+  let _detector = null, _detections = [];
+  let _classifier = null, _classResult = null;
+  let _handModel = null, _handData = null;
+  let _poseModel = null, _poseData = null;
+  let _faceModel = null, _faceData = [];
+  let _facemeshModel = null, _facemeshData = null;
+  let _recognition = null, _transcript = '', _speechConf = 0;
+  let _audioCtx = null, _analyser = null, _micStream = null;
+  let _nlpModel = null;
+
+  function _log(msg) { consolePrint('🤖 ' + msg, 'info'); }
+  function _err(msg) { consolePrint('❌ AI Error: ' + msg, 'error'); }
+
+  function _ensureVideo() {
+    if (_video) return _video;
+    _video = document.getElementById('_ai_video');
+    if (!_video) {
+      _video = document.createElement('video');
+      _video.id = '_ai_video';
+      _video.style.cssText = 'position:fixed;bottom:4px;right:4px;width:120px;height:90px;border:2px solid #00f5ff;border-radius:6px;z-index:9999;object-fit:cover;';
+      _video.autoplay = true; _video.muted = true; _video.playsInline = true;
+      document.body.appendChild(_video);
+    }
+    return _video;
+  }
+
+  // ── Scale factor: map video coords to canvas coords ──
+  function _sx(x) { return x * (CANVAS.width / (_video ? _video.videoWidth || 640 : 640)); }
+  function _sy(y) { return y * (CANVAS.height / (_video ? _video.videoHeight || 480 : 480)); }
+
+  return {
+    // ════════════════════════
+    //  CAMERA
+    // ════════════════════════
+    async camStart() {
+      try {
+        const v = _ensureVideo();
+        _stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        v.srcObject = _stream;
+        await new Promise(r => v.onloadedmetadata = r);
+        _log('Camera started ✅');
+      } catch(e) { _err('Camera: ' + e.message); }
+    },
+    camStop() {
+      if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+      const v = document.getElementById('_ai_video');
+      if (v) v.remove(); _video = null;
+      _log('Camera stopped');
+    },
+    camDraw(ctx, x, y, w, h) {
+      if (_video && _video.readyState >= 2) {
+        ctx.save();
+        ctx.translate(x + w, y);
+        ctx.scale(-1, 1); // mirror
+        ctx.drawImage(_video, 0, 0, w, h);
+        ctx.restore();
+      }
+    },
+
+    // ════════════════════════
+    //  OBJECT DETECTION (COCO-SSD via ml5)
+    // ════════════════════════
+    async objLoad() {
+      try {
+        _log('Loading object detector (COCO-SSD)...');
+        if (typeof ml5 === 'undefined') { _err('ml5.js not loaded'); return; }
+        _detector = await new Promise((res, rej) => {
+          const d = ml5.objectDetector('cocossd', () => res(d));
+          setTimeout(() => rej('timeout'), 30000);
+        });
+        _log('Object detector ready ✅');
+      } catch(e) { _err('Object detector: ' + e); }
+    },
+    async objDetect() {
+      if (!_detector || !_video) { _detections = []; return; }
+      try {
+        _detections = await new Promise(res => _detector.detect(_video, (err, r) => res(r || [])));
+      } catch(e) { _detections = []; }
+    },
+    objCount() { return _detections.length; },
+    objLabel(i) { return _detections[i] ? _detections[i].label : ''; },
+    objX(i) { return _detections[i] ? Math.round(_sx(_detections[i].x)) : 0; },
+    objY(i) { return _detections[i] ? Math.round(_sy(_detections[i].y)) : 0; },
+    objConf(i) { return _detections[i] ? Math.round(_detections[i].confidence * 100) : 0; },
+    objDrawBoxes(ctx) {
+      _detections.forEach(d => {
+        const x = _sx(d.x), y = _sy(d.y), w = _sx(d.width), h = _sy(d.height);
+        ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+        ctx.fillStyle = 'rgba(0,245,255,0.15)'; ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = '#00f5ff'; ctx.font = '11px monospace';
+        ctx.fillText(`${d.label} ${Math.round(d.confidence*100)}%`, x+2, y-4);
+      });
+    },
+
+    // ════════════════════════
+    //  IMAGE CLASSIFIER (MobileNet via ml5)
+    // ════════════════════════
+    async imgLoadClassifier() {
+      try {
+        _log('Loading image classifier (MobileNet)...');
+        _classifier = await new Promise((res, rej) => {
+          const c = ml5.imageClassifier('MobileNet', () => res(c));
+          setTimeout(() => rej('timeout'), 30000);
+        });
+        _log('Image classifier ready ✅');
+      } catch(e) { _err('Image classifier: ' + e); }
+    },
+    async imgClassify() {
+      if (!_classifier || !_video) return;
+      try {
+        const r = await new Promise(res => _classifier.classify(_video, 1, (err, res2) => res(res2)));
+        _classResult = r && r[0] ? r[0] : null;
+      } catch(e) { _classResult = null; }
+    },
+    imgLabel() { return _classResult ? _classResult.label.split(',')[0] : ''; },
+    imgConf() { return _classResult ? Math.round(_classResult.confidence * 100) : 0; },
+
+    // ════════════════════════
+    //  HAND POSE (ml5 handPose)
+    // ════════════════════════
+    async handStart() {
+      try {
+        _log('Loading hand pose model...');
+        _handModel = await new Promise((res, rej) => {
+          const h = ml5.handPose(() => res(h));
+          setTimeout(() => rej('timeout'), 30000);
+        });
+        if (_video) _handModel.detectStart(_video, r => { _handData = r && r[0] ? r[0] : null; });
+        _log('Hand detection active ✅');
+      } catch(e) { _err('Hand pose: ' + e); }
+    },
+    handDetected() { return _handData !== null && _handData !== undefined; },
+    handX() {
+      if (!_handData || !_handData.keypoints) return 0;
+      const kps = _handData.keypoints;
+      return Math.round(_sx(kps.reduce((s,k)=>s+k.x,0)/kps.length));
+    },
+    handY() {
+      if (!_handData || !_handData.keypoints) return 0;
+      const kps = _handData.keypoints;
+      return Math.round(_sy(kps.reduce((s,k)=>s+k.y,0)/kps.length));
+    },
+    handGesture() {
+      if (!_handData || !_handData.keypoints3D) return 'none';
+      // Count fingers up via landmark y positions
+      const kps = _handData.keypoints;
+      const tips = [8,12,16,20]; // index,middle,ring,pinky tip indices
+      const pips = [6,10,14,18]; // their pip joints
+      let count = tips.filter((ti,i) => kps[ti] && kps[pips[i]] && kps[ti].y < kps[pips[i]].y).length;
+      // Thumb: compare x
+      if (kps[4] && kps[3] && kps[4].x > kps[3].x) count++;
+      if (count === 0) return 'fist';
+      if (count === 5) return 'open';
+      if (count === 1) return 'pointing';
+      if (count === 2) return 'peace';
+      return 'partial';
+    },
+    handFingersUp() {
+      if (!_handData || !_handData.keypoints) return 0;
+      const kps = _handData.keypoints;
+      const tips = [8,12,16,20];
+      const pips = [6,10,14,18];
+      return tips.filter((ti,i) => kps[ti] && kps[pips[i]] && kps[ti].y < kps[pips[i]].y).length;
+    },
+    fingerX(name) {
+      if (!_handData || !_handData.keypoints) return 0;
+      const map = {THUMB_TIP:4,INDEX_FINGER_TIP:8,MIDDLE_FINGER_TIP:12,RING_FINGER_TIP:16,PINKY_TIP:20,WRIST:0};
+      const idx = map[name] || 8;
+      return _handData.keypoints[idx] ? Math.round(_sx(_handData.keypoints[idx].x)) : 0;
+    },
+    fingerY(name) {
+      if (!_handData || !_handData.keypoints) return 0;
+      const map = {THUMB_TIP:4,INDEX_FINGER_TIP:8,MIDDLE_FINGER_TIP:12,RING_FINGER_TIP:16,PINKY_TIP:20,WRIST:0};
+      const idx = map[name] || 8;
+      return _handData.keypoints[idx] ? Math.round(_sy(_handData.keypoints[idx].y)) : 0;
+    },
+    handDraw(ctx) {
+      if (!_handData || !_handData.keypoints) return;
+      const connections = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
+      ctx.strokeStyle = '#f4a261'; ctx.lineWidth = 2;
+      connections.forEach(([a,b]) => {
+        const kp1 = _handData.keypoints[a], kp2 = _handData.keypoints[b];
+        if (!kp1||!kp2) return;
+        ctx.beginPath(); ctx.moveTo(_sx(kp1.x),_sy(kp1.y)); ctx.lineTo(_sx(kp2.x),_sy(kp2.y)); ctx.stroke();
+      });
+      _handData.keypoints.forEach(k => {
+        ctx.fillStyle = '#fff'; ctx.beginPath();
+        ctx.arc(_sx(k.x), _sy(k.y), 3, 0, Math.PI*2); ctx.fill();
+      });
+    },
+
+    // ════════════════════════
+    //  POSE DETECTION (ml5 pose)
+    // ════════════════════════
+    async poseStart() {
+      try {
+        _log('Loading pose detection model...');
+        _poseModel = await new Promise((res, rej) => {
+          const p = ml5.bodyPose(() => res(p));
+          setTimeout(() => rej('timeout'), 30000);
+        });
+        if (_video) _poseModel.detectStart(_video, r => { _poseData = r && r[0] ? r[0] : null; });
+        _log('Pose detection active ✅');
+      } catch(e) { _err('Pose: ' + e); }
+    },
+    poseX(part) {
+      if (!_poseData || !_poseData.keypoints) return 0;
+      const kp = _poseData.keypoints.find(k => k.name === part);
+      return kp ? Math.round(_sx(kp.x)) : 0;
+    },
+    poseY(part) {
+      if (!_poseData || !_poseData.keypoints) return 0;
+      const kp = _poseData.keypoints.find(k => k.name === part);
+      return kp ? Math.round(_sy(kp.y)) : 0;
+    },
+
+    // ════════════════════════
+    //  FACE DETECTION (ml5 faceApi)
+    // ════════════════════════
+    async faceStart() {
+      try {
+        _log('Loading face detection model...');
+        _faceModel = await new Promise((res, rej) => {
+          const f = ml5.faceApi({ withLandmarks: false, withDescriptors: false }, () => res(f));
+          setTimeout(() => rej('timeout'), 30000);
+        });
+        if (_video) _faceModel.detectStart(_video, (err, r) => { _faceData = r || []; });
+        _log('Face detection active ✅');
+      } catch(e) { _err('Face detection: ' + e); }
+    },
+    faceDetected() { return _faceData.length > 0; },
+    faceCount() { return _faceData.length; },
+    faceX(i) {
+      const f = _faceData[i]; if (!f) return 0;
+      const b = f.detection ? f.detection.box : f.box;
+      return b ? Math.round(_sx(b.x + b.width/2)) : 0;
+    },
+    faceY(i) {
+      const f = _faceData[i]; if (!f) return 0;
+      const b = f.detection ? f.detection.box : f.box;
+      return b ? Math.round(_sy(b.y + b.height/2)) : 0;
+    },
+    faceWidth(i) {
+      const f = _faceData[i]; if (!f) return 0;
+      const b = f.detection ? f.detection.box : f.box;
+      return b ? Math.round(_sx(b.width)) : 0;
+    },
+    faceDrawBoxes(ctx) {
+      _faceData.forEach(f => {
+        const b = f.detection ? f.detection.box : f.box; if (!b) return;
+        const x=_sx(b.x), y=_sy(b.y), w=_sx(b.width), h=_sy(b.height);
+        ctx.strokeStyle='#e9c46a'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,h);
+        ctx.fillStyle='rgba(233,196,106,0.1)'; ctx.fillRect(x,y,w,h);
+        ctx.fillStyle='#e9c46a'; ctx.font='11px monospace';
+        ctx.fillText('Face', x+2, y-4);
+      });
+    },
+
+    // ════════════════════════
+    //  FACE MESH (ml5 faceMesh)
+    // ════════════════════════
+    async facemeshStart() {
+      try {
+        _log('Loading face mesh model...');
+        _facemeshModel = await new Promise((res, rej) => {
+          const f = ml5.faceMesh(() => res(f));
+          setTimeout(() => rej('timeout'), 30000);
+        });
+        if (_video) _facemeshModel.detectStart(_video, r => { _facemeshData = r && r[0] ? r[0] : null; });
+        _log('Face mesh active ✅');
+      } catch(e) { _err('FaceMesh: ' + e); }
+    },
+    facemeshX(i) {
+      if (!_facemeshData || !_facemeshData.keypoints) return 0;
+      const k = _facemeshData.keypoints[i]; return k ? Math.round(_sx(k.x)) : 0;
+    },
+    facemeshY(i) {
+      if (!_facemeshData || !_facemeshData.keypoints) return 0;
+      const k = _facemeshData.keypoints[i]; return k ? Math.round(_sy(k.y)) : 0;
+    },
+    facemeshDraw(ctx) {
+      if (!_facemeshData || !_facemeshData.keypoints) return;
+      ctx.fillStyle = 'rgba(233,196,106,0.6)';
+      _facemeshData.keypoints.forEach(k => {
+        ctx.beginPath(); ctx.arc(_sx(k.x), _sy(k.y), 1.2, 0, Math.PI*2); ctx.fill();
+      });
+    },
+
+    // ════════════════════════
+    //  SPEECH RECOGNITION (Web Speech API)
+    // ════════════════════════
+    speechStart() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { _err('Speech Recognition not supported in this browser'); return; }
+      if (_recognition) return;
+      _recognition = new SR();
+      _recognition.continuous = true;
+      _recognition.interimResults = true;
+      _recognition.onresult = e => {
+        let final = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            final += e.results[i][0].transcript;
+            _speechConf = Math.round(e.results[i][0].confidence * 100);
+          }
+        }
+        if (final) {
+          _transcript = final.trim().toLowerCase();
+          _log('Heard: "' + _transcript + '"');
+        }
+      };
+      _recognition.onerror = e => _err('Speech: ' + e.error);
+      _recognition.start();
+      _log('Listening for speech 🎤');
+    },
+    speechStop() {
+      if (_recognition) { _recognition.stop(); _recognition = null; }
+      _log('Speech recognition stopped');
+    },
+    speechTranscript() { return _transcript; },
+    speechHeard(word) { return _transcript.includes(word.toLowerCase()); },
+    speechConf() { return _speechConf; },
+
+    // ════════════════════════
+    //  TEXT TO SPEECH (Web Speech API)
+    // ════════════════════════
+    speak(text, rate = 1) {
+      if (!window.speechSynthesis) { _err('Speech Synthesis not supported'); return; }
+      const u = new SpeechSynthesisUtterance(String(text));
+      u.rate = rate; u.lang = 'en-US';
+      window.speechSynthesis.speak(u);
+    },
+    speakStop() { if (window.speechSynthesis) window.speechSynthesis.cancel(); },
+
+    // ════════════════════════
+    //  MICROPHONE AUDIO ANALYSIS
+    // ════════════════════════
+    async micStart() {
+      try {
+        _micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = _audioCtx.createMediaStreamSource(_micStream);
+        _analyser = _audioCtx.createAnalyser();
+        _analyser.fftSize = 256;
+        source.connect(_analyser);
+        _log('Microphone active 🎙️');
+      } catch(e) { _err('Microphone: ' + e.message); }
+    },
+    micVolume() {
+      if (!_analyser) return 0;
+      const data = new Uint8Array(_analyser.frequencyBinCount);
+      _analyser.getByteFrequencyData(data);
+      const avg = data.reduce((a,b)=>a+b,0) / data.length;
+      return Math.round(avg / 255 * 100);
+    },
+    micIsLoud(threshold) { return AI.micVolume() > threshold; },
+
+    // ════════════════════════
+    //  TEXT / NLP (pure JS — no model needed)
+    // ════════════════════════
+    nlpSentiment(text) {
+      const score = AI.nlpSentimentScore(text);
+      return score > 0 ? 'positive' : score < 0 ? 'negative' : 'neutral';
+    },
+    nlpSentimentScore(text) {
+      const pos = ['love','great','awesome','good','happy','fun','cool','nice','excellent','amazing','best','fantastic','wonderful','brilliant','superb','like','enjoy','beautiful','perfect','easy'];
+      const neg = ['hate','bad','awful','terrible','sad','boring','ugly','worst','horrible','dreadful','poor','fail','difficult','hard','annoying','useless','slow','broken','wrong','no'];
+      const words = String(text).toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/);
+      let score = 0;
+      words.forEach(w => { if(pos.includes(w)) score++; if(neg.includes(w)) score--; });
+      return score;
+    },
+    nlpWordCount(text) { return String(text).trim().split(/\s+/).filter(Boolean).length; },
+    nlpContains(text, word) { return String(text).toLowerCase().includes(String(word).toLowerCase()); },
+    nlpExtractNumber(text) {
+      const m = String(text).match(/-?\d+\.?\d*/);
+      return m ? parseFloat(m[0]) : 0;
+    },
+    nlpLanguage(text) {
+      const t = String(text).toLowerCase();
+      if (/[àâéêèëîïôùûüç]/.test(t)) return 'French';
+      if (/[äöüß]/.test(t)) return 'German';
+      if (/[áéíóúñ¿¡]/.test(t)) return 'Spanish';
+      if (/[अआइकरसहमनत]/.test(t)) return 'Hindi';
+      if (/[\u4e00-\u9fff]/.test(t)) return 'Chinese';
+      if (/[\u3040-\u30ff]/.test(t)) return 'Japanese';
+      if (/[\uac00-\ud7af]/.test(t)) return 'Korean';
+      if (/[\u0900-\u097f]/.test(t)) return 'Devanagari';
+      return 'English';
+    },
+    nlpAutocomplete(text) {
+      const completions = {
+        'the cat': 'sat on the mat', 'i am': 'learning to code',
+        'hello': 'world! nice to meet you', 'once upon': 'a time',
+        'the sky': 'is blue', 'machine': 'learning is cool',
+        'i love': 'programming', 'the quick': 'brown fox jumps',
+        'to be': 'or not to be', 'python': 'is a great language',
+      };
+      const key = String(text).toLowerCase().trim();
+      for (const [k,v] of Object.entries(completions)) {
+        if (key.endsWith(k)) return text + ' ' + v;
+      }
+      return text + '...';
+    },
+    nlpRhyme(word) {
+      const rhymes = {
+        cat:['bat','hat','mat','rat','sat'],car:['bar','far','jar','star'],
+        day:['bay','gay','hay','may','pay','play','say','way'],
+        love:['above','dove','glove','shove'],tree:['bee','fee','free','glee','key','me','see','tea'],
+        code:['load','mode','node','road','toad'],sun:['bun','fun','gun','run','son'],
+        moon:['boon','loon','noon','soon','tune'],blue:['clue','dew','flew','glue','new','true'],
+        big:['dig','fig','gig','jig','pig','wig'],
+      };
+      const w = String(word).toLowerCase();
+      const list = rhymes[w];
+      return list ? list[Math.floor(Math.random()*list.length)] : '(no rhyme found)';
+    },
+    nlpReverse(text) { return String(text).split('').reverse().join(''); },
+    aiAsk(q) {
+      const qa = {
+        'what is 2+2': '4', 'what is 2+2?': '4',
+        'what is your name': 'I am Block Coder AI!',
+        'hello': 'Hello! How can I help you?',
+        'how are you': "I'm great, thanks for asking!",
+        'what is coding': 'Coding is giving instructions to a computer to solve problems.',
+        'what is ai': 'AI stands for Artificial Intelligence — machines that learn and think!',
+        'what is ml': 'Machine Learning is teaching computers to learn from data.',
+        'what is python': 'Python is a popular programming language, great for AI and data science.',
+        'tell me a joke': 'Why do programmers prefer dark mode? Because light attracts bugs! 🐛',
+        'what is the capital of france': 'Paris!',
+        'what is gravity': 'Gravity is the force that pulls objects toward each other.',
+      };
+      const key = String(q).toLowerCase().trim().replace(/[?.!]/g,'');
+      return qa[key] || qa[key+'?'] || 'Hmm, I\'m not sure about that. Try rephrasing!';
+    },
+
+    // Legacy aliases
+    nlpClassifyNumber(num) {
+      if (num < 0) return 'negative';
+      if (num === 0) return 'zero';
+      if (num < 10) return 'small';
+      if (num < 100) return 'medium';
+      return 'large';
+    },
+    classifyNumber(num) { return AI.nlpClassifyNumber(num); },
+  };
+})();
+
+// ══════════════════════════════════════════════════
+//  BLOCKLY INIT
+// ══════════════════════════════════════════════════
+let workspace;
+
+function initBlockly() {
+  defineCustomBlocks();
+
+  const darkTheme = Blockly.Theme.defineTheme('aawiskarDark', {
+    base: Blockly.Themes.Classic,
+    componentStyles: {
+      workspaceBackgroundColour: '#0a0a1a',
+      toolboxBackgroundColour: '#0d0d1f',
+      toolboxForegroundColour: '#a0a8c0',
+      flyoutBackgroundColour: '#0d0d1f',
+      flyoutForegroundColour: '#c0c8e0',
+      flyoutOpacity: 0.95,
+      scrollbarColour: '#2a2a4a',
+      insertionMarkerColour: '#b43cff',
+      insertionMarkerOpacity: 0.4,
+      scrollbarOpacity: 0.4,
+      cursorColour: '#00d4ff',
+    },
+  });
+
+  workspace = Blockly.inject('blocklyDiv', {
+    toolbox: document.getElementById('toolbox'),
+    theme: darkTheme,
+    grid: { spacing: 24, length: 3, colour: '#1a1a35', snap: true },
+    zoom: { controls: true, wheel: true, startScale: 0.9, maxScale: 2, minScale: 0.3, scaleSpeed: 1.2 },
+    trashcan: true,
+    move: { scrollbars: true, drag: true, wheel: false },
+    renderer: 'zelos',
+  });
+
+  defineGenerators();
+
+  workspace.addChangeListener(() => {
+    updateBlockCount();
+    updateGeneratedCode();
+  });
+
+  // Load default project
+  loadProject('hello');
+}
+
+function changeBlocklyTheme(val) {
+  if (!workspace) return;
+  if (val === 'classic') workspace.setTheme(Blockly.Themes.Classic);
+  else if (val === 'neon') {
+    const neon = Blockly.Theme.defineTheme('neon', {
+      base: Blockly.Themes.Classic,
+      componentStyles: { workspaceBackgroundColour: '#000', toolboxBackgroundColour: '#050510' },
+    });
+    workspace.setTheme(neon);
+  } else {
+    workspace.setTheme(Blockly.Theme.defineTheme('dark2', {
+      base: Blockly.Themes.Classic,
+      componentStyles: { workspaceBackgroundColour: '#0a0a1a', toolboxBackgroundColour: '#0d0d1f' },
+    }));
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  PROJECTS (XML templates for the workspace)
+// ══════════════════════════════════════════════════
+const PROJECTS = {
+  blank: `<xml xmlns="https://developers.google.com/blockly/xml"></xml>`,
+
+  hello: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_print" x="30" y="30">
+    <value name="TEXT"><block type="text"><field name="TEXT">Hello, World!</field></block></value>
+    <next><block type="bc_print" >
+      <value name="TEXT"><block type="text"><field name="TEXT">Welcome to Block Coder!</field></block></value>
+      <next><block type="bc_print">
+        <value name="TEXT"><block type="text_join"><mutation items="2"></mutation>
+          <value name="ADD0"><block type="text"><field name="TEXT">My name is </field></block></value>
+          <value name="ADD1"><block type="text"><field name="TEXT">Coder</field></block></value>
+        </block></value>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  variables: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="variables_set" x="30" y="30">
+    <field name="VAR" id="age">age</field>
+    <value name="VALUE"><block type="math_number"><field name="NUM">15</field></block></value>
+    <next><block type="variables_set">
+      <field name="VAR" id="name">myName</field>
+      <value name="VALUE"><block type="text"><field name="TEXT">Alex</field></block></value>
+      <next><block type="bc_print">
+        <value name="TEXT"><block type="text_join"><mutation items="3"></mutation>
+          <value name="ADD0"><block type="text"><field name="TEXT">Name: </field></block></value>
+          <value name="ADD1"><block type="variables_get"><field name="VAR" id="name">myName</field></block></value>
+          <value name="ADD2"><block type="text"><field name="TEXT"> — Age: 15</field></block></value>
+        </block></value>
+        <next><block type="bc_print">
+          <value name="TEXT"><block type="text_join"><mutation items="2"></mutation>
+            <value name="ADD0"><block type="text"><field name="TEXT">In 5 years I will be: </field></block></value>
+            <value name="ADD1"><block type="math_arithmetic">
+              <field name="OP">ADD</field>
+              <value name="A"><block type="variables_get"><field name="VAR" id="age">age</field></block></value>
+              <value name="B"><block type="math_number"><field name="NUM">5</field></block></value>
+            </block></value>
+          </block></value>
+        </block></next>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  loops: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_print" x="30" y="30">
+    <value name="TEXT"><block type="text"><field name="TEXT">Counting 1 to 5:</field></block></value>
+    <next><block type="controls_for">
+      <field name="VAR" id="i">i</field>
+      <value name="FROM"><block type="math_number"><field name="NUM">1</field></block></value>
+      <value name="TO"><block type="math_number"><field name="NUM">5</field></block></value>
+      <value name="BY"><block type="math_number"><field name="NUM">1</field></block></value>
+      <statement name="DO"><block type="bc_print">
+        <value name="TEXT"><block type="text_join"><mutation items="2"></mutation>
+          <value name="ADD0"><block type="text"><field name="TEXT">Number: </field></block></value>
+          <value name="ADD1"><block type="variables_get"><field name="VAR" id="i">i</field></block></value>
+        </block></value>
+      </block></statement>
+      <next><block type="bc_print">
+        <value name="TEXT"><block type="text"><field name="TEXT">Done! Loop finished.</field></block></value>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  conditions: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="variables_set" x="30" y="30">
+    <field name="VAR" id="score">score</field>
+    <value name="VALUE"><block type="math_number"><field name="NUM">75</field></block></value>
+    <next><block type="controls_if">
+      <mutation elseif="1" else="1"></mutation>
+      <value name="IF0"><block type="logic_compare">
+        <field name="OP">GTE</field>
+        <value name="A"><block type="variables_get"><field name="VAR" id="score">score</field></block></value>
+        <value name="B"><block type="math_number"><field name="NUM">90</field></block></value>
+      </block></value>
+      <statement name="DO0"><block type="bc_print">
+        <value name="TEXT"><block type="text"><field name="TEXT">Grade: A — Excellent!</field></block></value>
+      </block></statement>
+      <value name="IF1"><block type="logic_compare">
+        <field name="OP">GTE</field>
+        <value name="A"><block type="variables_get"><field name="VAR" id="score">score</field></block></value>
+        <value name="B"><block type="math_number"><field name="NUM">60</field></block></value>
+      </block></value>
+      <statement name="DO1"><block type="bc_print">
+        <value name="TEXT"><block type="text"><field name="TEXT">Grade: B — Good job!</field></block></value>
+      </block></statement>
+      <statement name="ELSE"><block type="bc_print">
+        <value name="TEXT"><block type="text"><field name="TEXT">Grade: C — Keep practicing!</field></block></value>
+      </block></statement>
+    </block></next>
+  </block>
+</xml>`,
+
+  functions: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="procedures_defnoreturn" x="30" y="30">
+    <mutation><arg name="name"></arg></mutation>
+    <field name="NAME">greet</field>
+    <statement name="STACK"><block type="bc_print">
+      <value name="TEXT"><block type="text_join"><mutation items="2"></mutation>
+        <value name="ADD0"><block type="text"><field name="TEXT">Hello, </field></block></value>
+        <value name="ADD1"><block type="variables_get"><field name="VAR">name</field></block></value>
+      </block></value>
+    </block></statement>
+  </block>
+  <block type="procedures_defreturn" x="30" y="160">
+    <mutation><arg name="a"></arg><arg name="b"></arg></mutation>
+    <field name="NAME">add</field>
+    <value name="RETURN"><block type="math_arithmetic">
+      <field name="OP">ADD</field>
+      <value name="A"><block type="variables_get"><field name="VAR">a</field></block></value>
+      <value name="B"><block type="variables_get"><field name="VAR">b</field></block></value>
+    </block></value>
+  </block>
+  <block type="procedures_callnoreturn" x="300" y="30">
+    <mutation name="greet"><arg name="name"></arg></mutation>
+    <value name="ARG0"><block type="text"><field name="TEXT">World</field></block></value>
+  </block>
+  <block type="bc_print" x="300" y="120">
+    <value name="TEXT"><block type="procedures_callreturn">
+      <mutation name="add"><arg name="a"></arg><arg name="b"></arg></mutation>
+      <value name="ARG0"><block type="math_number"><field name="NUM">10</field></block></value>
+      <value name="ARG1"><block type="math_number"><field name="NUM">5</field></block></value>
+    </block></value>
+  </block>
+</xml>`,
+
+  calculator: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_print" x="30" y="30">
+    <value name="TEXT"><block type="text"><field name="TEXT">=== Simple Calculator ===</field></block></value>
+    <next><block type="variables_set">
+      <field name="VAR" id="a">a</field>
+      <value name="VALUE"><block type="math_number"><field name="NUM">12</field></block></value>
+      <next><block type="variables_set">
+        <field name="VAR" id="b">b</field>
+        <value name="VALUE"><block type="math_number"><field name="NUM">4</field></block></value>
+        <next><block type="bc_print">
+          <value name="TEXT"><block type="text_join"><mutation items="3"></mutation>
+            <value name="ADD0"><block type="text"><field name="TEXT">Add: </field></block></value>
+            <value name="ADD1"><block type="variables_get"><field name="VAR" id="a">a</field></block></value>
+            <value name="ADD2"><block type="text_join"><mutation items="3"></mutation>
+              <value name="ADD0"><block type="text"><field name="TEXT"> + </field></block></value>
+              <value name="ADD1"><block type="variables_get"><field name="VAR" id="b">b</field></block></value>
+              <value name="ADD2"><block type="text_join"><mutation items="2"></mutation>
+                <value name="ADD0"><block type="text"><field name="TEXT"> = </field></block></value>
+                <value name="ADD1"><block type="math_arithmetic"><field name="OP">ADD</field>
+                  <value name="A"><block type="variables_get"><field name="VAR" id="a">a</field></block></value>
+                  <value name="B"><block type="variables_get"><field name="VAR" id="b">b</field></block></value>
+                </block></value>
+              </block></value>
+            </block></value>
+          </block></value>
+        </block></next>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  fibonacci: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_print" x="30" y="30">
+    <value name="TEXT"><block type="text"><field name="TEXT">Fibonacci Sequence:</field></block></value>
+    <next><block type="variables_set">
+      <field name="VAR" id="a">a</field>
+      <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+      <next><block type="variables_set">
+        <field name="VAR" id="b">b</field>
+        <value name="VALUE"><block type="math_number"><field name="NUM">1</field></block></value>
+        <next><block type="controls_repeat_ext">
+          <value name="TIMES"><block type="math_number"><field name="NUM">10</field></block></value>
+          <statement name="DO">
+            <block type="bc_print">
+              <value name="TEXT"><block type="variables_get"><field name="VAR" id="a">a</field></block></value>
+              <next><block type="variables_set">
+                <field name="VAR" id="tmp">tmp</field>
+                <value name="VALUE"><block type="math_arithmetic"><field name="OP">ADD</field>
+                  <value name="A"><block type="variables_get"><field name="VAR" id="a">a</field></block></value>
+                  <value name="B"><block type="variables_get"><field name="VAR" id="b">b</field></block></value>
+                </block></value>
+                <next><block type="variables_set">
+                  <field name="VAR" id="a">a</field>
+                  <value name="VALUE"><block type="variables_get"><field name="VAR" id="b">b</field></block></value>
+                  <next><block type="variables_set">
+                    <field name="VAR" id="b">b</field>
+                    <value name="VALUE"><block type="variables_get"><field name="VAR" id="tmp">tmp</field></block></value>
+                  </block></next>
+                </block></next>
+              </block></next>
+            </block>
+          </statement>
+        </block></next>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  countdown: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_print" x="30" y="30">
+    <value name="TEXT"><block type="text"><field name="TEXT">Countdown!</field></block></value>
+    <next><block type="controls_for">
+      <field name="VAR" id="n">n</field>
+      <value name="FROM"><block type="math_number"><field name="NUM">10</field></block></value>
+      <value name="TO"><block type="math_number"><field name="NUM">1</field></block></value>
+      <value name="BY"><block type="math_number"><field name="NUM">-1</field></block></value>
+      <statement name="DO"><block type="bc_print">
+        <value name="TEXT"><block type="variables_get"><field name="VAR" id="n">n</field></block></value>
+      </block></statement>
+      <next><block type="bc_print">
+        <value name="TEXT"><block type="text"><field name="TEXT">🚀 Blast off!</field></block></value>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  shapes: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_setup" x="30" y="30">
+    <field name="WIDTH">300</field><field name="HEIGHT">260</field><field name="BG">#060612</field>
+    <next><block type="bc_draw_rect">
+      <field name="X">20</field><field name="Y">20</field><field name="W">80</field><field name="H">60</field><field name="COLOR">#00f5ff</field>
+      <next><block type="bc_draw_circle">
+        <field name="X">200</field><field name="Y">80</field><field name="R">40</field><field name="COLOR">#ff006e</field>
+        <next><block type="bc_draw_rect">
+          <field name="X">100</field><field name="Y">140</field><field name="W">100</field><field name="H">80</field><field name="COLOR">#39ff14</field>
+          <next><block type="bc_draw_text">
+            <field name="TEXT">Shapes!</field><field name="X">105</field><field name="Y">190</field><field name="COLOR">black</field><field name="SIZE">18</field>
+          </block></next>
+        </block></next>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  pattern: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_setup" x="30" y="30">
+    <field name="WIDTH">300</field><field name="HEIGHT">260</field><field name="BG">#000000</field>
+    <next><block type="controls_for">
+      <field name="VAR" id="row">row</field>
+      <value name="FROM"><block type="math_number"><field name="NUM">0</field></block></value>
+      <value name="TO"><block type="math_number"><field name="NUM">4</field></block></value>
+      <value name="BY"><block type="math_number"><field name="NUM">1</field></block></value>
+      <statement name="DO"><block type="controls_for">
+        <field name="VAR" id="col">col</field>
+        <value name="FROM"><block type="math_number"><field name="NUM">0</field></block></value>
+        <value name="TO"><block type="math_number"><field name="NUM">4</field></block></value>
+        <value name="BY"><block type="math_number"><field name="NUM">1</field></block></value>
+        <statement name="DO"><block type="bc_draw_circle">
+          <field name="COLOR">#00f5ff</field>
+          <field name="R">20</field>
+          <field name="X">30</field>
+          <field name="Y">30</field>
+        </block></statement>
+      </block></statement>
+    </block></next>
+  </block>
+</xml>`,
+
+  dodge: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_setup" x="30" y="30">
+    <field name="WIDTH">300</field>
+    <field name="HEIGHT">260</field>
+    <field name="BG">black</field>
+    <next>
+      <block type="bc_create_sprite">
+        <field name="NAME">player</field>
+        <field name="X">135</field>
+        <field name="Y">210</field>
+        <field name="W">30</field>
+        <field name="H">20</field>
+        <field name="COLOR">#00d4ff</field>
+        <next>
+          <block type="bc_create_sprite">
+            <field name="NAME">enemy</field>
+            <field name="X">130</field>
+            <field name="Y">10</field>
+            <field name="W">24</field>
+            <field name="H">24</field>
+            <field name="COLOR">#ff00aa</field>
+            <next>
+              <block type="bc_on_keypress">
+                <field name="KEY">ArrowLeft</field>
+                <statement name="BODY">
+                  <block type="bc_move_sprite">
+                    <field name="NAME">player</field>
+                    <value name="DX"><block type="math_number"><field name="NUM">-6</field></block></value>
+                    <value name="DY"><block type="math_number"><field name="NUM">0</field></block></value>
+                  </block>
+                </statement>
+                <next>
+                  <block type="bc_on_keypress">
+                    <field name="KEY">ArrowRight</field>
+                    <statement name="BODY">
+                      <block type="bc_move_sprite">
+                        <field name="NAME">player</field>
+                        <value name="DX"><block type="math_number"><field name="NUM">6</field></block></value>
+                        <value name="DY"><block type="math_number"><field name="NUM">0</field></block></value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="bc_game_loop">
+                        <statement name="BODY">
+                          <block type="bc_fill_bg">
+                            <field name="COLOR">#060612</field>
+                            <next>
+                              <block type="bc_ai_chase_player">
+                                <field name="NAME">enemy</field>
+                                <value name="SPD"><block type="math_number"><field name="NUM">2</field></block></value>
+                                <next>
+                                  <block type="bc_draw_sprite">
+                                    <field name="NAME">player</field>
+                                    <next>
+                                      <block type="bc_draw_sprite">
+                                        <field name="NAME">enemy</field>
+                                        <next>
+                                          <block type="bc_check_bounds">
+                                            <field name="NAME">player</field>
+                                            <value name="MARGIN"><block type="math_number"><field name="NUM">0</field></block></value>
+                                            <next>
+                                              <block type="controls_if">
+                                                <value name="IF0">
+                                                  <block type="bc_collide">
+                                                    <field name="A">player</field>
+                                                    <field name="B">enemy</field>
+                                                  </block>
+                                                </value>
+                                                <statement name="DO0">
+                                                  <block type="bc_explosion_sound">
+                                                    <next>
+                                                      <block type="bc_game_over">
+                                                        <value name="MSG"><block type="text"><field name="TEXT">Caught by enemy!</field></block></value>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </statement>
+                                                <next>
+                                                  <block type="bc_add_score">
+                                                    <value name="VAL"><block type="math_number"><field name="NUM">1</field></block></value>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`,
+
+  catch: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_setup" x="30" y="30">
+    <field name="WIDTH">300</field><field name="HEIGHT">260</field><field name="BG">black</field>
+    <next><block type="bc_create_sprite">
+      <field name="NAME">basket</field><field name="X">120</field><field name="Y">230</field>
+      <field name="W">60</field><field name="H">15</field><field name="COLOR">#00d4ff</field>
+      <next><block type="bc_create_sprite">
+        <field name="NAME">ball</field><field name="X">140</field><field name="Y">10</field>
+        <field name="W">18</field><field name="H">18</field><field name="COLOR">#ffaa00</field>
+        <next><block type="bc_on_keypress">
+          <field name="KEY">ArrowLeft</field>
+          <statement name="BODY"><block type="bc_move_sprite">
+            <field name="NAME">basket</field>
+            <value name="DX"><block type="math_number"><field name="NUM">-8</field></block></value>
+            <value name="DY"><block type="math_number"><field name="NUM">0</field></block></value>
+          </block></statement>
+          <next><block type="bc_on_keypress">
+            <field name="KEY">ArrowRight</field>
+            <statement name="BODY"><block type="bc_move_sprite">
+              <field name="NAME">basket</field>
+              <value name="DX"><block type="math_number"><field name="NUM">8</field></block></value>
+              <value name="DY"><block type="math_number"><field name="NUM">0</field></block></value>
+            </block></statement>
+            <next><block type="bc_game_loop">
+              <statement name="BODY"><block type="bc_fill_bg">
+                <field name="COLOR">#060612</field>
+                <next><block type="bc_gravity">
+                  <field name="NAME">ball</field>
+                  <value name="STR"><block type="math_number"><field name="NUM">0.4</field></block></value>
+                  <next><block type="bc_draw_sprite">
+                    <field name="NAME">basket</field>
+                    <next><block type="bc_draw_sprite">
+                      <field name="NAME">ball</field>
+                      <next><block type="bc_check_bounds">
+                        <field name="NAME">basket</field>
+                        <value name="MARGIN"><block type="math_number"><field name="NUM">0</field></block></value>
+                        <next><block type="controls_if">
+                          <value name="IF0"><block type="bc_collide"><field name="A">basket</field><field name="B">ball</field></block></value>
+                          <statement name="DO0"><block type="bc_add_score">
+                            <value name="VAL"><block type="math_number"><field name="NUM">10</field></block></value>
+                            <next><block type="bc_play_beep"><field name="FREQ">880</field><field name="DUR">0.08</field>
+                              <next><block type="bc_set_pos">
+                                <field name="NAME">ball</field>
+                                <value name="X"><block type="math_random_int">
+                                  <value name="FROM"><block type="math_number"><field name="NUM">10</field></block></value>
+                                  <value name="TO"><block type="math_number"><field name="NUM">280</field></block></value>
+                                </block></value>
+                                <value name="Y"><block type="math_number"><field name="NUM">0</field></block></value>
+                              </block></next>
+                            </block></next>
+                          </block></statement>
+                        </block></next>
+                      </block></next>
+                    </block></next>
+                  </block></next>
+                </block></next>
+              </block></statement>
+            </block></next>
+          </block></next>
+        </block></next>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  paint: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_setup" x="30" y="30">
+    <field name="WIDTH">300</field><field name="HEIGHT">260</field><field name="BG">white</field>
+    <next><block type="bc_game_loop">
+      <statement name="BODY">
+        <block type="controls_if">
+          <value name="IF0"><block type="logic_boolean"><field name="BOOL">TRUE</field></block></value>
+          <statement name="DO0">
+            <block type="bc_draw_circle">
+              <field name="X">150</field><field name="Y">130</field><field name="R">40</field><field name="COLOR">#ff00aa</field>
+              <next><block type="bc_draw_text">
+                <field name="TEXT">🎨 Use blocks to paint!</field>
+                <field name="X">10</field><field name="Y">240</field><field name="COLOR">#333333</field><field name="SIZE">13</field>
+              </block></next>
+            </block>
+          </statement>
+        </block>
+      </statement>
+    </block></next>
+  </block>
+</xml>`,
+
+  quiz: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_setup" x="30" y="30">
+    <field name="WIDTH">300</field><field name="HEIGHT">260</field><field name="BG">#060612</field>
+    <next><block type="bc_game_loop">
+      <statement name="BODY">
+        <block type="bc_fill_bg">
+          <field name="COLOR">#060612</field>
+          <next><block type="bc_draw_text">
+            <field name="TEXT">🧠 QUIZ TIME!</field><field name="X">80</field><field name="Y">40</field>
+            <field name="COLOR">#b43cff</field><field name="SIZE">20</field>
+            <next><block type="bc_draw_text">
+              <field name="TEXT">What is 7 × 6?</field><field name="X">80</field><field name="Y">90</field>
+              <field name="COLOR">#ffffff</field><field name="SIZE">16</field>
+              <next><block type="bc_draw_text">
+                <field name="TEXT">A) 36   B) 42   C) 48</field><field name="X">50</field><field name="Y">130</field>
+                <field name="COLOR">#00d4ff</field><field name="SIZE">14</field>
+                <next><block type="bc_draw_text">
+                  <field name="TEXT">Press B for the answer!</field><field name="X">55</field><field name="Y">200</field>
+                  <field name="COLOR">#aaaaaa</field><field name="SIZE">12</field>
+                </block></next>
+              </block></next>
+            </block></next>
+          </block></next>
+        </block>
+      </statement>
+      <next><block type="bc_on_keypress">
+        <field name="KEY">b</field>
+        <statement name="BODY">
+          <block type="bc_add_score"><value name="VAL"><block type="math_number"><field name="NUM">10</field></block></value>
+          <next><block type="bc_win_sound"></block></next></block>
+        </statement>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+
+  snake: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="bc_setup" x="30" y="30">
+    <field name="WIDTH">300</field><field name="HEIGHT">260</field><field name="BG">#060612</field>
+    <next><block type="bc_create_sprite">
+      <field name="NAME">head</field><field name="X">140</field><field name="Y">120</field>
+      <field name="W">16</field><field name="H">16</field><field name="COLOR">#00d4ff</field>
+      <next><block type="bc_create_sprite">
+        <field name="NAME">food</field><field name="X">200</field><field name="Y">80</field>
+        <field name="W">14</field><field name="H">14</field><field name="COLOR">#ffaa00</field>
+        <next><block type="bc_on_keypress">
+          <field name="KEY">ArrowUp</field>
+          <statement name="BODY"><block type="bc_move_sprite">
+            <field name="NAME">head</field>
+            <value name="DX"><block type="math_number"><field name="NUM">0</field></block></value>
+            <value name="DY"><block type="math_number"><field name="NUM">-16</field></block></value>
+          </block></statement>
+          <next><block type="bc_on_keypress">
+            <field name="KEY">ArrowDown</field>
+            <statement name="BODY"><block type="bc_move_sprite">
+              <field name="NAME">head</field>
+              <value name="DX"><block type="math_number"><field name="NUM">0</field></block></value>
+              <value name="DY"><block type="math_number"><field name="NUM">16</field></block></value>
+            </block></statement>
+            <next><block type="bc_on_keypress">
+              <field name="KEY">ArrowLeft</field>
+              <statement name="BODY"><block type="bc_move_sprite">
+                <field name="NAME">head</field>
+                <value name="DX"><block type="math_number"><field name="NUM">-16</field></block></value>
+                <value name="DY"><block type="math_number"><field name="NUM">0</field></block></value>
+              </block></statement>
+              <next><block type="bc_on_keypress">
+                <field name="KEY">ArrowRight</field>
+                <statement name="BODY"><block type="bc_move_sprite">
+                  <field name="NAME">head</field>
+                  <value name="DX"><block type="math_number"><field name="NUM">16</field></block></value>
+                  <value name="DY"><block type="math_number"><field name="NUM">0</field></block></value>
+                </block></statement>
+                <next><block type="bc_game_loop">
+                  <statement name="BODY"><block type="bc_fill_bg">
+                    <field name="COLOR">#060612</field>
+                    <next><block type="bc_draw_sprite">
+                      <field name="NAME">head</field>
+                      <next><block type="bc_draw_sprite">
+                        <field name="NAME">food</field>
+                        <next><block type="bc_check_bounds">
+                          <field name="NAME">head</field>
+                          <value name="MARGIN"><block type="math_number"><field name="NUM">0</field></block></value>
+                          <next><block type="controls_if">
+                            <value name="IF0"><block type="bc_collide"><field name="A">head</field><field name="B">food</field></block></value>
+                            <statement name="DO0"><block type="bc_add_score">
+                              <value name="VAL"><block type="math_number"><field name="NUM">10</field></block></value>
+                              <next><block type="bc_play_beep"><field name="FREQ">1200</field><field name="DUR">0.05</field></block></next>
+                            </block></statement>
+                          </block></next>
+                        </block></next>
+                      </block></next>
+                    </block></next>
+                  </block></statement>
+                </block></next>
+              </block></next>
+            </block></next>
+          </block></next>
+        </block></next>
+      </block></next>
+    </block></next>
+  </block>
+</xml>`,
+};
+
+// ══════════════════════════════════════════════════
+//  LOAD PROJECT
+// ══════════════════════════════════════════════════
+let currentProject = 'dodge';
+
+function loadProject(name) {
+  currentProject = name;
+  const xml = PROJECTS[name] || PROJECTS['blank'];
+  try {
+    workspace.clear();
+    const dom = Blockly.utils.xml.textToDom(xml);
+    Blockly.Xml.domToWorkspace(dom, workspace);
+    workspace.scrollCenter();
+  } catch(e) {
+    consoleLog('Error loading project: ' + e.message, 'error');
+  }
+
+  // Update active state
+  document.querySelectorAll('.bc-project-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.proj === name);
+  });
+
+  // Bump stat
+  const built = parseInt(localStorage.getItem('bc_projects')||'0') + 1;
+  localStorage.setItem('bc_projects', built);
+  document.getElementById('statProjects').textContent = built;
+
+  stopGame();
+  consoleLog(`📂 Loaded project: ${name}`, 'info');
+}
+
+// ══════════════════════════════════════════════════
+//  RUN / STOP GAME
+// ══════════════════════════════════════════════════
+function clearConsole() {
+  const out = document.getElementById('consoleOutput');
+  if (out) out.innerHTML = '<div style="color:var(--text-dim);font-family:var(--font-mono);font-size:.78rem">// Console cleared</div>';
+}
+
+function consolePrint(val, type) {
+  const out = document.getElementById('consoleOutput');
+  if (!out) return;
+  const line = document.createElement('div');
+  line.style.cssText = 'padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-family:var(--font-mono);font-size:.8rem;';
+  const colors = {success:'#39ff14', error:'#ff006e', warn:'#ffe000', info:'#00f5ff', print:'#e8e8ff'};
+  line.style.color = colors[type] || '#e8e8ff';
+  const prefix = type === 'error' ? '✗ ' : type === 'success' ? '✓ ' : type === 'warn' ? '⚠ ' : type === 'info' ? '» ' : '→ ';
+  line.textContent = prefix + String(val);
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+async function runCode() {
+  stopGame();
+  document.getElementById('previewOverlay').style.display = 'none';
+  document.getElementById('runningIndicator').style.display = 'flex';
+  document.getElementById('runBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = '';
+
+  // Reset canvas state
+  GS.sprites = {}; GS.keys = {}; GS.loopFn = null; GS.running = true;
+  GS.score = 0; GS.lives = 3; GS.level = 1;
+  updateGameHUD();
+
+  // Generate code
+  const J = Blockly.JavaScript || Blockly.javascriptGenerator;
+  let code = '';
+  try { code = J.workspaceToCode(workspace); }
+  catch(e) { consolePrint('Code generation error: ' + e.message, 'error'); stopGame(); return; }
+
+  updateCodeView(code);
+  consolePrint('▶ Running...', 'info');
+
+  // Update block count stat
+  const blockCount = workspace.getAllBlocks().length;
+  document.getElementById('statBlocks').textContent = blockCount;
+
+  // Track runs
+  const runs = parseInt(localStorage.getItem('bc_runs')||'0') + 1;
+  localStorage.setItem('bc_runs', runs);
+  document.getElementById('statRuns').textContent = runs;
+
+  // __print__ and __alert__ wired to console panel
+  const __print__ = (v) => consolePrint(v, 'print');
+  const __alert__ = (v) => consolePrint('💬 ' + v, 'warn');
+
+  try {
+    const fn = new Function('Game','GS','CANVAS','CTX','restartGame','__print__','__alert__','AI',
+      `return (async () => { ${code} })();`);
+    await fn(Game, GS, CANVAS, CTX, restartGame, __print__, __alert__, AI);
+  } catch(e) {
+    consolePrint('Runtime error: ' + e.message, 'error');
+    stopGame(); return;
+  }
+
+  // If no game loop, auto-stop (console/math program)
+  if (!GS.loopFn) {
+    consolePrint('✓ Done.', 'success');
+    stopGame();
+  } else {
+    // Game loop mode — switch to preview tab
+    switchBcTab('preview', document.querySelector('.bc-tab:nth-child(2)'));
+    const tick = () => {
+      if (!GS.running) return;
+      try { GS.loopFn(); } catch(e) {
+        consolePrint('Loop error: ' + e.message, 'error');
+        stopGame(); return;
+      }
+      GS.animId = requestAnimationFrame(tick);
+    };
+    GS.animId = requestAnimationFrame(tick);
+  }
+
+  addXP(10); updateSidebarXP();
+  if (runs === 1) unlockAchievement('block_builder');
+}
+
+// Keep alias for backward compat
+function runGame() { runCode(); }
+
+
+
+function stopGame() {
+  GS.running = false;
+  if (GS.animId) { cancelAnimationFrame(GS.animId); GS.animId = null; }
+  document.getElementById('runBtn').style.display = '';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('runningIndicator').style.display = 'none';
+}
+
+function restartGame() {
+  runCode();
+}
+
+function clearWorkspace() {
+  if (confirm('Clear all blocks?')) {
+    workspace.clear();
+    consoleLog('🗑 Workspace cleared', 'warn');
+  }
+}
+
+function undoWorkspace() {
+  workspace.undo(false);
+}
+
+function saveProject() {
+  const xml = Blockly.Xml.workspaceToDom(workspace);
+  const text = Blockly.utils.xml.domToText(xml);
+  const blob = new Blob([text], {type:'text/xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${currentProject}_blocks.xml`;
+  a.click();
+  consoleLog('💾 Project saved as XML', 'success');
+  showToast('Project saved!', 'success', '💾');
+}
+
+// ══════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════
+function switchBcTab(name, btn) {
+  document.querySelectorAll('.bc-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.bc-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`bcTab-${name}`)?.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════
+//  CODE VIEW
+// ══════════════════════════════════════════════════
+function updateGeneratedCode() {
+  const J = Blockly.JavaScript || Blockly.javascriptGenerator;
+  if (!J || !workspace) return;
+  try {
+    const code = J.workspaceToCode(workspace);
+    updateCodeView(code);
+  } catch(e) {}
+}
+
+function updateCodeView(code) {
+  const el = document.getElementById('generatedCode');
+  // Simple syntax highlight
+  const highlighted = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\b(var|let|const|function|if|else|for|while|return|true|false|new|this)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(Game\.\w+)/g, '<span class="fn">$1</span>')
+    .replace(/'([^']*)'/g, "<span class='str'>'$1'</span>")
+    .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="num">$1</span>')
+    .replace(/(\/\/[^\n]*)/g, '<span class="cmt">$1</span>');
+  el.innerHTML = highlighted;
+}
+
+function copyGeneratedCode() {
+  const code = document.getElementById('generatedCode').innerText;
+  navigator.clipboard.writeText(code).then(() => showToast('Code copied!','success','📋'));
+}
+
+// ══════════════════════════════════════════════════
+//  CONSOLE
+// ══════════════════════════════════════════════════
+function consoleLog(msg, type = 'log') {
+  // Delegate to new consolePrint (backwards compat)
+  const typeMap = { log: 'print', info: 'info', success: 'success', error: 'error', warn: 'warn' };
+  consolePrint(msg, typeMap[type] || 'print');
+}
+
+function handleConsoleInput(e) {
+  if (e.key !== 'Enter') return;
+  const inp = document.getElementById('consoleInput');
+  if (!inp) return;
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  consolePrint('> ' + cmd, 'info');
+  try {
+    const result = eval(cmd);
+    if (result !== undefined) consolePrint(String(result), 'success');
+  } catch(err) {
+    consolePrint(err.message, 'error');
+  }
+  inp.value = '';
+}
+
+// ══════════════════════════════════════════════════
+//  HUD & STATS
+// ══════════════════════════════════════════════════
+function updateGameHUD() {
+  document.getElementById('gameScore').textContent = GS.score;
+  document.getElementById('gameLives').textContent = GS.lives;
+  document.getElementById('gameLevel').textContent = GS.level;
+}
+
+function updateBlockCount() {
+  const count = workspace.getAllBlocks(false).length;
+  document.getElementById('statBlocks').textContent = count;
+}
+
+function updateSidebarXP() {
+  const xp = getXP();
+  const lvl = getLevel(xp);
+  const nextLvl = lvl * 100;
+  document.getElementById('sideLevel').textContent = lvl;
+  document.getElementById('sideXpText').textContent = `${xp} XP`;
+  document.getElementById('sideXpBar').style.width = Math.min(100, (xp % 100)) + '%';
+  document.getElementById('navXpVal').textContent = xp;
+}
+
+// ══════════════════════════════════════════════════
+//  TEMPLATES (quick insert)
+// ══════════════════════════════════════════════════
+function insertTemplate(name) {
+  const templates = {
+    loop: `<xml><block type="bc_game_loop"><statement name="BODY"><block type="bc_clear"></block></statement></block></xml>`,
+    score: `<xml><block type="bc_add_score"><value name="VAL"><block type="math_number"><field name="NUM">1</field></block></value></block></xml>`,
+    collision: `<xml><block type="controls_if"><value name="IF0"><block type="bc_collide"><field name="A">player</field><field name="B">enemy</field></block></value><statement name="DO0"><block type="bc_explosion_sound"></block></statement></block></xml>`,
+    ai: `<xml><block type="bc_ai_chase_player"><field name="NAME">enemy</field><value name="SPD"><block type="math_number"><field name="NUM">2</field></block></value></block></xml>`,
+  };
+  const xml = templates[name];
+  if (!xml) return;
+  try {
+    const dom = Blockly.utils.xml.textToDom(xml);
+    Blockly.Xml.appendDomToWorkspace(dom, workspace);
+    consoleLog(`✨ Inserted ${name} template`, 'info');
+  } catch(e) {
+    consoleLog('Template insert error: ' + e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  ACHIEVEMENTS
+// ══════════════════════════════════════════════════
+function unlockAchievement(id) {
+  const achievements = JSON.parse(localStorage.getItem('aawiskar_achievements') || '{}');
+  if (achievements[id]) return;
+  achievements[id] = Date.now();
+  localStorage.setItem('aawiskar_achievements', JSON.stringify(achievements));
+  showToast(`Achievement unlocked: ${id.replace(/_/g,' ')}`, 'success', '🏆');
+}
+
+// Helpers for XP (shared via script.js)
+function getXP() { return parseInt(localStorage.getItem('aawiskar_xp') || '0'); }
+function addXPLocal(amt) {
+  const xp = getXP() + amt;
+  localStorage.setItem('aawiskar_xp', xp);
+  return xp;
+}
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initBlockly();
+  updateSidebarXP();
+
+  // Load stats from localStorage
+  document.getElementById('statProjects').textContent = localStorage.getItem('bc_projects') || '0';
+  document.getElementById('statRuns').textContent = localStorage.getItem('bc_runs') || '0';
+
+  // Ctrl+Enter to run
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === "Enter") runCode();
+  });
+
+  consoleLog('🎮 Block Coder ready — drag blocks and click ▶ Run!', 'info');
+  consoleLog('💡 Beginner? Start with "Hello World" in the sidebar', 'log');
+  consoleLog('📢 Use "Output → print" blocks to see results here', 'log');
+});
+</script>
+</body>
+</html>

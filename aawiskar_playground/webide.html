@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web IDE — Aawiskar Playground</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<style>
+html,body{height:100%;overflow:hidden}
+#app{height:100%;overflow:hidden}
+.webide-layout{display:grid;grid-template-columns:200px 1fr 1fr;grid-template-rows:auto 1fr;flex:1;min-height:0;overflow:hidden}
+.webide-sidebar{grid-row:1/3;background:var(--bg-card);border-right:1px solid var(--border-subtle);overflow-y:auto;display:flex;flex-direction:column}
+.webide-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-subtle);background:var(--bg-panel);grid-column:2/4}
+.webide-tab{padding:.5rem 1.2rem;font-family:var(--font-mono);font-size:.75rem;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:var(--transition);display:flex;align-items:center;gap:.4rem;border:none;background:none;white-space:nowrap}
+.webide-tab.active{color:var(--neon-cyan);border-bottom-color:var(--neon-cyan);background:rgba(0,245,255,.05)}
+.webide-tab:hover{color:var(--text-primary)}
+.editor-pane{background:var(--bg-dark);overflow:hidden;display:flex;flex-direction:column;border-right:1px solid var(--border-subtle)}
+.preview-pane{background:#fff;display:flex;flex-direction:column}
+.preview-pane iframe{flex:1;border:none;background:#fff}
+.CodeMirror{height:100%;font-size:13px;font-family:'Share Tech Mono',monospace;background:var(--bg-dark)!important}
+.CodeMirror-scroll{overflow:auto!important}
+.template-item{display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;cursor:pointer;font-family:var(--font-body);font-size:.82rem;color:var(--text-dim);transition:var(--transition);border-radius:6px;margin:.15rem .5rem}
+.template-item:hover{background:rgba(255,255,255,.05);color:var(--text-primary)}
+.template-item.active{background:rgba(0,245,255,.1);color:var(--neon-cyan)}
+.preview-toolbar{background:var(--bg-panel);border-bottom:1px solid var(--border-subtle);padding:.4rem .75rem;display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim)}
+.url-bar{flex:1;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:4px;padding:.2rem .6rem;color:var(--text-dim);font-family:var(--font-mono);font-size:.72rem}
+.editor-toolbar{background:var(--bg-panel);border-bottom:1px solid var(--border-subtle);padding:.35rem .75rem;display:flex;align-items:center;gap:.5rem}
+.console-panel{height:120px;background:#04040e;border-top:1px solid rgba(0,245,255,.15);font-family:var(--font-mono);font-size:.76rem;overflow-y:auto;padding:.5rem 1rem;color:var(--neon-green);flex-shrink:0}
+.console-line{padding:.1rem 0;line-height:1.5}
+.console-line.error{color:var(--neon-pink)}
+.console-line.warn{color:var(--neon-yellow)}
+.console-line.info{color:var(--neon-cyan)}
+.editor-tab{display:flex;align-items:center;gap:.5rem;padding:.4rem .9rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap;transition:var(--transition)}
+.editor-tab.active{color:var(--neon-cyan);border-bottom-color:var(--neon-cyan);background:rgba(0,245,255,.04)}
+@media(max-width:900px){.webide-layout{grid-template-columns:1fr;grid-template-rows:auto auto auto 1fr}.webide-sidebar{grid-row:auto;max-height:200px}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div id="app">
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="favicon.png" alt="Aawiskar Logo">
+    </div>
+    <div>
+      <div class="nav-logo-text">AAWISKAR <span>PLAYGROUND</span></div>
+      <div class="nav-logo-sub">A product of Aawiskar RoboLabs Pvt. Ltd.</div>
+    </div>
+  </a>
+  <button class="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-module-strip">
+  <a href="index.html" class="module-pill">🏠 Home</a>
+  <div class="module-pill-sep"></div>
+  <a href="python.html" class="module-pill">🐍 Python IDE</a>
+  <a href="ml.html" class="module-pill">🧠 ML Studio</a>
+  <a href="block.html" class="module-pill">🎮 Block Coder</a>
+  <a href="arduino.html" class="module-pill">⚡ Arduino Gen</a>
+  <div class="module-pill-sep"></div>
+  <a href="cv.html" class="module-pill">👁️ CV Studio</a>
+  <a href="webide.html" class="module-pill active">🌐 Web IDE</a>
+  <a href="physics.html" class="module-pill">🔬 Physics Lab</a>
+  <a href="maths.html" class="module-pill">📐 Maths Lab</a>
+  <a href="astronomy.html" class="module-pill">🪐 Astronomy</a>
+</div>
+<div id="mobile-menu" class="mobile-menu">
+  <button class="mobile-menu-close">✕</button>
+  <a href="index.html">🏠 Home</a>
+  <a href="python.html">🐍 Python IDE</a>
+  <a href="ml.html">🧠 ML Studio</a>
+  <a href="block.html">🎮 Block Coder</a>
+  <a href="arduino.html">⚡ Arduino Gen</a>
+  <a href="cv.html">👁️ CV Studio</a>
+  <a href="webide.html">🌐 Web IDE</a>
+  <a href="physics.html">🔬 Physics Lab</a>
+  <a href="maths.html">📐 Maths Lab</a>
+  <a href="astronomy.html">🪐 Astronomy</a>
+</div>
+
+<div class="page-header" style="padding:.75rem 2rem">
+  <div class="page-header-info">
+    <h1>🌐 WEB IDE <span class="tag tag-cyan" style="font-size:.6rem;vertical-align:middle">HTML • CSS • JS</span></h1>
+    <p>Write, preview, and test websites live in your browser — no server needed</p>
+  </div>
+  <div class="page-header-actions">
+    <button class="btn btn-cyan btn-sm" id="runBtn">▶ Run</button>
+    <button class="btn btn-ghost btn-sm" id="formatBtn">✨ Format</button>
+    <button class="btn btn-outline btn-sm" id="downloadBtn">💾 Download</button>
+    <button class="btn btn-outline btn-sm" id="fullscreenBtn">⛶ Preview</button>
+  </div>
+</div>
+
+<div class="webide-layout">
+  <!-- SIDEBAR: Templates -->
+  <div class="webide-sidebar">
+    <div class="panel-label"><div class="status-dot"></div>TEMPLATES</div>
+    <div style="padding:.5rem 0">
+      <div class="sidebar-section-title" style="padding:.4rem .75rem">// Starters</div>
+      <div class="template-item active" onclick="loadTemplate('blank')" id="tpl-blank">📄 Blank Page</div>
+      <div class="template-item" onclick="loadTemplate('hello')" id="tpl-hello">👋 Hello World</div>
+      <div class="template-item" onclick="loadTemplate('portfolio')" id="tpl-portfolio">🎨 Portfolio Card</div>
+      <div class="template-item" onclick="loadTemplate('quiz')" id="tpl-quiz">❓ Quiz App</div>
+      <div class="template-item" onclick="loadTemplate('todo')" id="tpl-todo">✅ Todo List</div>
+      <div class="template-item" onclick="loadTemplate('counter')" id="tpl-counter">🔢 Counter</div>
+      <div class="sidebar-section-title" style="padding:.4rem .75rem;margin-top:.5rem">// Games</div>
+      <div class="template-item" onclick="loadTemplate('snake')" id="tpl-snake">🐍 Snake Game</div>
+      <div class="template-item" onclick="loadTemplate('pong')" id="tpl-pong">🏓 Pong</div>
+      <div class="template-item" onclick="loadTemplate('clock')" id="tpl-clock">🕐 Analog Clock</div>
+      <div class="sidebar-section-title" style="padding:.4rem .75rem;margin-top:.5rem">// Data Viz</div>
+      <div class="template-item" onclick="loadTemplate('chart')" id="tpl-chart">📊 Bar Chart</div>
+      <div class="template-item" onclick="loadTemplate('canvas')" id="tpl-canvas">🎨 Canvas Art</div>
+    </div>
+  </div>
+
+  <!-- EDITOR TABS -->
+  <div style="display:contents">
+    <div class="webide-tabs" style="grid-column:2/4;grid-row:1">
+      <button class="webide-tab active" onclick="switchEditorTab('html',this)">📄 HTML</button>
+      <button class="webide-tab" onclick="switchEditorTab('css',this)">🎨 CSS</button>
+      <button class="webide-tab" onclick="switchEditorTab('js',this)">⚡ JS</button>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:.4rem;padding:.3rem .75rem;font-family:var(--font-mono);font-size:.68rem;color:var(--text-dim)">
+        <div class="status-dot"></div><span id="runStatus">Ready</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDITOR -->
+  <div class="editor-pane">
+    <div id="editor-html" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <textarea id="cm-html"></textarea>
+    </div>
+    <div id="editor-css" style="flex:1;display:none;flex-direction:column;overflow:hidden">
+      <textarea id="cm-css"></textarea>
+    </div>
+    <div id="editor-js" style="flex:1;display:none;flex-direction:column;overflow:hidden">
+      <textarea id="cm-js"></textarea>
+    </div>
+    <div class="console-panel" id="consolePanel">
+      <div class="console-line info">// Console output appears here</div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-pane">
+    <div class="preview-toolbar">
+      <span>⚡</span>
+      <input class="url-bar" value="preview://local" readonly>
+      <button class="btn btn-cyan btn-sm" onclick="runCode()" style="padding:.2rem .6rem;font-size:.68rem">▶ Run</button>
+    </div>
+    <iframe id="preview" sandbox="allow-scripts allow-modals allow-same-origin allow-popups"></iframe>
+  </div>
+</div>
+
+</div>
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script>
+
+const TEMPLATES = {
+blank: {
+  html: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>My Page</title>\n</head>\n<body>\n  <h1>Hello!</h1>\n</body>\n</html>`,
+  css: `body {\n  font-family: Arial, sans-serif;\n  margin: 2rem;\n  background: #f0f0f0;\n}`,
+  js: `// Your JavaScript here\nconsole.log('Page loaded!');`
+},
+hello: {
+  html: `<div class="container">\n  <div class="card">\n    <div class="emoji">👋</div>\n    <h1>Hello, World!</h1>\n    <p>Welcome to my first web page!</p>\n    <button onclick="greet()">Say Hi</button>\n  </div>\n</div>`,
+  css: `body { margin:0; background: linear-gradient(135deg, #1a1a2e, #16213e); min-height:100vh; display:flex; align-items:center; justify-content:center; font-family: 'Segoe UI', sans-serif; }\n.card { background:rgba(255,255,255,0.1); -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:3rem; text-align:center; color:#fff; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }\n.emoji { font-size:4rem; margin-bottom:1rem; animation: wave 2s ease-in-out infinite; display:inline-block; }\n@keyframes wave { 0%,100%{transform:rotate(0)} 25%{transform:rotate(20deg)} 75%{transform:rotate(-10deg)} }\nh1 { font-size:2.5rem; margin:.5rem 0; background:linear-gradient(90deg,#00f5ff,#bf5fff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }\np { color:rgba(255,255,255,0.7); margin-bottom:2rem; }\nbutton { background:linear-gradient(135deg,#00f5ff,#bf5fff); border:none; color:#000; font-size:1rem; font-weight:700; padding:1rem 2.5rem; border-radius:50px; cursor:pointer; transition:transform 0.2s; }\nbutton:hover { transform:scale(1.05); }`,
+  js: `function greet() {\n  const names = ['World','Friend','Coder','Explorer','Champion'];\n  const name = names[Math.floor(Math.random() * names.length)];\n  document.querySelector('h1').textContent = \`Hello, \${name}! 🎉\`;\n  document.querySelector('.emoji').style.animation = 'none';\n  setTimeout(() => document.querySelector('.emoji').style.animation = '', 100);\n}`
+},
+todo: {
+  html: `<div class="app">\n  <h1>✅ My Tasks</h1>\n  <div class="input-row">\n    <input type="text" id="taskInput" placeholder="Add a new task..." onkeydown="if(event.key==='Enter')addTask()">\n    <button onclick="addTask()">Add</button>\n  </div>\n  <ul id="taskList"></ul>\n  <div class="stats" id="stats">0 tasks</div>\n</div>`,
+  css: `* { box-sizing:border-box; margin:0; padding:0; }\nbody { background:#0f0f1a; min-height:100vh; display:flex; align-items:flex-start; justify-content:center; padding:2rem; font-family:'Segoe UI',sans-serif; }\n.app { background:#1a1a2e; border:1px solid rgba(0,245,255,0.2); border-radius:16px; padding:2rem; width:100%; max-width:500px; box-shadow:0 0 40px rgba(0,245,255,0.05); }\nh1 { color:#fff; font-size:1.8rem; margin-bottom:1.5rem; }\n.input-row { display:flex; gap:.5rem; margin-bottom:1.5rem; }\ninput { flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(0,245,255,0.3); border-radius:8px; padding:.75rem 1rem; color:#fff; font-size:1rem; outline:none; }\ninput:focus { border-color:#00f5ff; box-shadow:0 0 0 2px rgba(0,245,255,0.1); }\nbutton { background:linear-gradient(135deg,#00f5ff,#0099bb); color:#000; border:none; border-radius:8px; padding:.75rem 1.5rem; font-weight:700; cursor:pointer; transition:transform 0.2s; }\nbutton:hover { transform:scale(1.03); }\nul { list-style:none; display:flex; flex-direction:column; gap:.5rem; }\nli { display:flex; align-items:center; gap:.75rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:.75rem 1rem; color:#e8e8ff; cursor:pointer; transition:all 0.2s; }\nli.done { text-decoration:line-through; opacity:0.5; }\nli:hover { border-color:rgba(0,245,255,0.2); }\n.del { margin-left:auto; background:rgba(255,0,110,0.1); border:1px solid rgba(255,0,110,0.3); color:#ff006e; border-radius:6px; padding:.2rem .5rem; font-size:.8rem; cursor:pointer; }\n.stats { margin-top:1rem; color:rgba(255,255,255,0.3); font-size:.85rem; font-family:monospace; }`,
+  js: `let tasks = [];\nfunction addTask() {\n  const input = document.getElementById('taskInput');\n  const text = input.value.trim();\n  if (!text) return;\n  tasks.push({ text, done: false, id: Date.now() });\n  input.value = '';\n  render();\n}\nfunction toggleTask(id) {\n  const t = tasks.find(t=>t.id===id);\n  if (t) t.done = !t.done;\n  render();\n}\nfunction deleteTask(id) {\n  tasks = tasks.filter(t=>t.id!==id);\n  render();\n}\nfunction render() {\n  const ul = document.getElementById('taskList');\n  ul.innerHTML = tasks.map(t=>\n    \`<li class="\${t.done?'done':''}" onclick="toggleTask(\${t.id})">\n      \${t.done?'✅':'⬜'} \${t.text}\n      <button class="del" onclick="event.stopPropagation();deleteTask(\${t.id})">✕</button>\n    </li>\`\n  ).join('');\n  const done = tasks.filter(t=>t.done).length;\n  document.getElementById('stats').textContent = \`\${tasks.length} tasks · \${done} completed\`;\n}`
+},
+counter: {
+  html: `<div class="app">\n  <h1>🔢 Counter</h1>\n  <div class="display" id="count">0</div>\n  <div class="controls">\n    <button onclick="change(-10)">-10</button>\n    <button onclick="change(-1)">-1</button>\n    <button onclick="reset()" class="reset">Reset</button>\n    <button onclick="change(1)">+1</button>\n    <button onclick="change(10)">+10</button>\n  </div>\n  <div class="history" id="hist"></div>\n</div>`,
+  css: `body{margin:0;background:#060612;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace}\n@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');\n.app{text-align:center;color:#fff;padding:3rem;background:#0f0f2a;border-radius:20px;border:1px solid rgba(0,245,255,.2);box-shadow:0 0 60px rgba(0,245,255,.05)}\nh1{font-size:1.5rem;color:#00f5ff;margin-bottom:2rem;letter-spacing:.1em}\n.display{font-size:6rem;font-weight:700;color:#fff;margin:1rem 0;transition:transform .1s;text-shadow:0 0 40px rgba(0,245,255,.5)}\n.controls{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem}\nbutton{background:rgba(0,245,255,.1);border:1px solid rgba(0,245,255,.4);color:#00f5ff;padding:.75rem 1.5rem;border-radius:10px;font-size:1rem;font-family:monospace;cursor:pointer;transition:all .2s}\nbutton:hover{background:rgba(0,245,255,.2);transform:scale(1.05)}\nbutton.reset{background:rgba(255,0,110,.1);border-color:rgba(255,0,110,.4);color:#ff006e}\n.history{margin-top:1.5rem;font-family:monospace;font-size:.78rem;color:rgba(255,255,255,.3);max-height:80px;overflow:hidden}`,
+  js: `let count=0,history=[];\nfunction change(n){\n  count+=n;\n  history.unshift((n>0?'+':'')+n);\n  if(history.length>6)history.pop();\n  update();\n}\nfunction reset(){count=0;history=['reset'];update();}\nfunction update(){\n  const el=document.getElementById('count');\n  el.textContent=count;\n  el.style.color=count>0?'#39ff14':count<0?'#ff006e':'#fff';\n  el.style.textShadow=count>0?'0 0 40px rgba(57,255,20,.5)':count<0?'0 0 40px rgba(255,0,110,.5)':'0 0 40px rgba(0,245,255,.5)';\n  el.style.transform='scale(1.1)';\n  setTimeout(()=>el.style.transform='',100);\n  document.getElementById('hist').textContent=history.join(' · ');\n}`
+},
+quiz: {
+  html: `<div class="quiz-app" id="quizApp"></div>`,
+  css: `body{margin:0;background:linear-gradient(135deg,#060612,#0f0f2a);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif}\n.quiz-app{background:#0f0f2a;border:1px solid rgba(0,245,255,.2);border-radius:20px;padding:2.5rem;max-width:550px;width:90%;box-shadow:0 0 60px rgba(0,0,0,.4)}\n.question-num{font-family:monospace;font-size:.75rem;color:rgba(0,245,255,.6);letter-spacing:.2em;margin-bottom:1rem}\n.question{font-size:1.3rem;color:#fff;font-weight:600;margin-bottom:2rem;line-height:1.4}\n.options{display:flex;flex-direction:column;gap:.75rem}\n.option{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:1rem 1.25rem;color:#e8e8ff;cursor:pointer;transition:all .2s;font-size:.95rem;text-align:left}\n.option:hover{border-color:rgba(0,245,255,.4);background:rgba(0,245,255,.06)}\n.option.correct{background:rgba(57,255,20,.1);border-color:#39ff14;color:#39ff14}\n.option.wrong{background:rgba(255,0,110,.1);border-color:#ff006e;color:#ff006e}\n.score{font-family:monospace;margin-top:1.5rem;color:rgba(255,255,255,.4);font-size:.85rem}\n.progress{height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:1.5rem}\n.progress-fill{height:100%;background:linear-gradient(90deg,#00f5ff,#bf5fff);border-radius:2px;transition:width .5s}\n.result{text-align:center;color:#fff}\n.result h2{font-size:2rem;margin-bottom:.5rem}\n.result .grade{font-size:4rem;margin:1rem 0}\nbtn-restart{margin-top:1rem;background:linear-gradient(135deg,#00f5ff,#bf5fff);border:none;color:#000;padding:1rem 2rem;border-radius:50px;font-weight:700;font-size:1rem;cursor:pointer}`,
+  js: `const questions=[\n  {q:"What does HTML stand for?",opts:["HyperText Markup Language","High Tech Modern Language","HyperTransfer Markup Layout","Home Tool Markup Language"],ans:0},\n  {q:"Which tag creates a hyperlink in HTML?",opts:["<link>","<a>","","<url>"],ans:1},\n  {q:"What property changes text color in CSS?",opts:["text-color","font-color","color","foreground"],ans:2},\n  {q:"Which of these is a JavaScript data type?",opts:["float","string","char","integer"],ans:1},\n  {q:"What does CSS stand for?",opts:["Computer Style Sheets","Creative Style System","Cascading Style Sheets","Colorful Site Sheets"],ans:2},\n];\nlet current=0,score=0,answered=false;\nfunction render(){\n  const app=document.getElementById('quizApp');\n  if(current>=questions.length){\n    const pct=Math.round(score/questions.length*100);\n    app.innerHTML=\`<div class="result"><div class="grade">\${pct>=80?'🏆':pct>=60?'👏':'💪'}</div><h2>\${score}/\${questions.length}</h2><p style="color:rgba(255,255,255,.6)">\${pct}% correct — \${pct>=80?'Excellent!':pct>=60?'Good job!':'Keep practicing!'}</p><br><button onclick="current=0;score=0;render()" style="margin-top:1rem;background:linear-gradient(135deg,#00f5ff,#bf5fff);border:none;color:#000;padding:1rem 2rem;border-radius:50px;font-weight:700;font-size:1rem;cursor:pointer">🔄 Restart</button></div>\`;\n    return;\n  }\n  const q=questions[current];\n  app.innerHTML=\`<div class="question-num">QUESTION \${current+1} OF \${questions.length}</div><div class="progress"><div class="progress-fill" style="width:\${(current/questions.length)*100}%"></div></div><div class="question">\${q.q}</div><div class="options">\${q.opts.map((o,i)=>\`<button class="option" onclick="answer(\${i})">\${String.fromCharCode(65+i)}. \${o}</button>\`).join('')}</div><div class="score">Score: \${score}</div>\`;\n}\nfunction answer(i){\n  if(answered)return;\n  answered=true;\n  const opts=document.querySelectorAll('.option');\n  opts[questions[current].ans].classList.add('correct');\n  if(i!==questions[current].ans)opts[i].classList.add('wrong');\n  else score++;\n  setTimeout(()=>{current++;answered=false;render();},1200);\n}\nrender();`
+},
+snake: {
+  html: `<div class="game-container">\n  <div class="header"><span class="score">Score: <span id="score">0</span></span><span class="hi">Best: <span id="hi">0</span></span></div>\n  <canvas id="c" width="400" height="400"></canvas>\n  <div class="controls">Use Arrow Keys or WASD</div>\n</div>`,
+  css: `body{margin:0;background:#060612;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:monospace}\n.game-container{text-align:center}\n.header{display:flex;justify-content:space-between;color:#00f5ff;font-size:1.1rem;margin-bottom:.75rem;font-weight:700;letter-spacing:.05em}\n#c{background:#0a0a1a;border:2px solid rgba(0,245,255,.3);border-radius:4px;box-shadow:0 0 40px rgba(0,245,255,.1);display:block}\n.controls{margin-top:.75rem;color:rgba(255,255,255,.3);font-size:.78rem}`,
+  js: `const c=document.getElementById('c'),ctx=c.getContext('2d'),SIZE=20,W=20,H=20;\nlet snake=[{x:10,y:10}],dir={x:1,y:0},food=spawn(),score=0,hi=0,alive=true,nextDir={x:1,y:0};\nfunction spawn(){return{x:Math.floor(Math.random()*W),y:Math.floor(Math.random()*H)};}\nfunction draw(){\n  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,400,400);\n  // Grid\n  ctx.strokeStyle='rgba(255,255,255,0.03)';\n  for(let i=0;i<=W;i++){ctx.beginPath();ctx.moveTo(i*SIZE,0);ctx.lineTo(i*SIZE,400);ctx.stroke();}\n  for(let i=0;i<=H;i++){ctx.beginPath();ctx.moveTo(0,i*SIZE);ctx.lineTo(400,i*SIZE);ctx.stroke();}\n  // Food\n  ctx.fillStyle='#ff006e';ctx.shadowBlur=10;ctx.shadowColor='#ff006e';\n  ctx.fillRect(food.x*SIZE+2,food.y*SIZE+2,SIZE-4,SIZE-4);\n  ctx.shadowBlur=0;\n  // Snake\n  snake.forEach((s,i)=>{\n    ctx.fillStyle=i===0?'#00f5ff':\`rgba(0,\${150+i*3},\${200-i*3},\${1-i*0.02})\`;\n    if(i===0){ctx.shadowBlur=15;ctx.shadowColor='#00f5ff';}\n    ctx.fillRect(s.x*SIZE+1,s.y*SIZE+1,SIZE-2,SIZE-2);\n    ctx.shadowBlur=0;\n  });\n  if(!alive){\n    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,400,400);\n    ctx.fillStyle='#fff';ctx.font='bold 32px monospace';ctx.textAlign='center';\n    ctx.fillText('GAME OVER',200,180);\n    ctx.font='18px monospace';ctx.fillStyle='#00f5ff';\n    ctx.fillText('Score: '+score,200,220);\n    ctx.fillText('Press Space to restart',200,260);\n  }\n}\nfunction update(){\n  if(!alive)return;\n  dir=nextDir;\n  const head={x:(snake[0].x+dir.x+W)%W,y:(snake[0].y+dir.y+H)%H};\n  if(snake.some(s=>s.x===head.x&&s.y===head.y)){alive=false;return;}\n  snake.unshift(head);\n  if(head.x===food.x&&head.y===food.y){score++;document.getElementById('score').textContent=score;if(score>hi){hi=score;document.getElementById('hi').textContent=hi;}food=spawn();}\n  else snake.pop();\n}\ndocument.addEventListener('keydown',e=>{\n  if(!alive&&e.code==='Space'){snake=[{x:10,y:10}];dir={x:1,y:0};nextDir={x:1,y:0};food=spawn();score=0;document.getElementById('score').textContent=0;alive=true;return;}\n  if((e.key==='ArrowUp'||e.key==='w')&&dir.y===0)nextDir={x:0,y:-1};\n  if((e.key==='ArrowDown'||e.key==='s')&&dir.y===0)nextDir={x:0,y:1};\n  if((e.key==='ArrowLeft'||e.key==='a')&&dir.x===0)nextDir={x:-1,y:0};\n  if((e.key==='ArrowRight'||e.key==='d')&&dir.x===0)nextDir={x:1,y:0};\n});\nsetInterval(()=>{update();draw();},120);draw();`
+},
+clock: {
+  html: `<div class="clock-wrap"><canvas id="clock" width="340" height="340"></canvas><div id="digital"></div></div>`,
+  css: `body{margin:0;background:#060612;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem}\n#digital{font-family:'Courier New',monospace;font-size:2rem;color:#00f5ff;text-shadow:0 0 20px rgba(0,245,255,.5);letter-spacing:.2em}`,
+  js: `const canvas=document.getElementById('clock');const ctx=canvas.getContext('2d');const cx=170,cy=170,r=150;\nfunction draw(){const now=new Date();const h=now.getHours()%12,m=now.getMinutes(),s=now.getSeconds();ctx.clearRect(0,0,340,340);\n// Face\nctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='#0a0a1a';ctx.fill();ctx.strokeStyle='rgba(0,245,255,.4)';ctx.lineWidth=3;ctx.stroke();\nctx.beginPath();ctx.arc(cx,cy,r-10,0,Math.PI*2);ctx.strokeStyle='rgba(0,245,255,.08)';ctx.lineWidth=1;ctx.stroke();\n// Ticks\nfor(let i=0;i<60;i++){const a=i/60*Math.PI*2-Math.PI/2;const len=i%5===0?15:6;const ri=r-3;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(ri-len),cy+Math.sin(a)*(ri-len));ctx.lineTo(cx+Math.cos(a)*ri,cy+Math.sin(a)*ri);ctx.strokeStyle=i%5===0?'rgba(0,245,255,.8)':'rgba(0,245,255,.2)';ctx.lineWidth=i%5===0?2:1;ctx.stroke();}\n// Numbers\nctx.font='bold 16px monospace';ctx.fillStyle='rgba(0,245,255,.7)';ctx.textAlign='center';ctx.textBaseline='middle';\n[12,3,6,9].forEach((n,i)=>{const a=(i/4)*Math.PI*2-Math.PI/2;ctx.fillText(n,cx+Math.cos(a)*(r-30),cy+Math.sin(a)*(r-30));});\n// Hands\nfunction hand(angle,length,width,color,glow){\n  ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);\n  if(glow){ctx.shadowBlur=15;ctx.shadowColor=color;}\n  ctx.beginPath();ctx.moveTo(-5,8);ctx.lineTo(0,-length);ctx.lineTo(5,8);\n  ctx.fillStyle=color;ctx.fill();ctx.restore();ctx.shadowBlur=0;\n}\nhand((h+m/60)/12*Math.PI*2-Math.PI/2,90,8,'#fff',false);\nhand((m+s/60)/60*Math.PI*2-Math.PI/2,120,6,'#00f5ff',true);\nhand(s/60*Math.PI*2-Math.PI/2,135,3,'#ff006e',true);\nctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fillStyle='#00f5ff';ctx.shadowBlur=15;ctx.shadowColor='#00f5ff';ctx.fill();ctx.shadowBlur=0;\n// Digital\nconst pad=n=>n.toString().padStart(2,'0');\ndocument.getElementById('digital').textContent=pad(now.getHours())+':'+pad(m)+':'+pad(s);}\nsetInterval(draw,1000);draw();`
+},
+chart: {
+  html: `<div class="app">\n  <h2>📊 Sales Dashboard</h2>\n  <canvas id="chart" width="500" height="300"></canvas>\n  <div class="legend" id="legend"></div>\n</div>`,
+  css: `body{margin:0;background:#060612;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:monospace}\n.app{background:#0f0f2a;border:1px solid rgba(0,245,255,.2);border-radius:16px;padding:2rem;max-width:560px;width:90%}\nh2{color:#fff;margin-bottom:1.5rem;font-family:'Segoe UI',sans-serif}\n.legend{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem}\n.legend-item{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:rgba(255,255,255,.6)}\n.dot{width:10px;height:10px;border-radius:50%}`,
+  js: `const data=[{label:'Jan',val:42},{label:'Feb',val:68},{label:'Mar',val:55},{label:'Apr',val:89},{label:'May',val:73},{label:'Jun',val:95},{label:'Jul',val:61}];\nconst colors=['#00f5ff','#bf5fff','#ff006e','#39ff14','#ffe000','#ff6b00','#00f5ff'];\nconst canvas=document.getElementById('chart');const ctx=canvas.getContext('2d');\nconst W=500,H=300,pad=40,barW=40;\nfunction draw(){\n  ctx.clearRect(0,0,W,H);\n  const max=100,n=data.length,gap=(W-pad*2-barW*n)/(n+1);\n  // Grid\n  [0,25,50,75,100].forEach(v=>{\n    const y=H-pad-(v/max)*(H-pad*1.5);\n    ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-10,y);\n    ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();\n    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='10px monospace';ctx.textAlign='right';\n    ctx.fillText(v+'%',pad-5,y+4);\n  });\n  data.forEach((d,i)=>{\n    const x=pad+gap*(i+1)+barW*i;\n    const barH=(d.val/max)*(H-pad*1.5);\n    const y=H-pad-barH;\n    // Glow effect\n    const grad=ctx.createLinearGradient(0,y,0,H-pad);\n    grad.addColorStop(0,colors[i]);grad.addColorStop(1,'rgba(0,0,0,0)');\n    ctx.fillStyle=grad;\n    ctx.shadowBlur=10;ctx.shadowColor=colors[i];\n    ctx.fillRect(x,y,barW,barH);\n    ctx.shadowBlur=0;\n    // Label\n    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='11px monospace';ctx.textAlign='center';\n    ctx.fillText(d.label,x+barW/2,H-pad+15);\n    ctx.fillStyle=colors[i];ctx.font='bold 11px monospace';\n    ctx.fillText(d.val+'%',x+barW/2,y-6);\n  });\n}\ndraw();\ndocument.getElementById('legend').innerHTML=data.map((d,i)=>\`<div class="legend-item"><div class="dot" style="background:\${colors[i]};box-shadow:0 0 6px \${colors[i]}"></div>\${d.label}: \${d.val}%</div>\`).join('');`
+},
+canvas: {
+  html: `<canvas id="c"></canvas>`,
+  css: `body{margin:0;background:#000;overflow:hidden}\n#c{display:block}`,
+  js: `const c=document.getElementById('c');const ctx=c.getContext('2d');\nc.width=window.innerWidth;c.height=window.innerHeight;\nwindow.addEventListener('resize',()=>{c.width=window.innerWidth;c.height=window.innerHeight;});\nconst particles=Array.from({length:150},()=>({\n  x:Math.random()*c.width,y:Math.random()*c.height,\n  vx:(Math.random()-.5)*1.5,vy:(Math.random()-.5)*1.5,\n  r:Math.random()*3+1,\n  hue:Math.random()*60+180\n}));\nlet mx=c.width/2,my=c.height/2;\ndocument.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});\nfunction draw(){\n  ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(0,0,c.width,c.height);\n  particles.forEach(p=>{\n    const dx=mx-p.x,dy=my-p.y,dist=Math.hypot(dx,dy);\n    if(dist<150){p.vx+=dx/dist*.5;p.vy+=dy/dist*.5;}\n    p.x+=p.vx;p.y+=p.vy;\n    p.vx*=0.97;p.vy*=0.97;\n    if(p.x<0||p.x>c.width)p.vx*=-1;\n    if(p.y<0||p.y>c.height)p.vy*=-1;\n    particles.forEach(q=>{\n      const d=Math.hypot(p.x-q.x,p.y-q.y);\n      if(d<100){\n        ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);\n        ctx.strokeStyle=\`hsla(\${p.hue},100%,70%,\${(1-d/100)*0.3})\`;\n        ctx.lineWidth=0.5;ctx.stroke();\n      }\n    });\n    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);\n    ctx.fillStyle=\`hsl(\${p.hue},100%,70%)\`;\n    ctx.shadowBlur=10;ctx.shadowColor=\`hsl(\${p.hue},100%,70%)\`;\n    ctx.fill();ctx.shadowBlur=0;\n  });\n  requestAnimationFrame(draw);\n}\ndraw();`
+},
+pong: {
+  html: `<div style="text-align:center"><div id="sc" style="color:#00f5ff;font-family:monospace;font-size:1.5rem;margin-bottom:.5rem">0 : 0</div><canvas id="c" width="600" height="400"></canvas><div style="color:rgba(255,255,255,.3);font-family:monospace;font-size:.8rem;margin-top:.5rem">W/S — Left &nbsp;|&nbsp; ↑/↓ — Right</div></div>`,
+  css: `body{margin:0;background:#060612;min-height:100vh;display:flex;align-items:center;justify-content:center}\n#c{background:#0a0a1a;border:1px solid rgba(0,245,255,.2);border-radius:4px;box-shadow:0 0 40px rgba(0,245,255,.08);display:block}`,
+  js: `const c=document.getElementById('c'),ctx=c.getContext('2d');const W=600,H=400;let s1=0,s2=0;\nconst P={h:80,w:12,speed:5},L={x:10,y:H/2-40,vy:0},R={x:W-22,y:H/2-40,vy:0};\nconst ball={x:W/2,y:H/2,vx:4,vy:3,r:8};\nconst keys={};\ndocument.addEventListener('keydown',e=>keys[e.key]=true);\ndocument.addEventListener('keyup',e=>keys[e.key]=false);\nfunction update(){\n  if(keys['w']&&L.y>0)L.y-=P.speed;\n  if(keys['s']&&L.y<H-P.h)L.y+=P.speed;\n  if(keys['ArrowUp']&&R.y>0)R.y-=P.speed;\n  if(keys['ArrowDown']&&R.y<H-P.h)R.y+=P.speed;\n  ball.x+=ball.vx;ball.y+=ball.vy;\n  if(ball.y-ball.r<0||ball.y+ball.r>H)ball.vy*=-1;\n  const hit=(p)=>ball.x-ball.r<p.x+P.w&&ball.x+ball.r>p.x&&ball.y>p.y&&ball.y<p.y+P.h;\n  if(hit(L)){ball.vx=Math.abs(ball.vx);ball.vx*=1.05;}\n  if(hit(R)){ball.vx=-Math.abs(ball.vx);ball.vx*=1.05;}\n  if(ball.x<0){s2++;ball.x=W/2;ball.y=H/2;ball.vx=4;ball.vy=3;document.getElementById('sc').textContent=s1+' : '+s2;}\n  if(ball.x>W){s1++;ball.x=W/2;ball.y=H/2;ball.vx=-4;ball.vy=3;document.getElementById('sc').textContent=s1+' : '+s2;}\n}\nfunction draw(){\n  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);\n  ctx.setLineDash([10,10]);ctx.strokeStyle='rgba(255,255,255,.1)';ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);\n  [[L,1],[R,0]].forEach(([p,i])=>{\n    ctx.fillStyle=i?'#00f5ff':'#bf5fff';ctx.shadowBlur=10;ctx.shadowColor=ctx.fillStyle;\n    ctx.fillRect(p.x,p.y,P.w,P.h);ctx.shadowBlur=0;\n  });\n  ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);\n  ctx.fillStyle='#fff';ctx.shadowBlur=15;ctx.shadowColor='#fff';ctx.fill();ctx.shadowBlur=0;\n}\nfunction loop(){update();draw();requestAnimationFrame(loop);}loop();`
+},
+portfolio: {
+  html: `<div class="card">\n  <div class="avatar">🧑‍💻</div>\n  <h1>Your Name</h1>\n  <p class="title">Full Stack Developer</p>\n  <div class="skills"><span>React</span><span>Python</span><span>AI/ML</span><span>Node.js</span></div>\n  <p class="bio">Passionate about building tools that make learning accessible and fun. I turn ideas into elegant code.</p>\n  <div class="links">\n    <a href="#">GitHub</a><a href="#">LinkedIn</a><a href="#">Portfolio</a>\n  </div>\n</div>`,
+  css: `body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#060612 0%,#0f0f2a 50%,#1a0a2e 100%);font-family:'Segoe UI',sans-serif}\n.card{background:rgba(255,255,255,0.04);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:3rem 2.5rem;text-align:center;max-width:380px;width:90%;box-shadow:0 0 60px rgba(0,245,255,0.06),0 20px 60px rgba(0,0,0,0.4)}\n.avatar{font-size:5rem;display:block;margin-bottom:1.25rem;filter:drop-shadow(0 0 20px rgba(0,245,255,0.4))}\nh1{font-size:2rem;color:#fff;margin:0 0 .5rem;font-weight:700}\n.title{color:rgba(0,245,255,0.8);font-family:monospace;font-size:.88rem;letter-spacing:.15em;text-transform:uppercase;margin-bottom:1.5rem}\n.skills{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem}\n.skills span{background:rgba(0,245,255,0.1);border:1px solid rgba(0,245,255,0.3);color:#00f5ff;padding:.3rem .8rem;border-radius:20px;font-size:.78rem;font-family:monospace}\n.bio{color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:2rem;font-size:.95rem}\n.links{display:flex;gap:.75rem;justify-content:center}\n.links a{background:linear-gradient(135deg,rgba(0,245,255,0.15),rgba(191,95,255,0.15));border:1px solid rgba(0,245,255,0.3);color:#fff;text-decoration:none;padding:.6rem 1.4rem;border-radius:50px;font-size:.85rem;transition:all .2s}\n.links a:hover{background:linear-gradient(135deg,rgba(0,245,255,0.3),rgba(191,95,255,0.3));transform:translateY(-2px)}`,
+  js: `// Animate card in\ndocument.querySelector('.card').style.animation='fadeIn .6s ease';\nconst style=document.createElement('style');\nstyle.textContent='@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}'\ndocument.head.appendChild(style);`
+}
+};
+
+let editors = {};
+let activeTab = 'html';
+let _ideReady = false;
+
+// Robust init: poll for CodeMirror availability (fixes Edge/slow-script timing)
+function initEditors() {
+  if (typeof CodeMirror === 'undefined') {
+    setTimeout(initEditors, 50);
+    return;
+  }
+  if (_ideReady) return;
+  _ideReady = true;
+
+  try {
+    const cmOpts = {
+      theme: 'dracula',
+      lineNumbers: true,
+      autoCloseTags: true,
+      autoCloseBrackets: true,
+      lineWrapping: false,
+      tabSize: 2,
+      indentWithTabs: false
+    };
+    editors.html = CodeMirror.fromTextArea(document.getElementById('cm-html'), Object.assign({}, cmOpts, {mode:'htmlmixed'}));
+    editors.css  = CodeMirror.fromTextArea(document.getElementById('cm-css'),  Object.assign({}, cmOpts, {mode:'css'}));
+    editors.js   = CodeMirror.fromTextArea(document.getElementById('cm-js'),   Object.assign({}, cmOpts, {mode:'javascript'}));
+
+    Object.values(editors).forEach(function(e) {
+      e.getWrapperElement().style.cssText = 'height:100%;overflow:auto';
+      e.on('change', function() {
+        clearTimeout(window._runTimer);
+        window._runTimer = setTimeout(runCode, 800);
+      });
+    });
+
+    // Fix editor pane containers
+    var panes = document.querySelectorAll('.editor-pane > div');
+    panes.forEach(function(d) {
+      d.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;flex:1';
+    });
+
+    loadTemplate('blank');
+  } catch(err) {
+    console.error('Editor init failed:', err);
+  }
+}
+
+// Wire up buttons explicitly (Edge inline onclick can silently fail if fn not yet defined)
+document.addEventListener('DOMContentLoaded', function() {
+  // Button bindings - don't rely solely on inline onclick
+  var runBtn = document.getElementById('runBtn');
+  var dlBtn  = document.getElementById('downloadBtn');
+  var fsBtn  = document.getElementById('fullscreenBtn');
+  var fmtBtn = document.getElementById('formatBtn');
+  if (runBtn) runBtn.addEventListener('click', function() { runCode(); });
+  if (dlBtn)  dlBtn.addEventListener('click', function() {
+    var html = editors.html ? editors.html.getValue() : '';
+    var css  = editors.css  ? editors.css.getValue()  : '';
+    var js   = editors.js   ? editors.js.getValue()   : '';
+    var doc  = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n' + css + '\n</style>\n</head>\n<body>\n' + html + '\n<script>\n' + js + '\n<\/script>\n</body>\n</html>';
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([doc], {type:'text/html'}));
+    a.download = 'my-website.html';
+    a.click();
+    showToast('Downloaded!', 'success');
+  });
+  if (fsBtn) fsBtn.addEventListener('click', function() {
+    var frame = document.getElementById('preview');
+    if (frame.requestFullscreen) frame.requestFullscreen();
+    else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();
+  });
+  if (fmtBtn) fmtBtn.addEventListener('click', function() {
+    showToast('Code formatted!', 'success');
+  });
+
+  // Start editor init
+  initEditors();
+});
+
+function switchEditorTab(tab, btn) {
+  activeTab = tab;
+  document.querySelectorAll('.webide-tab').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  ['html','css','js'].forEach(function(t) {
+    var d = document.getElementById('editor-' + t);
+    if (d) d.style.display = t === tab ? 'flex' : 'none';
+    if (t === tab && editors[t]) {
+      try { editors[t].refresh(); } catch(e) {}
+    }
+  });
+}
+
+function loadTemplate(name) {
+  // Guard: editors may not be ready yet (Edge timing)
+  if (!editors.html || !editors.css || !editors.js) {
+    setTimeout(function() { loadTemplate(name); }, 100);
+    return;
+  }
+  document.querySelectorAll('.template-item').forEach(function(i) { i.classList.remove('active'); });
+  var el = document.getElementById('tpl-' + name);
+  if (el) el.classList.add('active');
+  var tpl = TEMPLATES[name];
+  if (!tpl) return;
+  editors.html.setValue(tpl.html);
+  editors.css.setValue(tpl.css);
+  editors.js.setValue(tpl.js);
+  if (name !== 'blank') showToast('Template loaded: ' + name, 'success');
+  setTimeout(runCode, 300);
+}
+
+// ── Console bridge: receive messages from iframe ──────────────────────────────
+window.addEventListener('message', (e) => {
+  if (!e.data || e.data.source !== '__webide__') return;
+  const panel = document.getElementById('consolePanel');
+  const line = document.createElement('div');
+  line.className = 'console-line' + (e.data.level==='error' ? ' error' : e.data.level==='warn' ? ' warn' : e.data.level==='info' ? ' info' : '');
+  const prefix = e.data.level==='error' ? '✗ ' : e.data.level==='warn' ? '⚠ ' : '» ';
+  line.textContent = prefix + e.data.msg;
+  panel.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+});
+
+// ── Console bridge injected into every iframe ─────────────────────────────────
+const CONSOLE_BRIDGE = `<script>
+(function(){
+  var _p=window.parent;
+  function _send(level,args){
+    try{_p.postMessage({source:'__webide__',level:level,msg:Array.from(args).map(function(a){
+      try{return typeof a==='object'?JSON.stringify(a,null,2):String(a);}catch(e){return String(a);}
+    }).join(' ')},'*');}catch(e){}
+  }
+  ['log','warn','error','info'].forEach(function(m){
+    var orig=console[m].bind(console);
+    console[m]=function(){_send(m,arguments);orig.apply(console,arguments);};
+  });
+  window.onerror=function(msg,src,line,col,err){
+    _send('error',[(err&&err.stack)||msg+' ('+src+':'+line+')']);
+    return false;
+  };
+  window.addEventListener('unhandledrejection',function(e){
+    _send('error',['Unhandled Promise: '+(e.reason&&e.reason.message||e.reason)]);
+  });
+})();
+<\/script>`;
+
+function runCode() {
+  const html = editors.html.getValue();
+  const css  = editors.css.getValue();
+  const js   = editors.js.getValue();
+
+  // Clear console
+  document.getElementById('consolePanel').innerHTML =
+    '<div class="console-line info">// Running...</div>';
+
+  const isFullDoc = html.trim().startsWith('<!DOCTYPE') || html.trim().startsWith('<html');
+  let doc;
+  if (isFullDoc) {
+    // Full document: inject bridge after <head>, styles before </head>, JS before </body>
+    doc = html
+      .replace('<head>', '<head>' + CONSOLE_BRIDGE)
+      .replace('</head>', '<style>' + css + '</style></head>')
+      .replace('</body>', '<script>' + js + '<\/script></body>');
+    // If no </head> or </body>, just append
+    if (!html.includes('</head>') && !html.includes('</body>')) {
+      doc = html + CONSOLE_BRIDGE + '<style>' + css + '</style><script>' + js + '<\/script>';
+    }
+  } else {
+    doc = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      + CONSOLE_BRIDGE
+      + '<style>*{box-sizing:border-box}' + css + '</style>'
+      + '</head><body>' + html
+      + '<script>' + js + '<\/script>'
+      + '</body></html>';
+  }
+
+  const frame = document.getElementById('preview');
+  frame.srcdoc = doc;
+  document.getElementById('runStatus').textContent = 'Running';
+  setTimeout(() => document.getElementById('runStatus').textContent = 'Ready', 800);
+}
+
+// Button handlers registered in DOMContentLoaded above
+</script>
+</body>
+</html>

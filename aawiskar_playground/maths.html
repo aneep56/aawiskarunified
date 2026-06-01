@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maths Lab — Aawiskar Playground</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<style>
+html,body{height:100%;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Layout ── */
+.ml-wrap{display:flex;flex:1;min-height:0;overflow:hidden}
+.ml-sidebar{width:280px;flex-shrink:0;background:#0a0a1e;border-right:1px solid rgba(191,95,255,.15);display:flex;flex-direction:column;overflow:hidden}
+.ml-canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#04040e;position:relative}
+
+/* ── Sidebar tabs ── */
+.ml-tabs{display:flex;background:#06061a;border-bottom:1px solid rgba(191,95,255,.15);flex-shrink:0}
+.ml-tab{flex:1;padding:.55rem .25rem;font-family:var(--font-mono);font-size:.62rem;color:#5a5a8a;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:.2s;text-align:center}
+.ml-tab:hover{color:#b080ff}
+.ml-tab.active{color:#bf5fff;border-bottom-color:#bf5fff;background:rgba(191,95,255,.06)}
+
+/* ── Sidebar content ── */
+.ml-panel{flex:1;overflow-y:auto;padding:.5rem;scrollbar-width:thin;scrollbar-color:rgba(191,95,255,.3) transparent}
+.ml-panel::-webkit-scrollbar{width:4px}
+.ml-panel::-webkit-scrollbar-thumb{background:rgba(191,95,255,.3);border-radius:2px}
+
+/* ── Section cards ── */
+.ml-card{background:#0f0f2a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:.65rem .8rem;margin-bottom:.5rem}
+.ml-card-title{font-family:var(--font-mono);font-size:.62rem;color:#bf5fff;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem}
+.ml-card-title::before{content:'';width:3px;height:.75rem;background:#bf5fff;border-radius:2px;box-shadow:0 0 6px #bf5fff}
+
+/* ── Inputs ── */
+.ml-input{width:100%;background:#060618;border:1px solid rgba(191,95,255,.25);border-radius:6px;color:#e0d8ff;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .6rem;outline:none;box-sizing:border-box;margin-bottom:.35rem}
+.ml-input:focus{border-color:#bf5fff;box-shadow:0 0 0 2px rgba(191,95,255,.12)}
+.ml-input-sm{width:100%;background:#060618;border:1px solid rgba(255,255,255,.1);border-radius:5px;color:#e0d8ff;font-family:var(--font-mono);font-size:.78rem;padding:.3rem .5rem;outline:none;box-sizing:border-box}
+.ml-input-sm:focus{border-color:rgba(191,95,255,.5)}
+
+/* ── Result box ── */
+.ml-result{background:#020210;border:1px solid rgba(57,255,20,.15);border-radius:7px;padding:.55rem .7rem;font-family:var(--font-mono);font-size:.74rem;color:#39ff14;white-space:pre-wrap;line-height:1.55;min-height:42px;margin-top:.35rem}
+
+/* ── Buttons ── */
+.ml-btn{display:block;width:100%;padding:.42rem .75rem;font-family:var(--font-mono);font-size:.74rem;font-weight:600;border:none;border-radius:6px;cursor:pointer;text-align:center;transition:.15s;margin-bottom:.3rem}
+.ml-btn-purple{background:linear-gradient(135deg,#8833cc,#6611aa);color:#fff;box-shadow:0 0 14px rgba(191,95,255,.25)}
+.ml-btn-purple:hover{box-shadow:0 0 22px rgba(191,95,255,.45);transform:translateY(-1px)}
+.ml-btn-cyan{background:linear-gradient(135deg,#00a8bb,#006688);color:#fff}
+.ml-btn-ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#8090a0;font-size:.72rem;margin-bottom:.25rem}
+.ml-btn-ghost:hover{background:rgba(191,95,255,.12);border-color:rgba(191,95,255,.35);color:#bf5fff}
+.ml-btn-row{display:flex;gap:.3rem;margin-bottom:.3rem}
+.ml-btn-row .ml-btn{margin-bottom:0}
+
+/* ── Function list ── */
+.fn-row{display:flex;align-items:center;gap:.4rem;padding:.3rem 0}
+.fn-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;cursor:pointer;border:2px solid rgba(255,255,255,.2)}
+.fn-field{flex:1;background:#060618;border:1px solid rgba(255,255,255,.08);border-radius:5px;color:#e0d8ff;font-family:var(--font-mono);font-size:.8rem;padding:.3rem .5rem;outline:none}
+.fn-field:focus{border-color:rgba(191,95,255,.5)}
+.fn-del{background:none;border:none;color:#556070;cursor:pointer;font-size:.9rem;padding:.1rem .3rem;border-radius:4px}
+.fn-del:hover{color:#ff006e;background:rgba(255,0,110,.1)}
+
+/* ── Quick chips ── */
+.chips{display:flex;flex-wrap:wrap;gap:.25rem;margin:.25rem 0}
+.chip{padding:.18rem .5rem;background:rgba(191,95,255,.08);border:1px solid rgba(191,95,255,.2);border-radius:4px;font-family:var(--font-mono);font-size:.71rem;color:#9060cc;cursor:pointer;transition:.15s}
+.chip:hover{background:rgba(191,95,255,.2);color:#bf5fff}
+
+/* ── Range input ── */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:rgba(191,95,255,.2);border-radius:2px;outline:none;border:none;cursor:pointer;margin:.3rem 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#bf5fff;cursor:pointer;box-shadow:0 0 7px #bf5fff;border:none}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#bf5fff;border:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{background:rgba(191,95,255,.15);border-radius:2px;height:4px}
+
+/* ── Canvas toolbar ── */
+.ml-toolbar{background:#06061a;border-bottom:1px solid rgba(191,95,255,.12);padding:.4rem .75rem;display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.ml-toolbar-btn{padding:.28rem .65rem;font-family:var(--font-mono);font-size:.69rem;border:1px solid rgba(191,95,255,.3);border-radius:5px;background:rgba(191,95,255,.08);color:#bf5fff;cursor:pointer;transition:.15s}
+.ml-toolbar-btn:hover{background:rgba(191,95,255,.18)}
+.ml-toolbar-btn.active{background:rgba(191,95,255,.22);box-shadow:0 0 8px rgba(191,95,255,.3)}
+.ml-status{font-family:var(--font-mono);font-size:.69rem;color:#5a5a8a;margin-left:auto}
+.ml-coord{font-family:var(--font-mono);font-size:.7rem;color:#7070a0}
+
+/* ── Coordinate bar ── */
+.ml-coordbar{background:#06061a;border-top:1px solid rgba(191,95,255,.08);padding:.3rem .75rem;display:flex;gap:1.5rem;flex-shrink:0}
+
+/* ── Trig values ── */
+.trig-val-row{display:flex;justify-content:space-between;padding:.22rem 0;font-family:var(--font-mono);font-size:.77rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.trig-val-row:last-child{border-bottom:none}
+.trig-val-key{color:#7070a0}
+.trig-val-num{font-weight:600}
+
+/* ── Scatter textarea ── */
+.ml-textarea{width:100%;background:#060618;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e0d8ff;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .55rem;outline:none;resize:none;box-sizing:border-box;margin-bottom:.3rem}
+.ml-textarea:focus{border-color:rgba(191,95,255,.4)}
+
+/* ── Grid row ── */
+.ml-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;margin-bottom:.3rem}
+
+/* ── Inline label ── */
+.ml-lbl{font-family:var(--font-mono);font-size:.66rem;color:#5a5a8a;margin-bottom:.18rem;display:block}
+
+/* ── Angle display ── */
+.angle-display{font-family:'Orbitron',monospace;font-size:1.4rem;font-weight:700;color:#bf5fff;text-align:center;padding:.4rem;text-shadow:0 0 20px rgba(191,95,255,.5)}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div id="app">
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="favicon.png" alt="Aawiskar Logo">
+    </div>
+    <div>
+      <div class="nav-logo-text">AAWISKAR <span>PLAYGROUND</span></div>
+      <div class="nav-logo-sub">A product of Aawiskar RoboLabs Pvt. Ltd.</div>
+    </div>
+  </a>
+  <button class="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-module-strip">
+  <a href="index.html" class="module-pill">🏠 Home</a>
+  <div class="module-pill-sep"></div>
+  <a href="python.html" class="module-pill">🐍 Python IDE</a>
+  <a href="ml.html" class="module-pill">🧠 ML Studio</a>
+  <a href="block.html" class="module-pill">🎮 Block Coder</a>
+  <a href="arduino.html" class="module-pill">⚡ Arduino Gen</a>
+  <div class="module-pill-sep"></div>
+  <a href="cv.html" class="module-pill">👁️ CV Studio</a>
+  <a href="webide.html" class="module-pill">🌐 Web IDE</a>
+  <a href="physics.html" class="module-pill">🔬 Physics Lab</a>
+  <a href="maths.html" class="module-pill active">📐 Maths Lab</a>
+  <a href="astronomy.html" class="module-pill">🪐 Astronomy</a>
+</div>
+<div id="mobile-menu" class="mobile-menu">
+  <button class="mobile-menu-close">✕</button>
+  <a href="index.html">🏠 Home</a>
+  <a href="python.html">🐍 Python IDE</a>
+  <a href="ml.html">🧠 ML Studio</a>
+  <a href="block.html">🎮 Block Coder</a>
+  <a href="arduino.html">⚡ Arduino Gen</a>
+  <a href="cv.html">👁️ CV Studio</a>
+  <a href="webide.html">🌐 Web IDE</a>
+  <a href="physics.html">🔬 Physics Lab</a>
+  <a href="maths.html">📐 Maths Lab</a>
+  <a href="astronomy.html">🪐 Astronomy</a>
+</div>
+
+<div class="ml-wrap">
+  <!-- ══ SIDEBAR ══ -->
+  <div class="ml-sidebar">
+    <div class="ml-tabs">
+      <button class="ml-tab active" id="tab-graph-btn" onclick="switchTab('graph',this)">📊<br>Graph</button>
+      <button class="ml-tab" id="tab-trig-btn" onclick="switchTab('trig',this)">📐<br>Trig</button>
+      <button class="ml-tab" id="tab-calc-btn" onclick="switchTab('calc',this)">∫<br>Calculus</button>
+      <button class="ml-tab" id="tab-de-btn" onclick="switchTab('de',this)">∂<br>DE</button>
+      <button class="ml-tab" id="tab-slope-btn" onclick="switchTab('slope',this)">📏<br>Slope</button>
+    </div>
+
+    <!-- GRAPH PANEL -->
+    <div class="ml-panel" id="panel-graph">
+      <div class="ml-card">
+        <div class="ml-card-title">Functions y = f(x)</div>
+        <div id="fnList"></div>
+        <button class="ml-btn ml-btn-purple" onclick="addFunction()" style="margin-top:.35rem">+ Add Function</button>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Quick Insert</div>
+        <div class="chips">
+          <span class="chip" onclick="insertFn('sin(x)')">sin(x)</span>
+          <span class="chip" onclick="insertFn('cos(x)')">cos(x)</span>
+          <span class="chip" onclick="insertFn('tan(x)')">tan(x)</span>
+          <span class="chip" onclick="insertFn('x^2')">x²</span>
+          <span class="chip" onclick="insertFn('x^3')">x³</span>
+          <span class="chip" onclick="insertFn('sqrt(x)')">√x</span>
+          <span class="chip" onclick="insertFn('abs(x)')">|x|</span>
+          <span class="chip" onclick="insertFn('exp(x)')">eˣ</span>
+          <span class="chip" onclick="insertFn('log(x)')">ln(x)</span>
+          <span class="chip" onclick="insertFn('1/x')">1/x</span>
+          <span class="chip" onclick="insertFn('sin(x)/x')">sinc</span>
+          <span class="chip" onclick="insertFn('x*sin(x)')">x·sin</span>
+        </div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">View Range</div>
+        <div class="ml-grid-2">
+          <div><span class="ml-lbl">x min</span><input class="ml-input-sm" type="number" id="xMin" value="-10" oninput="onViewChange()"></div>
+          <div><span class="ml-lbl">x max</span><input class="ml-input-sm" type="number" id="xMax" value="10" oninput="onViewChange()"></div>
+          <div><span class="ml-lbl">y min</span><input class="ml-input-sm" type="number" id="yMin" value="-10" oninput="onViewChange()"></div>
+          <div><span class="ml-lbl">y max</span><input class="ml-input-sm" type="number" id="yMax" value="10" oninput="onViewChange()"></div>
+        </div>
+        <div class="ml-btn-row">
+          <button class="ml-btn ml-btn-ghost" onclick="setView(-10,10,-10,10)">Reset</button>
+          <button class="ml-btn ml-btn-ghost" onclick="setView(-6.28,6.28,-4,4)">Trig</button>
+          <button class="ml-btn ml-btn-ghost" onclick="setView(-2,10,-5,110)">Quad</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRIG PANEL -->
+    <div class="ml-panel" id="panel-trig" style="display:none">
+      <div class="ml-card">
+        <div class="ml-card-title">Unit Circle Explorer</div>
+        <div class="angle-display" id="trigAngleLabel">45°</div>
+        <input type="range" id="trigAngle" min="0" max="360" value="45" oninput="updateTrig(this.value)">
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.65rem;color:#5a5a8a;margin-bottom:.4rem"><span>0°</span><span>180°</span><span>360°</span></div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Values</div>
+        <div id="trigValues"></div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Identities</div>
+        <div style="font-family:var(--font-mono);font-size:.72rem;color:#7070a0;line-height:2">
+          sin²θ + cos²θ = <span style="color:#bf5fff">1</span><br>
+          tan θ = sin θ / cos θ<br>
+          sin(2θ) = 2·sinθ·cosθ<br>
+          cos(2θ) = cos²θ − sin²θ<br>
+          e<sup>iθ</sup> = cosθ + i·sinθ
+        </div>
+      </div>
+    </div>
+
+    <!-- CALC PANEL -->
+    <div class="ml-panel" id="panel-calc" style="display:none">
+      <div class="ml-card">
+        <div class="ml-card-title">Derivative d/dx</div>
+        <span class="ml-lbl">f(x) =</span>
+        <input class="ml-input" id="derivInput" placeholder="e.g. x^3 + 2*x" value="x^3 + 2*x">
+        <button class="ml-btn ml-btn-purple" onclick="computeDerivative()">→ Differentiate</button>
+        <div class="ml-result" id="derivResult">// Enter function above</div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Definite Integral ∫ₐᵇ</div>
+        <span class="ml-lbl">f(x) =</span>
+        <input class="ml-input" id="intInput" placeholder="e.g. x^2" value="x^2">
+        <div class="ml-grid-2">
+          <div><span class="ml-lbl">a (lower)</span><input class="ml-input-sm" id="intA" value="0"></div>
+          <div><span class="ml-lbl">b (upper)</span><input class="ml-input-sm" id="intB" value="3"></div>
+        </div>
+        <button class="ml-btn ml-btn-purple" onclick="computeIntegral()" style="margin-top:.2rem">→ Integrate</button>
+        <div class="ml-result" id="intResult">// Enter function and bounds</div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Taylor Series (x=0)</div>
+        <span class="ml-lbl">Function</span>
+        <input class="ml-input" id="taylorInput" placeholder="sin, cos, or exp" value="sin">
+        <span class="ml-lbl">Terms</span>
+        <input class="ml-input" id="taylorN" placeholder="5" value="5">
+        <button class="ml-btn ml-btn-purple" onclick="computeTaylor()">→ Expand</button>
+        <div class="ml-result" id="taylorResult">// sin, cos, exp supported</div>
+      </div>
+    </div>
+
+    <!-- DE PANEL -->
+    <div class="ml-panel" id="panel-de" style="display:none">
+      <div class="ml-card">
+        <div class="ml-card-title">ODE Solver — Euler Method</div>
+        <span class="ml-lbl">dy/dx = f(x, y)</span>
+        <input class="ml-input" id="deInput" placeholder="e.g. x - y" value="x - y">
+        <div class="ml-grid-2">
+          <div><span class="ml-lbl">x₀</span><input class="ml-input-sm" id="deX0" value="0"></div>
+          <div><span class="ml-lbl">y₀</span><input class="ml-input-sm" id="deY0" value="1"></div>
+          <div style="grid-column:1/-1"><span class="ml-lbl">x end</span><input class="ml-input-sm" id="deXend" value="5"></div>
+        </div>
+        <button class="ml-btn ml-btn-purple" onclick="solveDE()">→ Solve</button>
+        <div class="ml-result" id="deResult">// Solution curve will be plotted</div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Presets</div>
+        <div class="chips">
+          <span class="chip" onclick="dePreset('-y')">Decay</span>
+          <span class="chip" onclick="dePreset('y*(1-y)')">Logistic</span>
+          <span class="chip" onclick="dePreset('sin(x)*y')">Oscillating</span>
+          <span class="chip" onclick="dePreset('x + y')">x + y</span>
+          <span class="chip" onclick="dePreset('-x/y')">Circle</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLOPE PANEL -->
+    <div class="ml-panel" id="panel-slope" style="display:none">
+      <div class="ml-card" style="background:rgba(0,245,255,.04);border-color:rgba(0,245,255,.12)">
+        <div class="ml-card-title" style="color:#00f5ff">m = Δy / Δx = rise / run</div>
+        <div style="font-family:var(--font-mono);font-size:.71rem;color:#5a8090;line-height:1.8">
+          <span style="color:#39ff14">m &gt; 0</span> → rising &nbsp;
+          <span style="color:#ff006e">m &lt; 0</span> → falling &nbsp;
+          <span style="color:#ffe000">m = 0</span> → flat
+        </div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Two Points → Slope</div>
+        <div class="ml-grid-2">
+          <div><span class="ml-lbl" style="color:#00f5ff">P₁ · x₁</span><input class="ml-input-sm" id="slopeX1" value="1" oninput="liveSlopeUpdate()"></div>
+          <div><span class="ml-lbl" style="color:#00f5ff">P₁ · y₁</span><input class="ml-input-sm" id="slopeY1" value="2" oninput="liveSlopeUpdate()"></div>
+          <div><span class="ml-lbl" style="color:#ff006e">P₂ · x₂</span><input class="ml-input-sm" id="slopeX2" value="4" oninput="liveSlopeUpdate()"></div>
+          <div><span class="ml-lbl" style="color:#ff006e">P₂ · y₂</span><input class="ml-input-sm" id="slopeY2" value="8" oninput="liveSlopeUpdate()"></div>
+        </div>
+        <div class="ml-result" id="slopeResult" style="min-height:90px">// Enter points above</div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Plot y = mx + b</div>
+        <div class="ml-grid-2">
+          <div><span class="ml-lbl">Slope m</span><input class="ml-input-sm" id="slopeM" value="2" oninput="livePlotLine()"></div>
+          <div><span class="ml-lbl">Intercept b</span><input class="ml-input-sm" id="slopeB" value="0" oninput="livePlotLine()"></div>
+        </div>
+        <div id="lineEqLabel" style="font-family:var(--font-mono);font-size:.8rem;color:#00f5ff;text-align:center;padding:.25rem;background:rgba(0,245,255,.05);border-radius:5px;margin-bottom:.35rem">y = 2x + 0</div>
+        <div class="ml-btn-row">
+          <button class="ml-btn ml-btn-ghost" onclick="plotParallel()">∥ Parallel</button>
+          <button class="ml-btn ml-btn-ghost" onclick="plotPerpendicular()">⊥ Perp.</button>
+        </div>
+        <div class="ml-grid-2" style="margin-top:.25rem">
+          <div><span class="ml-lbl">Through x₀</span><input class="ml-input-sm" id="ppX0" value="2"></div>
+          <div><span class="ml-lbl">Through y₀</span><input class="ml-input-sm" id="ppY0" value="3"></div>
+        </div>
+      </div>
+      <div class="ml-card">
+        <div class="ml-card-title">Linear Regression</div>
+        <span class="ml-lbl">Data points (x,y per line)</span>
+        <textarea class="ml-textarea" id="scatterData" rows="5" placeholder="1,2&#10;2,4&#10;3,5">1,2
+2,4
+3,5
+4,8
+5,9</textarea>
+        <button class="ml-btn ml-btn-purple" onclick="plotScatter()">📊 Fit Regression Line</button>
+        <div class="ml-result" id="regrResult" style="min-height:60px">// Click above to run regression</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CANVAS AREA ══ -->
+  <div class="ml-canvas-area">
+    <div class="ml-toolbar">
+      <button class="ml-toolbar-btn active" id="plotAllBtn" onclick="plotAll();showToast('Plotted!','success')">▶ Plot All</button>
+      <button class="ml-toolbar-btn" onclick="clearAll()">✕ Clear</button>
+      <button class="ml-toolbar-btn" onclick="setView(-10,10,-10,10)">⊞ Reset View</button>
+      <div style="width:1px;height:18px;background:rgba(255,255,255,.1);margin:0 .25rem"></div>
+      <span style="font-family:var(--font-mono);font-size:.68rem;color:#5a5a8a" id="canvasHint">📊 Graph · Scroll to zoom · Drag to pan</span>
+      <button class="ml-toolbar-btn" style="margin-left:auto" onclick="exportImg()">📸 Export</button>
+    </div>
+    <div style="position:relative;flex:1;min-height:0">
+      <canvas id="graphCanvas" style="display:block;width:100%;height:100%;cursor:crosshair;background:#04040e"></canvas>
+      <canvas id="trigCanvas" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:#04040e"></canvas>
+    </div>
+    <div class="ml-coordbar">
+      <span class="ml-coord" id="coordXY">Move mouse over graph</span>
+      <span class="ml-coord" id="coordFx" style="color:#00f5ff"></span>
+      <span class="ml-coord" style="margin-left:auto">Scroll = zoom &nbsp;·&nbsp; Drag = pan</span>
+    </div>
+  </div>
+</div>
+
+</div>
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
+<script>
+'use strict';
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+let W=0, H=0;
+let viewXmin=-10,viewXmax=10,viewYmin=-10,viewYmax=10;
+let isPanning=false,panStart={},panView={};
+let currentTab='graph';
+const FN_COLORS=['#00f5ff','#ff006e','#39ff14','#ffe000','#bf5fff','#ff6b00','#ffffff'];
+let functions=[{expr:'sin(x)',color:'#00f5ff',visible:true}];
+let deSolution=null, integralData=null, slopeData=null, scatterPts=null;
+
+/* ── Canvas resize ── */
+function resize(){
+  const r=canvas.parentElement.getBoundingClientRect();
+  if(r.width<10||r.height<10)return;
+  W=canvas.width=Math.floor(r.width);
+  H=canvas.height=Math.floor(r.height);
+  const tc=document.getElementById('trigCanvas');
+  tc.width=W; tc.height=H;
+  redraw();
+}
+window.addEventListener('resize',resize);
+(function poll(){const r=canvas.parentElement.getBoundingClientRect();if(r.width>10){resize();}else setTimeout(poll,80);})();
+
+/* ── Coord transforms ── */
+function toScreen(x,y){return{x:(x-viewXmin)/(viewXmax-viewXmin)*W,y:H-(y-viewYmin)/(viewYmax-viewYmin)*H};}
+function toMath(px,py){return{x:viewXmin+px/W*(viewXmax-viewXmin),y:viewYmin+(H-py)/H*(viewYmax-viewYmin)};}
+
+/* ── Tab switching ── */
+function switchTab(tab,btn){
+  currentTab=tab;
+  document.querySelectorAll('.ml-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['graph','trig','calc','de','slope'].forEach(t=>{
+    document.getElementById('panel-'+t).style.display=t===tab?'flex':'none';
+    document.getElementById('panel-'+t).style.flexDirection='column';
+  });
+  const isGraph=(tab==='graph'||tab==='calc'||tab==='de'||tab==='slope');
+  canvas.style.display=isGraph?'block':'none';
+  const tc=document.getElementById('trigCanvas');
+  tc.style.display=tab==='trig'?'block':'none';
+  document.getElementById('canvasHint').textContent=
+    tab==='trig'?'📐 Unit Circle — drag the slider':'📊 Graph · Scroll to zoom · Drag to pan';
+  if(tab==='trig'){
+    setTimeout(()=>{resize();drawUnitCircle(parseFloat(document.getElementById('trigAngle').value));},30);
+  } else if(tab==='slope'){
+    slopeData=null;scatterPts=null;setView(-12,12,-10,10);
+    setTimeout(()=>liveSlopeUpdate(),60);
+  } else { redraw(); }
+}
+
+/* ── Grid & axes ── */
+function drawGrid(){
+  ctx.fillStyle='#04040e';ctx.fillRect(0,0,W,H);
+  const rangeX=viewXmax-viewXmin;
+  const step=Math.pow(10,Math.floor(Math.log10(rangeX))-1)*2;
+  // Minor grid
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;
+  for(let x=Math.ceil(viewXmin/step)*step;x<=viewXmax;x+=step){
+    const {x:px}=toScreen(x,0);ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,H);ctx.stroke();
+  }
+  for(let y=Math.ceil(viewYmin/step)*step;y<=viewYmax;y+=step){
+    const {y:py}=toScreen(0,y);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(W,py);ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle='rgba(191,95,255,.35)';ctx.lineWidth=1.5;
+  const o=toScreen(0,0);
+  ctx.beginPath();ctx.moveTo(0,o.y);ctx.lineTo(W,o.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(o.x,0);ctx.lineTo(o.x,H);ctx.stroke();
+  // Tick labels
+  ctx.fillStyle='rgba(255,255,255,.28)';ctx.font='10px monospace';
+  for(let x=Math.ceil(viewXmin/step)*step;x<=viewXmax;x+=step*2){
+    if(Math.abs(x)<step*0.1)continue;
+    const {x:px}=toScreen(x,0);
+    ctx.textAlign='center';ctx.fillText(x%1===0?x:x.toFixed(1),px,Math.min(Math.max(o.y+14,12),H-4));
+  }
+  ctx.textAlign='right';
+  for(let y=Math.ceil(viewYmin/step)*step;y<=viewYmax;y+=step*2){
+    if(Math.abs(y)<step*0.1)continue;
+    const {y:py}=toScreen(0,y);
+    ctx.fillText(y%1===0?y:y.toFixed(1),Math.min(Math.max(o.x-6,30),W-4),py+4);
+  }
+}
+
+/* ── Plot function ── */
+function plotFunction(expr,color){
+  const comp=math.compile(expr);
+  ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.shadowBlur=10;ctx.shadowColor=color;
+  let started=false;
+  const steps=W*2;
+  for(let i=0;i<=steps;i++){
+    const x=viewXmin+i/steps*(viewXmax-viewXmin);
+    let y;
+    try{y=comp.evaluate({x});} catch{started=false;continue;}
+    if(typeof y!=='number'||!isFinite(y)){started=false;continue;}
+    const p=toScreen(x,y);
+    if(!started){ctx.moveTo(p.x,p.y);started=true;}
+    else{
+      if(i>0){const prev=comp.evaluate({x:x-1/steps*(viewXmax-viewXmin)});if(isFinite(prev)&&Math.abs(y-prev)>(viewYmax-viewYmin)*3){ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.shadowBlur=10;ctx.shadowColor=color;continue;}}
+      ctx.lineTo(p.x,p.y);
+    }
+  }
+  ctx.stroke();ctx.shadowBlur=0;
+}
+
+/* ── Main redraw ── */
+function redraw(){
+  if(!W||!H)return;
+  drawGrid();
+  // Functions
+  functions.forEach(fn=>{if(!fn.visible||!fn.expr.trim())return;try{plotFunction(fn.expr,fn.color);}catch{}});
+  // DE solution overlay
+  if(deSolution){
+    ctx.beginPath();ctx.strokeStyle='#ffe000';ctx.lineWidth=2.5;ctx.shadowBlur=8;ctx.shadowColor='#ffe000';
+    deSolution.forEach((p,i)=>{const s=toScreen(p.x,p.y);i===0?ctx.moveTo(s.x,s.y):ctx.lineTo(s.x,s.y);});
+    ctx.stroke();ctx.shadowBlur=0;
+  }
+  // Integral shading
+  if(integralData){
+    const {expr,a,b,color}=integralData;
+    try{
+      const comp=math.compile(expr);
+      ctx.fillStyle=color+'33';ctx.beginPath();
+      const sa=toScreen(a,0);ctx.moveTo(sa.x,sa.y);
+      for(let i=0;i<=200;i++){const x=a+i/200*(b-a);const y=comp.evaluate({x});ctx.lineTo(...Object.values(toScreen(x,y)));}
+      const sb=toScreen(b,0);ctx.lineTo(sb.x,sb.y);ctx.closePath();ctx.fill();
+    }catch{}
+  }
+}
+
+function plotAll(){redraw();}
+
+/* ── View ── */
+function setView(xmin,xmax,ymin,ymax){
+  viewXmin=xmin;viewXmax=xmax;viewYmin=ymin;viewYmax=ymax;
+  document.getElementById('xMin').value=xmin;document.getElementById('xMax').value=xmax;
+  document.getElementById('yMin').value=ymin;document.getElementById('yMax').value=ymax;
+  redraw();
+}
+function onViewChange(){
+  viewXmin=parseFloat(document.getElementById('xMin').value)||viewXmin;
+  viewXmax=parseFloat(document.getElementById('xMax').value)||viewXmax;
+  viewYmin=parseFloat(document.getElementById('yMin').value)||viewYmin;
+  viewYmax=parseFloat(document.getElementById('yMax').value)||viewYmax;
+  redraw();
+}
+function clearAll(){
+  functions=[{expr:'',color:'#00f5ff',visible:true}];
+  deSolution=null;integralData=null;slopeData=null;scatterPts=null;
+  renderFnList();redraw();
+}
+
+/* ── Function UI ── */
+function renderFnList(){
+  document.getElementById('fnList').innerHTML=functions.map((fn,i)=>`
+    <div class="fn-row">
+      <div class="fn-dot" style="background:${fn.color};opacity:${fn.visible?1:.35}" onclick="toggleFn(${i})" title="Toggle"></div>
+      <input class="fn-field" value="${fn.expr}" oninput="updateFn(${i},this.value)" placeholder="e.g. sin(x)">
+      <button class="fn-del" onclick="removeFn(${i})">✕</button>
+    </div>`).join('');
+}
+function addFunction(){const c=FN_COLORS[functions.length%FN_COLORS.length];functions.push({expr:'',color:c,visible:true});renderFnList();document.querySelectorAll('.fn-field')[functions.length-1].focus();}
+function removeFn(i){functions.splice(i,1);if(!functions.length)functions=[{expr:'sin(x)',color:'#00f5ff',visible:true}];renderFnList();redraw();}
+function toggleFn(i){functions[i].visible=!functions[i].visible;renderFnList();redraw();}
+function updateFn(i,v){functions[i].expr=v;redraw();}
+function insertFn(expr){const empty=functions.find(f=>!f.expr.trim());if(empty)empty.expr=expr;else functions.push({expr,color:FN_COLORS[functions.length%FN_COLORS.length],visible:true});renderFnList();redraw();}
+renderFnList();
+
+/* ── Mouse ── */
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  const px=(e.clientX-r.left)*W/r.width, py=(e.clientY-r.top)*H/r.height;
+  const {x,y}=toMath(px,py);
+  document.getElementById('coordXY').textContent=`x: ${x.toFixed(3)}  y: ${y.toFixed(3)}`;
+  const fv=functions.filter(f=>f.visible&&f.expr.trim()).map(fn=>{try{const yv=math.compile(fn.expr).evaluate({x});return isFinite(yv)?`f(x)=${yv.toFixed(3)}`:null;}catch{return null;}}).filter(Boolean);
+  document.getElementById('coordFx').textContent=fv.join('  ');
+  if(isPanning){
+    const dx=x-panStart.mx,dy=y-panStart.my;
+    viewXmin=panView.xmin-dx;viewXmax=panView.xmax-dx;
+    viewYmin=panView.ymin-dy;viewYmax=panView.ymax-dy;
+    redraw();
+  }
+});
+canvas.addEventListener('mousedown',e=>{
+  isPanning=true;
+  const r=canvas.getBoundingClientRect();
+  const px=(e.clientX-r.left)*W/r.width,py=(e.clientY-r.top)*H/r.height;
+  panStart=toMath(px,py);panStart.mx=panStart.x;panStart.my=panStart.y;
+  panView={xmin:viewXmin,xmax:viewXmax,ymin:viewYmin,ymax:viewYmax};
+});
+canvas.addEventListener('mouseup',()=>isPanning=false);
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f=e.deltaY>0?1.15:.87;
+  const cx=(viewXmin+viewXmax)/2,cy=(viewYmin+viewYmax)/2;
+  const rX=(viewXmax-viewXmin)/2*f,rY=(viewYmax-viewYmin)/2*f;
+  viewXmin=cx-rX;viewXmax=cx+rX;viewYmin=cy-rY;viewYmax=cy+rY;
+  redraw();
+},{passive:false});
+
+/* ── Trig ── */
+function drawUnitCircle(deg){
+  const tc=document.getElementById('trigCanvas');
+  const tctx=tc.getContext('2d');
+  tctx.fillStyle='#04040e';tctx.fillRect(0,0,tc.width,tc.height);
+  const cx=tc.width/2,cy=tc.height/2,r=Math.min(tc.width,tc.height)*.38;
+  // Background rings
+  tctx.strokeStyle='rgba(191,95,255,.08)';tctx.lineWidth=1;
+  tctx.beginPath();tctx.arc(cx,cy,r*.5,0,Math.PI*2);tctx.stroke();
+  // Circle
+  tctx.beginPath();tctx.arc(cx,cy,r,0,Math.PI*2);
+  tctx.strokeStyle='rgba(191,95,255,.35)';tctx.lineWidth=1.5;tctx.stroke();
+  // Axes
+  tctx.strokeStyle='rgba(255,255,255,.15)';tctx.lineWidth=1;
+  tctx.beginPath();tctx.moveTo(cx-r-20,cy);tctx.lineTo(cx+r+20,cy);tctx.stroke();
+  tctx.beginPath();tctx.moveTo(cx,cy-r-20);tctx.lineTo(cx,cy+r+20);tctx.stroke();
+  // Angle labels
+  [0,30,45,60,90,120,135,150,180,210,225,240,270,300,315,330].forEach(a=>{
+    const rad=a*Math.PI/180;
+    tctx.fillStyle='rgba(255,255,255,.18)';tctx.font='9px monospace';tctx.textAlign='center';
+    tctx.fillText(a+'°',cx+(r+18)*Math.cos(-rad),cy+(r+18)*Math.sin(-rad)+4);
+  });
+  const rad=deg*Math.PI/180;
+  const px=cx+r*Math.cos(-rad),py=cy+r*Math.sin(-rad);
+  const sinV=Math.sin(rad),cosV=Math.cos(rad),tanV=Math.tan(rad);
+  // Shaded sector
+  tctx.beginPath();tctx.moveTo(cx,cy);tctx.arc(cx,cy,r*.18,0,-rad,true);tctx.closePath();
+  tctx.fillStyle='rgba(191,95,255,.15)';tctx.fill();
+  // cos line
+  tctx.beginPath();tctx.moveTo(cx,cy);tctx.lineTo(px,cy);
+  tctx.strokeStyle='#ff006e';tctx.lineWidth=2;tctx.shadowBlur=8;tctx.shadowColor='#ff006e';tctx.stroke();tctx.shadowBlur=0;
+  // sin line
+  tctx.beginPath();tctx.moveTo(px,py);tctx.lineTo(px,cy);
+  tctx.strokeStyle='#39ff14';tctx.lineWidth=2;tctx.shadowBlur=8;tctx.shadowColor='#39ff14';tctx.stroke();tctx.shadowBlur=0;
+  // Radius
+  tctx.beginPath();tctx.moveTo(cx,cy);tctx.lineTo(px,py);
+  tctx.strokeStyle='#00f5ff';tctx.lineWidth=2.5;tctx.shadowBlur=14;tctx.shadowColor='#00f5ff';tctx.stroke();tctx.shadowBlur=0;
+  // Point
+  tctx.beginPath();tctx.arc(px,py,7,0,Math.PI*2);
+  tctx.fillStyle='#bf5fff';tctx.shadowBlur=16;tctx.shadowColor='#bf5fff';tctx.fill();tctx.shadowBlur=0;
+  // Label
+  tctx.font='bold 12px monospace';tctx.textAlign='left';tctx.fillStyle='#e0d8ff';
+  tctx.fillText(`(${cosV.toFixed(2)}, ${sinV.toFixed(2)})`,px+10,py-6);
+  // Values
+  document.getElementById('trigValues').innerHTML=[
+    {k:'sin θ',v:sinV.toFixed(4),c:'#39ff14'},
+    {k:'cos θ',v:cosV.toFixed(4),c:'#ff006e'},
+    {k:'tan θ',v:isFinite(tanV)?tanV.toFixed(4):'∞',c:'#ffe000'},
+    {k:'csc θ',v:Math.abs(sinV)>.001?(1/sinV).toFixed(4):'∞',c:'#bf5fff'},
+    {k:'sec θ',v:Math.abs(cosV)>.001?(1/cosV).toFixed(4):'∞',c:'#ff6b00'},
+    {k:'cot θ',v:Math.abs(tanV)>.001?(1/tanV).toFixed(4):'∞',c:'#00f5ff'},
+    {k:'radians',v:(rad).toFixed(4),c:'#7070a0'},
+  ].map(({k,v,c})=>`<div class="trig-val-row"><span class="trig-val-key">${k}</span><span class="trig-val-num" style="color:${c}">${v}</span></div>`).join('');
+}
+function updateTrig(deg){
+  document.getElementById('trigAngleLabel').textContent=deg+'°';
+  drawUnitCircle(parseFloat(deg));
+}
+
+/* ── Calculus ── */
+function computeDerivative(){
+  const expr=document.getElementById('derivInput').value.trim();
+  try{
+    const d=math.derivative(math.parse(expr),'x').toString();
+    document.getElementById('derivResult').textContent=`d/dx [ ${expr} ]\n= ${d}`;
+    functions=[{expr,color:'#00f5ff',visible:true},{expr:d,color:'#ff006e',visible:true}];
+    renderFnList();redraw();showToast('Derivative computed!','success');
+  }catch(e){document.getElementById('derivResult').textContent='Error: '+e.message;}
+}
+function computeIntegral(){
+  const expr=document.getElementById('intInput').value.trim();
+  const a=parseFloat(document.getElementById('intA').value);
+  const b=parseFloat(document.getElementById('intB').value);
+  try{
+    const f=math.compile(expr);
+    const n=1000,dx=(b-a)/n;let sum=0;
+    for(let i=0;i<n;i++){sum+=f.evaluate({x:a+(i+.5)*dx})*dx;}
+    document.getElementById('intResult').textContent=`∫[${a}, ${b}] ${expr} dx\n≈ ${sum.toFixed(6)}`;
+    integralData={expr,a,b,color:'#bf5fff'};
+    functions=[{expr,color:'#00f5ff',visible:true}];renderFnList();
+    setView(a-1,b+1,-10,10);showToast('Integral computed!','success');
+  }catch(e){document.getElementById('intResult').textContent='Error: '+e.message;}
+}
+function computeTaylor(){
+  const fn=document.getElementById('taylorInput').value.trim().toLowerCase();
+  const n=parseInt(document.getElementById('taylorN').value)||5;
+  function fac(n){return n<=1?1:n*fac(n-1);}
+  const s={
+    sin:()=>Array.from({length:n},(_,k)=>`${k===0?'':k%2?'-':'+'}x^${2*k+1}/${fac(2*k+1)}`).join(' '),
+    cos:()=>Array.from({length:n},(_,k)=>`${k===0?'1':k%2?'-':'+'}${k?`x^${2*k}/${fac(2*k)}`:''}`) .filter(Boolean).join(' '),
+    exp:()=>Array.from({length:n},(_,k)=>`${k?'+':''}x^${k}/${fac(k)}`).join(' '),
+  };
+  document.getElementById('taylorResult').textContent=s[fn]?`${fn}(x) ≈\n${s[fn]()}\n(${n} terms, around x=0)`:'Supported: sin, cos, exp';
+}
+
+/* ── DE ── */
+function solveDE(){
+  const expr=document.getElementById('deInput').value.trim();
+  const x0=parseFloat(document.getElementById('deX0').value);
+  const y0=parseFloat(document.getElementById('deY0').value);
+  const xEnd=parseFloat(document.getElementById('deXend').value);
+  try{
+    const f=math.compile(expr);
+    const pts=[{x:x0,y:y0}];const h=.02;let x=x0,y=y0;
+    while(x<xEnd){y+=f.evaluate({x,y})*h;x+=h;pts.push({x,y});}
+    deSolution=pts;
+    document.getElementById('deResult').textContent=`y(${xEnd}) ≈ ${y.toFixed(4)}\n${pts.length} steps · Euler method`;
+    const ys=pts.map(p=>p.y),mn=Math.min(...ys),mx=Math.max(...ys);
+    setView(x0-.5,xEnd+.5,mn-(mx-mn)*.2,mx+(mx-mn)*.2);
+    showToast('DE solved!','success');
+  }catch(e){document.getElementById('deResult').textContent='Error: '+e.message;}
+}
+function dePreset(expr){document.getElementById('deInput').value=expr;solveDE();}
+
+/* ── Slope ── */
+function liveSlopeUpdate(){
+  const x1=parseFloat(document.getElementById('slopeX1').value);
+  const y1=parseFloat(document.getElementById('slopeY1').value);
+  const x2=parseFloat(document.getElementById('slopeX2').value);
+  const y2=parseFloat(document.getElementById('slopeY2').value);
+  if([x1,y1,x2,y2].some(isNaN))return;
+  if(x2===x1){document.getElementById('slopeResult').textContent='m = undefined\n(vertical line)';slopeData=null;plotSlopeCanvas();return;}
+  const m=(y2-y1)/(x2-x1),b=y1-m*x1;
+  const angle=Math.atan(m)*180/Math.PI,dist=Math.hypot(x2-x1,y2-y1);
+  document.getElementById('slopeResult').textContent=
+    `m = (${y2}−${y1}) / (${x2}−${x1})\n`+
+    `m = ${m.toFixed(4)}\n`+
+    `Equation: y = ${m.toFixed(3)}x ${b>=0?'+ '+b.toFixed(3):'− '+Math.abs(b).toFixed(3)}\n`+
+    `y-intercept: b = ${b.toFixed(4)}\n`+
+    `Distance: ${dist.toFixed(4)}\n`+
+    `Angle: θ = ${angle.toFixed(2)}°\n`+
+    `Midpoint: (${((x1+x2)/2).toFixed(2)}, ${((y1+y2)/2).toFixed(2)})`;
+  document.getElementById('slopeM').value=m.toFixed(4);
+  document.getElementById('slopeB').value=b.toFixed(4);
+  document.getElementById('lineEqLabel').textContent=`y = ${m.toFixed(3)}x ${b>=0?'+ '+b.toFixed(3):b.toFixed(3)}`;
+  const pad=Math.max(3,Math.abs(x2-x1)*1.2,Math.abs(y2-y1)*1.2);
+  setView((x1+x2)/2-pad*1.8,(x1+x2)/2+pad*1.8,(y1+y2)/2-pad*1.4,(y1+y2)/2+pad*1.4);
+  slopeData={x1,y1,x2,y2,m,b};scatterPts=null;
+  plotSlopeCanvas();
+}
+function livePlotLine(){
+  const m=parseFloat(document.getElementById('slopeM').value);
+  const b=parseFloat(document.getElementById('slopeB').value);
+  if(isNaN(m)||isNaN(b))return;
+  document.getElementById('lineEqLabel').textContent=`y = ${m.toFixed(3)}x ${b>=0?'+ '+b.toFixed(3):b.toFixed(3)}`;
+  if(currentTab==='slope')plotSlopeCanvas();
+}
+function plotSlopeCanvas(){
+  drawGrid();
+  // Main line
+  const m_val=parseFloat(document.getElementById('slopeM').value)||0;
+  const b_val=parseFloat(document.getElementById('slopeB').value)||0;
+  if(!isNaN(m_val)){
+    const s1=toScreen(viewXmin,m_val*viewXmin+b_val),s2=toScreen(viewXmax,m_val*viewXmax+b_val);
+    ctx.beginPath();ctx.moveTo(s1.x,s1.y);ctx.lineTo(s2.x,s2.y);
+    ctx.strokeStyle='rgba(0,245,255,.8)';ctx.lineWidth=2.5;ctx.shadowBlur=10;ctx.shadowColor='#00f5ff';ctx.stroke();ctx.shadowBlur=0;
+  }
+  // Scatter pts
+  if(scatterPts){
+    const {pts,m,b,r2}=scatterPts;
+    pts.forEach(p=>{
+      const s=toScreen(p.x,p.y),sf=toScreen(p.x,m*p.x+b);
+      ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(sf.x,sf.y);
+      ctx.strokeStyle='rgba(255,224,0,.25)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(s.x,s.y,6,0,Math.PI*2);
+      ctx.fillStyle='#ff006e';ctx.shadowBlur=10;ctx.shadowColor='#ff006e';ctx.fill();ctx.shadowBlur=0;
+    });
+    // Stats box
+    ctx.fillStyle='rgba(4,4,20,.9)';ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(12,12,230,52,8);else ctx.rect(12,12,230,52);
+    ctx.fill();ctx.strokeStyle='rgba(0,245,255,.2)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#00f5ff';ctx.font='bold 13px monospace';ctx.textAlign='left';ctx.fillText(`m = ${m.toFixed(4)}`,22,32);
+    ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px monospace';
+    ctx.fillText(`y = ${m.toFixed(3)}x ${b>=0?'+ ':''}${b.toFixed(3)}  R² = ${r2.toFixed(3)}`,22,50);
+    return;
+  }
+  if(!slopeData)return;
+  const {x1,y1,x2,y2,m,b}=slopeData;
+  const sp1=toScreen(x1,y1),sp2=toScreen(x2,y2),sp3=toScreen(x2,y1);
+  // Rise/run triangles
+  ctx.beginPath();ctx.moveTo(sp1.x,sp1.y);ctx.lineTo(sp3.x,sp3.y);
+  ctx.strokeStyle='rgba(255,224,0,.65)';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(sp3.x,sp3.y);ctx.lineTo(sp2.x,sp2.y);
+  ctx.strokeStyle='rgba(57,255,20,.65)';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+  // Labels
+  ctx.font='bold 12px monospace';ctx.fillStyle='#ffe000';ctx.textAlign='center';
+  ctx.fillText(`Δx=${(x2-x1)>0?'+':''}${(x2-x1).toFixed(2)}`,(sp1.x+sp3.x)/2,sp3.y+(y2>y1?16:-8));
+  ctx.fillStyle='#39ff14';ctx.textAlign='left';
+  ctx.fillText(`Δy=${(y2-y1)>0?'+':''}${(y2-y1).toFixed(2)}`,sp3.x+8,(sp3.y+sp2.y)/2+4);
+  // Points
+  [[x1,y1,'P₁','#00f5ff'],[x2,y2,'P₂','#ff006e']].forEach(([x,y,lbl,col])=>{
+    const s=toScreen(x,y);
+    ctx.beginPath();ctx.arc(s.x,s.y,9,0,Math.PI*2);ctx.fillStyle=col;ctx.shadowBlur=14;ctx.shadowColor=col;ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#000';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(lbl,s.x,s.y);ctx.textBaseline='alphabetic';
+    ctx.fillStyle='rgba(255,255,255,.75)';ctx.font='11px monospace';ctx.textAlign='left';ctx.fillText(`(${x}, ${y})`,s.x+12,s.y-6);
+  });
+  // Info box
+  ctx.fillStyle='rgba(4,4,20,.9)';ctx.beginPath();
+  if(ctx.roundRect)ctx.roundRect(12,12,220,52,8);else ctx.rect(12,12,220,52);
+  ctx.fill();ctx.strokeStyle='rgba(0,245,255,.2)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#00f5ff';ctx.font='bold 13px monospace';ctx.textAlign='left';ctx.fillText(`m = ${m.toFixed(4)}`,22,32);
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px monospace';
+  ctx.fillText(`y = ${m.toFixed(3)}x ${b>=0?'+ ':''}${Math.abs(b).toFixed(3)}`,22,50);
+}
+function plotScatter(){
+  const pts=[];
+  document.getElementById('scatterData').value.trim().split('\n').forEach(line=>{
+    const p=line.trim().split(/[\s,]+/);if(p.length>=2){const x=parseFloat(p[0]),y=parseFloat(p[1]);if(!isNaN(x)&&!isNaN(y))pts.push({x,y});}
+  });
+  if(pts.length<2){showToast('Need at least 2 x,y points','error');return;}
+  const n=pts.length,sx=pts.reduce((s,p)=>s+p.x,0),sy=pts.reduce((s,p)=>s+p.y,0);
+  const sxy=pts.reduce((s,p)=>s+p.x*p.y,0),sxx=pts.reduce((s,p)=>s+p.x*p.x,0);
+  const denom=n*sxx-sx*sx;if(Math.abs(denom)<1e-10){showToast('All x values same','error');return;}
+  const m=(n*sxy-sx*sy)/denom,b=(sy-m*sx)/n;
+  const ybar=sy/n,ssTot=pts.reduce((s,p)=>s+Math.pow(p.y-ybar,2),0),ssRes=pts.reduce((s,p)=>s+Math.pow(p.y-(m*p.x+b),2),0);
+  const r2=ssTot>0?1-ssRes/ssTot:1;
+  document.getElementById('regrResult').textContent=`y = ${m.toFixed(4)}x ${b>=0?'+ '+b.toFixed(4):'− '+Math.abs(b).toFixed(4)}\nSlope m = ${m.toFixed(4)}\ny-intercept b = ${b.toFixed(4)}\nR² = ${r2.toFixed(4)}\n${n} data points`;
+  document.getElementById('slopeM').value=m.toFixed(4);document.getElementById('slopeB').value=b.toFixed(4);
+  document.getElementById('lineEqLabel').textContent=`y = ${m.toFixed(4)}x ${b>=0?'+ '+b.toFixed(4):b.toFixed(4)}`;
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+  const xpad=(Math.max(...xs)-Math.min(...xs))*.25+1,ypad=(Math.max(...ys)-Math.min(...ys))*.25+1;
+  setView(Math.min(...xs)-xpad,Math.max(...xs)+xpad,Math.min(...ys)-ypad,Math.max(...ys)+ypad);
+  slopeData=null;scatterPts={pts,m,b,r2};plotSlopeCanvas();
+  showToast(`R² = ${r2.toFixed(3)}`,'success');
+}
+function plotParallel(){
+  const m=parseFloat(document.getElementById('slopeM').value)||0;
+  const x0=parseFloat(document.getElementById('ppX0').value)||0;
+  const y0=parseFloat(document.getElementById('ppY0').value)||0;
+  const b2=y0-m*x0;plotSlopeCanvas();
+  const s1=toScreen(viewXmin,m*viewXmin+b2),s2=toScreen(viewXmax,m*viewXmax+b2);
+  ctx.beginPath();ctx.moveTo(s1.x,s1.y);ctx.lineTo(s2.x,s2.y);
+  ctx.strokeStyle='rgba(57,255,20,.8)';ctx.lineWidth=2;ctx.shadowBlur=8;ctx.shadowColor='#39ff14';ctx.stroke();ctx.shadowBlur=0;
+  const pt=toScreen(x0,y0);ctx.beginPath();ctx.arc(pt.x,pt.y,7,0,Math.PI*2);ctx.fillStyle='#39ff14';ctx.fill();
+  showToast(`∥ y = ${m.toFixed(2)}x + ${b2.toFixed(2)}`,'success');
+}
+function plotPerpendicular(){
+  const m=parseFloat(document.getElementById('slopeM').value)||0;
+  if(m===0){showToast('Perp. of flat line is vertical: x='+document.getElementById('ppX0').value,'info');return;}
+  const x0=parseFloat(document.getElementById('ppX0').value)||0,y0=parseFloat(document.getElementById('ppY0').value)||0;
+  const mp=-1/m,b2=y0-mp*x0;plotSlopeCanvas();
+  const s1=toScreen(viewXmin,mp*viewXmin+b2),s2=toScreen(viewXmax,mp*viewXmax+b2);
+  ctx.beginPath();ctx.moveTo(s1.x,s1.y);ctx.lineTo(s2.x,s2.y);
+  ctx.strokeStyle='rgba(255,0,110,.8)';ctx.lineWidth=2;ctx.shadowBlur=8;ctx.shadowColor='#ff006e';ctx.stroke();ctx.shadowBlur=0;
+  showToast(`⊥ y = ${mp.toFixed(2)}x + ${b2.toFixed(2)}`,'success');
+}
+
+function exportImg(){
+  const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='maths-lab.png';a.click();showToast('Exported!','success');
+}
+
+// Init
+document.querySelectorAll('.ml-panel').forEach(p=>p.style.flexDirection='column');
+setTimeout(()=>{resize();redraw();updateTrig(45);liveSlopeUpdate();},100);
+</script>
+</body>
+</html>

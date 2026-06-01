@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Home Automation | e-Sarathi · Aawiskar</title>
+
+<!-- ═══ PWA + STORE META ═══ -->
+<link rel="manifest" href="/apps/home_automation/manifest.json">
+<meta name="theme-color" content="#00d4ff">
+<meta name="description" content="BLE + WiFi relay controller for ESP32-based home automation by e-Sarathi · Aawiskar">
+<meta name="application-name" content="e-Sarathi Home Automation">
+
+<!-- Apple PWA (Add to Home Screen on iOS) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="e-Sarathi">
+
+<!-- Microsoft PWA -->
+<meta name="msapplication-TileImage" content="/apps/home_automation/icons/icon-192.png">
+<meta name="msapplication-TileColor" content="#020a0f">
+
+<!-- Favicon -->
+<link rel="shortcut icon" href="/apps/home_automation/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="/apps/home_automation/favicon.svg">
+<link rel="icon" type="image/png" sizes="96x96" href="/apps/home_automation/icons/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/home_automation/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apps/home_automation/icons/apple-touch-icon.png">
+
+<!-- Service Worker registration (required for PWA install + Play Store TWA) -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/apps/home_automation/sw.js')
+        .then(reg => console.log('[SW] Registered:', reg.scope))
+        .catch(err => console.warn('[SW] Registration failed:', err));
+    });
+  }
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════
+     DESIGN TOKENS — matches e-Sarathi system
+  ═══════════════════════════════════════════ */
+  :root {
+    --neon-blue:  #00d4ff;
+    --blue-bright:#00f0ff;
+    --blue-dim:   #0090b3;
+    --blue-glow:  rgba(0,212,255,0.18);
+    --cyan:       #00ffea;
+    --amber:      #ffb300;
+    --red:        #ff3b5c;
+    --green:      #00ff88;
+    --bg:         #020a0f;
+    --panel:      rgba(0,212,255,0.04);
+    --border:     rgba(0,212,255,0.22);
+    --text:       #b0f0ff;
+    --text-dim:   #4a8fa8;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box; margin: 0; padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--neon-blue);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* Scan lines */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none; z-index: 1;
+  }
+
+  /* ═══════════════════════════════════════════
+     LAYOUT
+  ═══════════════════════════════════════════ */
+  .app {
+    position: relative; z-index: 2;
+    max-width: 1400px; margin: 0 auto; padding: 12px;
+  }
+
+  @media (min-width: 768px) {
+    .app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 16px; padding: 20px;
+    }
+    .header { grid-column: 1 / -1; }
+    .status-bar-row { grid-column: 1 / -1; }
+    .left-column, .right-column {
+      display: flex; flex-direction: column; gap: 10px; align-content: start;
+    }
+    .right-column { align-items: stretch; justify-content: flex-start; }
+  }
+
+  /* ═══════════════════════════════════════════
+     HEADER
+  ═══════════════════════════════════════════ */
+  .header {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 6px; margin-bottom: 10px;
+    position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+    animation: scanH 3s linear infinite;
+  }
+  @keyframes scanH { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+  .header-row1 {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 10px;
+  }
+  .brand-strip {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .back-link {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; color: var(--text-dim);
+    text-decoration: none; display: flex; align-items: center; gap: 4px;
+    white-space: nowrap; transition: color 0.2s;
+    padding: 4px 8px; border: 1px solid rgba(0,212,255,0.12); border-radius: 3px;
+  }
+  .back-link:hover  { color: var(--neon-blue); border-color: var(--border); }
+  .back-link:active { color: var(--neon-blue); }
+
+  .brand-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+
+  .brand-wordmark {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: 14px; letter-spacing: 1px; line-height: 1; white-space: nowrap;
+  }
+  .brand-e    { color: #fff; }
+  .brand-dash { color: var(--text-dim); }
+  .brand-sarathi {
+    background: linear-gradient(90deg, var(--neon-blue), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .brand-dot     { color: var(--text-dim); font-size: 14px; }
+  .brand-aawiskar {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; letter-spacing: 3px; color: var(--text-dim); white-space: nowrap;
+  }
+
+  .header-meta { text-align: right; flex-shrink: 0; }
+  .header-meta .unit-id { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; font-family: 'Orbitron', monospace; }
+  .header-meta .freq    { font-size: 9px; color: var(--amber); letter-spacing: 1px; }
+
+  .app-identity {
+    text-align: center;
+    border-top: 1px solid rgba(0,212,255,0.08); padding-top: 6px;
+  }
+  .app-id-name {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: clamp(13px, 4vw, 19px);
+    letter-spacing: clamp(1px, 1vw, 4px);
+    color: var(--neon-blue); text-shadow: 0 0 16px var(--neon-blue); white-space: nowrap;
+  }
+  .id-sep { color: var(--text-dim); font-weight: 400; margin: 0 4px; }
+  .app-id-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; letter-spacing: 3px; color: var(--text-dim); margin-top: 2px;
+  }
+
+  @media (min-width: 640px) {
+    .header { flex-direction: row; align-items: center; gap: 0; }
+    .header-row1 { flex: 0 0 auto; }
+    .app-identity { flex: 1; border-top: none; padding-top: 0; }
+    .header-meta { margin-left: auto; }
+    .brand-aawiskar { display: block; }
+  }
+  @media (max-width: 639px) {
+    .brand-aawiskar, .brand-dot { display: none; }
+  }
+
+  /* ═══════════════════════════════════════════
+     STATUS BAR
+  ═══════════════════════════════════════════ */
+  .status-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .stat-cell {
+    border: 1px solid var(--border); background: var(--panel);
+    border-radius: 4px; padding: 8px 10px; position: relative; overflow: hidden;
+  }
+  .stat-cell .label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase;
+  }
+  .stat-cell .value { font-family: 'Orbitron', monospace; font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .stat-cell.ok   .value { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+  .stat-cell.warn .value { color: var(--amber);     text-shadow: 0 0 10px var(--amber); }
+  .stat-cell.err  .value { color: var(--red);        text-shadow: 0 0 10px var(--red); }
+  .stat-cell.good .value { color: var(--green);      text-shadow: 0 0 10px var(--green); }
+
+  .pulse-dot {
+    display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--neon-blue);
+    box-shadow: 0 0 8px var(--neon-blue);
+    animation: blink 1.2s ease-in-out infinite;
+    vertical-align: middle; margin-right: 5px;
+  }
+  .pulse-dot.off  { background: var(--red);   box-shadow: 0 0 8px var(--red);   animation: none; }
+  .pulse-dot.warn { background: var(--amber);  box-shadow: 0 0 8px var(--amber); animation: none; }
+  .pulse-dot.good { background: var(--green);  box-shadow: 0 0 8px var(--green); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* ═══════════════════════════════════════════
+     PANEL BASE
+  ═══════════════════════════════════════════ */
+  .panel {
+    border: 1px solid var(--border); background: var(--panel);
+    border-radius: 6px; margin-bottom: 10px; overflow: hidden;
+  }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    background: rgba(0,212,255,0.06);
+  }
+  .panel-header .title {
+    font-family: 'Orbitron', monospace; font-size: 10px;
+    letter-spacing: 3px; font-weight: 600; color: var(--neon-blue);
+  }
+  .panel-header .badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; color: var(--text-dim);
+    border: 1px solid var(--border); padding: 2px 6px; border-radius: 2px;
+  }
+  .badge-live {
+    color: var(--green) !important;
+    border-color: rgba(0,255,136,0.3) !important;
+  }
+
+  /* ═══════════════════════════════════════════
+     DEVICE SLOTS PANEL
+  ═══════════════════════════════════════════ */
+  /* devices-section now handled by accordion styles above */
+
+  .device-slot {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 5px;
+    background: rgba(0,212,255,0.02); cursor: pointer;
+    transition: all 0.2s; position: relative;
+    min-width: 0;
+  }
+  .device-slot:hover { border-color: rgba(0,212,255,0.38); background: rgba(0,212,255,0.04); }
+  .device-slot.selected {
+    border-color: var(--neon-blue); background: rgba(0,212,255,0.07);
+    box-shadow: 0 0 14px rgba(0,212,255,0.1);
+  }
+  .device-slot.linked { border-color: rgba(0,255,136,0.28); }
+  .device-slot.linked.selected {
+    border-color: rgba(0,255,136,0.6);
+    box-shadow: 0 0 14px rgba(0,255,136,0.12);
+  }
+
+  .dev-indicator {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 6px var(--red);
+    flex-shrink: 0; transition: all 0.3s;
+  }
+  .device-slot.linked .dev-indicator {
+    background: var(--green); box-shadow: 0 0 8px var(--green);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  .dev-info { flex: 1; min-width: 0; }
+
+  .dev-name-edit {
+    font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1px;
+    color: var(--text); background: transparent; border: none; outline: none;
+    width: 100%; cursor: pointer;
+    border-bottom: 1px solid transparent; transition: border-color 0.2s;
+    user-select: text; display: block; padding: 0;
+  }
+  .dev-name-edit:focus { border-color: rgba(0,212,255,0.3); color: var(--neon-blue); cursor: text; }
+  .device-slot.linked .dev-name-edit { color: var(--green); }
+  .device-slot.linked .dev-name-edit:focus { color: var(--neon-blue); }
+
+  .dev-status-text {
+    font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
+    color: var(--text-dim); margin-top: 2px;
+  }
+  .device-slot.linked .dev-status-text { color: rgba(0,255,136,0.6); }
+
+  .dev-link-btn {
+    flex-shrink: 0;
+    padding: 5px 10px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px;
+    background: rgba(0,212,255,0.05); border: 1px solid var(--border);
+    border-radius: 3px; color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .dev-link-btn:hover {
+    background: rgba(0,212,255,0.14); border-color: var(--neon-blue); color: var(--neon-blue);
+    box-shadow: 0 0 10px rgba(0,212,255,0.15);
+  }
+  .device-slot.linked .dev-link-btn {
+    background: rgba(255,59,92,0.05); border-color: rgba(255,59,92,0.25); color: var(--red);
+  }
+  .device-slot.linked .dev-link-btn:hover {
+    background: rgba(255,59,92,0.14); border-color: var(--red);
+    box-shadow: 0 0 10px rgba(255,59,92,0.2);
+  }
+
+  /* dev-sel-badge removed */
+
+  /* Devices panel accordion toggle */
+  .devices-toggle-btn {
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: var(--text-dim); font-size: 14px; line-height: 1;
+    transition: color 0.2s, transform 0.25s;
+    display: flex; align-items: center;
+  }
+  .devices-toggle-btn:hover { color: var(--neon-blue); }
+  .devices-toggle-btn.open { transform: rotate(180deg); }
+
+  .devices-selected-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; color: var(--text-dim);
+    margin-left: 8px; transition: color 0.2s;
+  }
+  .devices-selected-label.linked { color: var(--green); }
+
+  .devices-section {
+    padding: 0 14px 0;
+    display: flex; flex-direction: column; gap: 7px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s ease, padding 0.25s ease;
+  }
+  .devices-section.open {
+    max-height: 600px;
+    padding: 10px 14px 14px;
+  }
+
+  /* ═══════════════════════════════════════════
+     WIFI SETUP PANEL
+  ═══════════════════════════════════════════ */
+  .wifi-section { padding: 14px; }
+
+  .wifi-field { margin-bottom: 10px; }
+  .wifi-field label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; color: var(--text-dim);
+    text-transform: uppercase; display: block; margin-bottom: 5px;
+  }
+
+  .wifi-input-wrap { position: relative; }
+  .wifi-input {
+    width: 100%; padding: 10px 38px 10px 12px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    letter-spacing: 1px; color: var(--text);
+    background: rgba(0,212,255,0.04); border: 1px solid var(--border);
+    border-radius: 4px; outline: none; transition: all 0.2s;
+    user-select: text;
+  }
+  .wifi-input:focus {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 12px rgba(0,212,255,0.15);
+    background: rgba(0,212,255,0.07);
+  }
+  .wifi-input::placeholder { color: var(--text-dim); opacity: 0.6; }
+
+  /* Eye toggle for password */
+  .eye-btn {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--text-dim); font-size: 14px; padding: 2px;
+    transition: color 0.2s; line-height: 1;
+  }
+  .eye-btn:hover { color: var(--neon-blue); }
+
+  .wifi-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .wifi-btn {
+    padding: 10px 14px;
+    font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px;
+    background: rgba(0,212,255,0.06); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text); cursor: pointer; transition: all 0.2s;
+  }
+  .wifi-btn:hover, .wifi-btn:active {
+    background: rgba(0,212,255,0.15); border-color: var(--neon-blue);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+  .wifi-btn.primary {
+    background: rgba(0,255,136,0.06);
+    border-color: rgba(0,255,136,0.3); color: var(--green);
+  }
+  .wifi-btn.primary:hover {
+    background: rgba(0,255,136,0.15); border-color: var(--green);
+    box-shadow: 0 0 12px rgba(0,255,136,0.2);
+  }
+
+  .wifi-status-box {
+    padding: 10px 12px;
+    background: rgba(0,212,255,0.03); border: 1px solid var(--border);
+    border-radius: 4px; margin-top: 10px;
+  }
+  .wifi-status-box .ws-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; color: var(--text-dim); letter-spacing: 2px;
+  }
+  .wifi-status-box .ws-val {
+    font-family: 'Orbitron', monospace; font-size: 12px;
+    color: var(--neon-blue); margin-top: 3px;
+  }
+  .wifi-status-box.connected-box { border-color: rgba(0,255,136,0.3); }
+  .wifi-status-box.connected-box .ws-val { color: var(--green); }
+
+  /* ═══════════════════════════════════════════
+     VOICE CONTROL
+  ═══════════════════════════════════════════ */
+  .voice-section { padding: 14px; }
+  .voice-row { display: flex; gap: 10px; align-items: center; }
+
+  .voice-btn {
+    flex-shrink: 0; width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(0,212,255,0.06); border: 2px solid var(--border);
+    color: var(--neon-blue); font-size: 24px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .voice-btn:hover, .voice-btn:active {
+    background: rgba(0,212,255,0.12); border-color: var(--neon-blue);
+    box-shadow: 0 0 16px rgba(0,212,255,0.25);
+  }
+  .voice-btn.listening {
+    animation: listenPulse 1.5s ease-in-out infinite;
+    border-color: var(--cyan); box-shadow: 0 0 24px var(--cyan);
+  }
+  @keyframes listenPulse {
+    0%,100% { transform: scale(1);    box-shadow: 0 0 14px rgba(0,255,234,0.4); }
+    50%      { transform: scale(1.09); box-shadow: 0 0 32px rgba(0,255,234,0.7), 0 0 60px rgba(0,255,234,0.2); }
+  }
+  .voice-btn.stop-voice-btn {
+    background: rgba(255,59,92,0.08); border-color: rgba(255,59,92,0.3); color: var(--red);
+  }
+  .voice-btn.stop-voice-btn:hover {
+    background: rgba(255,59,92,0.15); border-color: var(--red);
+    box-shadow: 0 0 16px rgba(255,59,92,0.35);
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+  .voice-display {
+    flex: 1; border: 1px solid var(--border);
+    background: rgba(0,212,255,0.03); border-radius: 6px; padding: 10px 14px;
+  }
+  .voice-display .v-text {
+    font-family: 'Orbitron', monospace; font-size: 11px;
+    letter-spacing: 2px; color: var(--text); margin-bottom: 4px;
+  }
+  .voice-display .v-cmd { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-dim); }
+
+  .voice-hint {
+    margin-top: 10px; padding: 8px 10px;
+    background: rgba(0,212,255,0.02); border: 1px solid rgba(0,212,255,0.08);
+    border-radius: 4px;
+  }
+  .voice-hint .hint-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 5px;
+  }
+  .hint-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .hint-chip {
+    font-family: 'Share Tech Mono', monospace; font-size: 9px;
+    padding: 2px 7px; border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 2px; color: var(--text-dim);
+  }
+
+  /* Custom voice command editor */
+  .voice-cmd-editor {
+    margin-top: 10px; padding: 10px;
+    background: rgba(0,212,255,0.02); border: 1px solid rgba(0,212,255,0.10);
+    border-radius: 4px;
+  }
+  .vce-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; letter-spacing: 2px; color: var(--text-dim);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .vce-title span { color: var(--neon-blue); opacity: 0.6; }
+  .vce-row {
+    display: grid; grid-template-columns: 90px 1fr;
+    align-items: center; gap: 6px 10px; margin-bottom: 6px;
+  }
+  .vce-row:last-child { margin-bottom: 0; }
+  .vce-label {
+    font-family: 'Share Tech Mono', monospace; font-size: 9px;
+    color: var(--text-dim); letter-spacing: 1px; white-space: nowrap;
+  }
+  .vce-input {
+    width: 100%;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    color: var(--text); background: rgba(0,212,255,0.04);
+    border: 1px solid var(--border); border-radius: 3px;
+    padding: 4px 8px; outline: none; transition: all 0.2s;
+    user-select: text;
+  }
+  .vce-input:focus {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 8px rgba(0,212,255,0.12);
+    background: rgba(0,212,255,0.07);
+  }
+  .vce-input::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+  /* ═══════════════════════════════════════════
+     COMMAND LOG
+  ═══════════════════════════════════════════ */
+  .log-section { padding: 14px; }
+  .log-feed {
+    max-height: 120px; overflow-y: auto;
+    border: 1px solid var(--border); background: rgba(0,212,255,0.02);
+    border-radius: 4px; padding: 8px;
+  }
+  .log-item {
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    color: var(--text-dim); padding: 3px 0;
+    border-bottom: 1px solid rgba(0,212,255,0.05);
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-item .ts  { color: var(--amber); margin-right: 8px; }
+  .log-item .msg { color: var(--neon-blue); }
+  .log-item .src { color: var(--text-dim); margin-right: 5px; }
+  .log-item .src.wifi-src { color: var(--green); }
+
+  .log-feed::-webkit-scrollbar { width: 4px; }
+  .log-feed::-webkit-scrollbar-track { background: rgba(0,212,255,0.05); }
+  .log-feed::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 2px; }
+
+  /* ═══════════════════════════════════════════
+     RELAY CARDS — right column
+  ═══════════════════════════════════════════ */
+  .relay-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .relay-card {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 8px; overflow: hidden;
+    position: relative; transition: all 0.25s;
+    display: flex; flex-direction: column;
+    cursor: pointer;
+  }
+  .relay-card.relay-on {
+    border-color: rgba(0,212,255,0.55);
+    box-shadow: 0 0 20px rgba(0,212,255,0.1), inset 0 0 20px rgba(0,212,255,0.04);
+  }
+
+  .relay-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .relay-card.relay-on::before { opacity: 1; animation: scanH 2s linear infinite; }
+
+  .relay-card-top {
+    padding: 14px 14px 10px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+
+  .relay-icon-wrap {
+    width: 44px; height: 44px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: rgba(0,212,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; transition: all 0.25s;
+    flex-shrink: 0;
+  }
+  .relay-card.relay-on .relay-icon-wrap {
+    border-color: rgba(0,212,255,0.4);
+    background: rgba(0,212,255,0.1);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+
+  .relay-ch-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; letter-spacing: 2px; color: var(--text-dim);
+    text-align: right;
+  }
+  .relay-status-dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--red);
+    box-shadow: 0 0 6px var(--red); margin-bottom: 3px;
+    transition: all 0.3s;
+  }
+  .relay-card.relay-on .relay-status-dot {
+    background: var(--green); box-shadow: 0 0 8px var(--green);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  .relay-state-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px; font-weight: 600;
+    color: var(--red); display: block;
+  }
+  .relay-card.relay-on .relay-state-text { color: var(--green); }
+
+  .relay-card-mid { padding: 0 14px 10px; }
+
+  /* Relay name — editable inline */
+  .relay-name {
+    font-family: 'Orbitron', monospace; font-weight: 700;
+    font-size: 13px; color: var(--text); letter-spacing: 1px;
+    margin-bottom: 2px;
+    cursor: text; border-bottom: 1px solid transparent;
+    transition: border-color 0.2s; outline: none;
+    user-select: text;
+    /* pencil hint */
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 1L9 3L3 9H1V7L7 1Z' stroke='%234a8fa8' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 2px center;
+    background-size: 9px;
+    padding-right: 14px;
+  }
+  .relay-name:focus {
+    border-color: rgba(0,212,255,0.3);
+    color: var(--neon-blue);
+    background-image: none;
+    padding-right: 0;
+  }
+  .relay-card.relay-on .relay-name { color: var(--neon-blue); }
+
+  .relay-last-action {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; color: var(--text-dim); letter-spacing: 1px;
+  }
+
+  /* Big toggle button */
+  .relay-toggle {
+    margin: 0 14px 14px; padding: 12px;
+    font-family: 'Orbitron', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 3px;
+    border-radius: 5px; cursor: pointer;
+    transition: all 0.2s; position: relative; overflow: hidden;
+    border: 1px solid rgba(255,59,92,0.3);
+    background: rgba(255,59,92,0.06); color: var(--red);
+    width: calc(100% - 28px);
+  }
+  .relay-toggle::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    transform: translateX(-100%); transition: transform 0.4s;
+  }
+  .relay-toggle:hover::after { transform: translateX(100%); }
+  .relay-toggle:hover {
+    background: rgba(255,59,92,0.15);
+    box-shadow: 0 0 16px rgba(255,59,92,0.2);
+  }
+  .relay-toggle:active { transform: scale(0.97); }
+  @keyframes toggleFlash {
+    0%   { box-shadow: 0 0 0px rgba(0,212,255,0); }
+    40%  { box-shadow: 0 0 22px rgba(0,212,255,0.5); }
+    100% { box-shadow: 0 0 6px rgba(0,212,255,0.1); }
+  }
+  .relay-toggle.flash-on  { animation: toggleFlash 0.4s ease-out forwards; }
+  @keyframes toggleFlashOff {
+    0%   { box-shadow: 0 0 0px rgba(255,59,92,0); }
+    40%  { box-shadow: 0 0 22px rgba(255,59,92,0.45); }
+    100% { box-shadow: 0 0 4px rgba(255,59,92,0.1); }
+  }
+  .relay-toggle.flash-off { animation: toggleFlashOff 0.4s ease-out forwards; }
+
+  .relay-card.relay-on .relay-toggle {
+    border-color: rgba(0,212,255,0.4);
+    background: rgba(0,212,255,0.1); color: var(--neon-blue);
+  }
+  .relay-card.relay-on .relay-toggle:hover {
+    background: rgba(0,212,255,0.18);
+    box-shadow: 0 0 16px rgba(0,212,255,0.2);
+  }
+
+  /* ═══════════════════════════════════════════
+     MASTER CONTROLS
+  ═══════════════════════════════════════════ */
+  .master-section { padding: 14px; }
+  .master-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .master-btn {
+    padding: 14px; font-family: 'Orbitron', monospace;
+    font-size: 12px; letter-spacing: 3px; font-weight: 700;
+    border-radius: 5px; cursor: pointer; transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .master-btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    transform: translateX(-100%); transition: transform 0.4s;
+  }
+  .master-btn:hover::after { transform: translateX(100%); }
+  .master-btn:active { transform: scale(0.97); }
+
+  .master-btn.all-on {
+    background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.3); color: var(--green);
+  }
+  .master-btn.all-on:hover {
+    background: rgba(0,255,136,0.18); box-shadow: 0 0 20px rgba(0,255,136,0.2);
+  }
+  .master-btn.all-off {
+    background: rgba(255,59,92,0.06); border: 1px solid rgba(255,59,92,0.25); color: var(--red);
+  }
+  .master-btn.all-off:hover {
+    background: rgba(255,59,92,0.14); box-shadow: 0 0 20px rgba(255,59,92,0.2);
+  }
+
+  /* ═══════════════════════════════════════════
+     CONNECTION MODE INDICATOR
+  ═══════════════════════════════════════════ */
+  .mode-section { padding: 14px; }
+  .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .mode-card {
+    padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--border); background: rgba(0,212,255,0.02);
+    transition: all 0.3s;
+  }
+  .mode-card.active-mode {
+    border-color: rgba(0,255,136,0.35);
+    background: rgba(0,255,136,0.05);
+    box-shadow: 0 0 10px rgba(0,255,136,0.08);
+  }
+  .mode-card .mc-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 4px;
+  }
+  .mode-card .mc-val {
+    font-family: 'Orbitron', monospace; font-size: 12px; font-weight: 600;
+    color: var(--text-dim); transition: color 0.3s;
+  }
+  .mode-card.active-mode .mc-val { color: var(--green); }
+  .mode-card .mc-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; color: var(--text-dim); margin-top: 2px; letter-spacing: 1px;
+  }
+
+  /* ═══════════════════════════════════════════
+     RELAY PANEL — device label bar
+  ═══════════════════════════════════════════ */
+  .relay-dev-bar {
+    padding: 6px 14px; border-bottom: 1px solid var(--border);
+    background: rgba(0,212,255,0.03);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .relay-dev-bar .rdb-label {
+    font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text-dim);
+  }
+  .relay-dev-bar .rdb-name {
+    font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 600; color: var(--neon-blue);
+    letter-spacing: 1px;
+  }
+  .relay-dev-bar .rdb-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 5px var(--red); margin-left: auto;
+    transition: all 0.3s;
+  }
+  .relay-dev-bar .rdb-dot.linked {
+    background: var(--green); box-shadow: 0 0 7px var(--green);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  /* No-device placeholder */
+  .relay-placeholder {
+    padding: 40px 20px; text-align: center;
+  }
+  .relay-placeholder .rp-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+  .relay-placeholder .rp-text {
+    font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+  .relay-placeholder .rp-sub {
+    font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
+    color: var(--text-dim); opacity: 0.6; margin-top: 6px;
+  }
+
+  /* ═══════════════════════════════════════════
+     WATERMARK
+  ═══════════════════════════════════════════ */
+  .brand-watermark {
+    position: fixed; bottom: 12px; right: 16px;
+    font-family: 'Share Tech Mono', monospace; font-size: 8px;
+    letter-spacing: 2px; color: rgba(0,212,255,0.12);
+    text-transform: uppercase; pointer-events: none; z-index: 10;
+  }
+
+  /* ═══════════════════════════════════════════
+     RELAY CHANNEL ENABLE / DISABLE
+  ═══════════════════════════════════════════ */
+  .relay-card.relay-disabled {
+    opacity: 0.38;
+    filter: saturate(0.15);
+  }
+  /* toggle stays fully interactive even when card is dimmed */
+  .relay-card.relay-disabled .ch-enable-toggle {
+    opacity: 1 !important;
+    filter: none !important;
+    pointer-events: all !important;
+  }
+  .relay-card.relay-disabled .relay-toggle,
+  .relay-card.relay-disabled .relay-name,
+  .relay-card.relay-disabled .relay-icon-wrap {
+    pointer-events: none;
+  }
+
+  .ch-enable-toggle {
+    display: inline-flex; align-items: center; gap: 4px;
+    cursor: pointer; margin-top: 5px; padding: 3px 7px;
+    border-radius: 3px; border: 1px solid rgba(255,59,92,0.3);
+    background: rgba(255,59,92,0.07);
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .ch-enable-toggle:hover {
+    border-color: rgba(255,59,92,0.55);
+    background: rgba(255,59,92,0.14);
+  }
+  .ch-enable-toggle.enabled {
+    border-color: rgba(0,255,136,0.35);
+    background: rgba(0,255,136,0.08);
+  }
+  .ch-enable-toggle.enabled:hover {
+    border-color: rgba(0,255,136,0.6);
+    background: rgba(0,255,136,0.15);
+  }
+
+  /* dot indicator inside the badge */
+  .ch-toggle-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 4px var(--red);
+    flex-shrink: 0; transition: all 0.2s;
+  }
+  .ch-enable-toggle.enabled .ch-toggle-dot {
+    background: var(--green); box-shadow: 0 0 5px var(--green);
+  }
+
+  .ch-enable-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px; letter-spacing: 1.5px;
+    color: rgba(255,59,92,0.7); transition: color 0.2s;
+  }
+  .ch-enable-toggle.enabled .ch-enable-label {
+    color: rgba(0,255,136,0.8);
+  }
+
+  /* ═══════════════════════════════════════════
+     ICON PICKER POPUP
+  ═══════════════════════════════════════════ */
+  .icon-picker-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    display: none;
+  }
+  .icon-picker-overlay.show { display: block; }
+  .icon-picker-popup {
+    position: absolute;
+    background: #071318; border: 1px solid var(--neon-blue);
+    border-radius: 8px; padding: 10px;
+    box-shadow: 0 0 24px rgba(0,212,255,0.25);
+    z-index: 101;
+  }
+  .icon-picker-title {
+    font-family: 'Share Tech Mono', monospace; font-size: 8px;
+    letter-spacing: 2px; color: var(--text-dim); margin-bottom: 8px;
+  }
+  .icon-picker-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  }
+  .icon-option {
+    width: 40px; height: 40px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--border); background: rgba(0,212,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; transition: all 0.15s;
+  }
+  .icon-option:hover {
+    border-color: var(--neon-blue); background: rgba(0,212,255,0.12);
+    box-shadow: 0 0 10px rgba(0,212,255,0.2);
+    transform: scale(1.1);
+  }
+  .icon-option.selected {
+    border-color: var(--cyan); background: rgba(0,212,255,0.16);
+  }
+
+  /* Clickable icon wrap hint */
+  .relay-icon-wrap { cursor: pointer; position: relative; }
+  .relay-icon-wrap::after {
+    content: '✎';
+    position: absolute; bottom: -3px; right: -3px;
+    font-size: 8px; color: var(--text-dim);
+    background: #071318; border-radius: 50%;
+    width: 12px; height: 12px;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s;
+    line-height: 12px; text-align: center;
+  }
+  .relay-icon-wrap:hover::after { opacity: 1; }
+
+  /* ═══════════════════════════════════════════
+     ADD DEVICE BUTTON
+  ═══════════════════════════════════════════ */
+  .add-device-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 14px; border-radius: 5px; cursor: pointer;
+    border: 1px dashed rgba(0,212,255,0.25);
+    background: rgba(0,212,255,0.02);
+    color: var(--text-dim); transition: all 0.2s;
+    font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px;
+    width: 100%;
+  }
+  .add-device-btn:hover {
+    border-color: var(--neon-blue); color: var(--neon-blue);
+    background: rgba(0,212,255,0.06);
+    box-shadow: 0 0 12px rgba(0,212,255,0.1);
+  }
+  .add-device-btn .add-icon {
+    font-size: 16px; font-weight: 300; line-height: 1;
+    color: var(--neon-blue); opacity: 0.7;
+  }
+
+  /* Remove button on device slot */
+  .dev-remove-btn {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,59,92,0.05); border: 1px solid rgba(255,59,92,0.15);
+    color: rgba(255,59,92,0.4); cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; line-height: 1;
+  }
+  .dev-remove-btn:hover {
+    background: rgba(255,59,92,0.15); border-color: var(--red);
+    color: var(--red); box-shadow: 0 0 8px rgba(255,59,92,0.2);
+  }
+  .device-slot.linked .dev-remove-btn { opacity: 0.3; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══ HEADER ══ -->
+  <div class="header">
+    <div class="header-row1">
+      <div class="brand-strip">
+        <a href="./index.html" class="back-link">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          BACK
+        </a>
+        <div class="brand-divider"></div>
+        <div class="brand-wordmark">
+          <span class="brand-e">e</span><span class="brand-dash">-</span><span class="brand-sarathi">SARATHI</span>
+        </div>
+        <div class="brand-dot">·</div>
+        <div class="brand-aawiskar">AAWISKAR</div>
+      </div>
+      <div class="header-meta">
+        <div class="unit-id">ESP32 DEV MODULE</div>
+        <div class="freq">BLE + WiFi</div>
+      </div>
+    </div>
+    <div class="app-identity">
+      <div class="app-id-name">HOME<span class="id-sep">//</span>AUTOMATION</div>
+      <div class="app-id-sub">IoT CONTROL — APP 02</div>
+    </div>
+  </div>
+
+  <!-- ══ STATUS BAR (full width) ══ -->
+  <div class="status-bar-row">
+    <div class="status-bar">
+      <div class="stat-cell ok" id="cell-ble">
+        <div class="label">BLE DEVICES</div>
+        <div class="value"><span class="pulse-dot off" id="ble-dot"></span><span id="stat-ble">0/6</span></div>
+      </div>
+      <div class="stat-cell ok" id="cell-wifi">
+        <div class="label">WiFi</div>
+        <div class="value"><span class="pulse-dot off" id="wifi-dot"></span><span id="stat-wifi">OFF</span></div>
+      </div>
+      <div class="stat-cell ok">
+        <div class="label">IP ADDR</div>
+        <div class="value" id="stat-ip" style="font-size:10px">--</div>
+      </div>
+      <div class="stat-cell ok">
+        <div class="label">ACTIVE</div>
+        <div class="value" id="stat-active">0/4</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LEFT COLUMN ══ -->
+  <div class="left-column">
+
+    <!-- Devices Panel -->
+    <div class="panel">
+      <div class="panel-header" style="cursor:pointer" onclick="toggleDevicesPanel()">
+        <div class="title" style="display:flex;align-items:center;gap:8px">
+          LINKED DEVICES
+          <span class="devices-selected-label" id="devices-selected-label">— NONE</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="badge" id="dev-panel-badge">6-DEV</div>
+          <button class="devices-toggle-btn" id="devices-toggle-btn" onclick="event.stopPropagation();toggleDevicesPanel()">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="devices-section open" id="devices-section">
+        <!-- Slots injected by JS -->
+      </div>
+    </div>
+
+    <!-- WiFi Setup (shown when any device is selected) -->
+    <div class="panel" id="wifi-panel" style="display:none">
+      <div class="panel-header">
+        <div class="title">WIFI SETUP</div>
+        <div class="badge" id="wifi-badge">CONFIGURE</div>
+      </div>
+      <div class="wifi-section">
+        <div class="wifi-field">
+          <label>Network SSID</label>
+          <div class="wifi-input-wrap">
+            <input class="wifi-input" id="wifi-ssid" type="text" placeholder="Your WiFi name" autocomplete="off">
+          </div>
+        </div>
+        <div class="wifi-field">
+          <label>Password</label>
+          <div class="wifi-input-wrap">
+            <input class="wifi-input" id="wifi-pass" type="password" placeholder="Your WiFi password" autocomplete="new-password">
+            <button class="eye-btn" id="eye-btn" onclick="togglePassVis()" title="Show/hide password"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <div class="wifi-actions">
+          <button class="wifi-btn" onclick="saveWiFiCreds()">SAVE CREDS</button>
+          <button class="wifi-btn primary" onclick="connectWiFi()">CONNECT</button>
+        </div>
+        <div class="wifi-status-box" id="wifi-status-box">
+          <div class="ws-label">STATUS</div>
+          <div class="ws-val" id="wifi-status-val">Select a device and link via BLE...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection Mode -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">CONNECTION MODE</div>
+        <div class="badge" id="mode-badge">STANDBY</div>
+      </div>
+      <div class="mode-section">
+        <div class="mode-grid">
+          <div class="mode-card" id="mode-ble">
+            <div class="mc-label">BLUETOOTH</div>
+            <div class="mc-val">OFFLINE</div>
+            <div class="mc-sub">BLE 5.0</div>
+          </div>
+          <div class="mode-card" id="mode-wifi">
+            <div class="mc-label">WiFi</div>
+            <div class="mc-val">OFFLINE</div>
+            <div class="mc-sub" id="mode-wifi-ip">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voice Control -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">VOICE CONTROL</div>
+        <div class="badge">SPEECH</div>
+      </div>
+      <div class="voice-section">
+        <div class="voice-row">
+          <button class="voice-btn" id="voice-btn" onclick="startVoice()">🎤</button>
+          <button class="voice-btn stop-voice-btn" id="stop-voice-btn" onclick="stopVoice()" style="display:none">⏹</button>
+          <div class="voice-display">
+            <div class="v-text" id="v-text">READY</div>
+            <div class="v-cmd" id="v-cmd">Tap mic to begin voice control</div>
+          </div>
+        </div>
+        <div class="voice-hint">
+          <div class="hint-title">// VOICE COMMANDS (active device)</div>
+          <div class="hint-chips">
+            <span class="hint-chip">relay one on</span>
+            <span class="hint-chip">relay two off</span>
+            <span class="hint-chip">all on</span>
+            <span class="hint-chip">all off</span>
+            <span class="hint-chip">channel three on</span>
+            <span class="hint-chip">[custom] on/off</span>
+          </div>
+        </div>
+        <div class="voice-cmd-editor" id="voice-cmd-editor">
+          <div class="vce-title">// CUSTOM TRIGGER PHRASES <span>(active device)</span></div>
+          <div id="vce-rows"><!-- injected by JS --></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Command Log -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">COMMAND LOG</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="document.getElementById('log-feed').innerHTML=''" style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);background:rgba(255,59,92,0.05);border:1px solid rgba(255,59,92,0.2);border-radius:2px;padding:2px 8px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,59,92,0.5)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='rgba(255,59,92,0.2)'">CLEAR</button>
+          <div class="badge">LOG</div>
+        </div>
+      </div>
+      <div class="log-section">
+        <div class="log-feed" id="log-feed">
+          <div class="log-item">
+            <span class="ts">--:--:--</span>
+            <span class="src">[SYS]</span>
+            <span class="msg">e-Sarathi Home Automation ready · 6-device mode</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /left-column -->
+
+  <!-- ══ RIGHT COLUMN ══ -->
+  <div class="right-column">
+
+    <!-- Relay Cards -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">RELAY CONTROL</div>
+        <div class="badge badge-live" id="relay-panel-badge">4CH</div>
+      </div>
+      <!-- Device label bar -->
+      <div class="relay-dev-bar" id="relay-dev-bar">
+        <span class="rdb-label">DEVICE</span>
+        <span class="rdb-name" id="rdb-name">—</span>
+        <span class="rdb-dot" id="rdb-dot"></span>
+      </div>
+      <div style="padding:14px">
+        <div class="relay-grid" id="relay-grid">
+          <!-- Cards injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Master Controls -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">MASTER CONTROL</div>
+        <div class="badge">GLOBAL</div>
+      </div>
+      <div class="master-section">
+        <div class="master-row">
+          <button class="master-btn all-on" onclick="sendAll(true)">⬛ ALL ON</button>
+          <button class="master-btn all-off" onclick="sendAll(false)">⬛ ALL OFF</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /right-column -->
+
+</div><!-- /app -->
+
+<div class="brand-watermark">e-Sarathi · Aawiskar IoT</div>
+
+<!-- Icon picker overlay -->
+<div class="icon-picker-overlay" id="icon-picker-overlay" onclick="closeIconPicker()">
+  <div class="icon-picker-popup" id="icon-picker-popup" onclick="event.stopPropagation()">
+    <div class="icon-picker-title">// SELECT ICON</div>
+    <div class="icon-picker-grid" id="icon-picker-grid"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════
+//  BLE CONFIG
+// ════════════════════════════════════════════════════
+const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
+const CMD_UUID     = '12345678-1234-1234-1234-1234567890ac';
+const STATUS_UUID  = '12345678-1234-1234-1234-1234567890ad';
+
+const MAX_DEVICES = 6;
+const MAX_RELAYS  = 4;
+
+const ICON_SET = ['💡','🌀','❄️','🔌','🔊','📺','🔒','💧'];
+
+const RELAY_DEFAULTS = [
+  { name: 'Light', icon: '💡' },
+  { name: 'Fan',   icon: '🌀' },
+  { name: 'AC',    icon: '❄️' },
+  { name: 'Plug',  icon: '🔌' },
+];
+
+// ════════════════════════════════════════════════════
+//  DYNAMIC DEVICE STATE
+// ════════════════════════════════════════════════════
+function loadDevices() {
+  const count = parseInt(localStorage.getItem('dev_count') || '0', 10);
+  const arr = [];
+  for (let di = 0; di < count; di++) {
+    arr.push(makeDevice(di));
+  }
+  return arr;
+}
+
+function makeDevice(di) {
+  return {
+    bleDevice:  null, cmdChar: null, statusChar: null,
+    bleOK: false, wifiOK: false, wifiIP: '',
+    relayState:   Array(MAX_RELAYS).fill(false),
+    relayEnabled: Array.from({ length: MAX_RELAYS }, (_, ri) =>
+      localStorage.getItem(`dev${di}_renabled_${ri}`) !== 'false'),
+    relayNames:  RELAY_DEFAULTS.map((d, ri) =>
+      localStorage.getItem(`dev${di}_rname_${ri}`) || d.name),
+    relayIcons:  RELAY_DEFAULTS.map((d, ri) =>
+      localStorage.getItem(`dev${di}_ricon_${ri}`) || d.icon),
+    numRelays:   4,
+    label:       localStorage.getItem(`dev${di}_label`) || `DEVICE ${di + 1}`,
+    customVoiceCmds: Array.from({ length: MAX_RELAYS }, (_, ri) =>
+      localStorage.getItem(`dev${di}_vcmd_${ri}`) || ''),
+  };
+}
+
+let devices = loadDevices();
+let selectedDev = 0;
+
+// ════════════════════════════════════════════════════
+//  DEVICE MANAGEMENT
+// ════════════════════════════════════════════════════
+function addDevice() {
+  if (devices.length >= MAX_DEVICES) {
+    log(`Maximum ${MAX_DEVICES} devices reached`, 'SYS'); return;
+  }
+  const di = devices.length;
+  devices.push(makeDevice(di));
+  localStorage.setItem('dev_count', devices.length);
+  buildDeviceSlots();
+  selectDevice(di);
+  document.getElementById('dev-panel-badge').textContent = `${devices.length}-DEV`;
+  updateBLEStatusBar();
+}
+
+function removeDevice(di, e) {
+  e.stopPropagation();
+  const d = devices[di];
+  if (d.bleOK) { log('Unlink device before removing', 'SYS'); return; }
+  devices.splice(di, 1);
+  // Re-index localStorage
+  localStorage.setItem('dev_count', devices.length);
+  // Re-save all device labels / relay names with new indices
+  devices.forEach((dev, idx) => {
+    localStorage.setItem(`dev${idx}_label`, dev.label);
+    localStorage.setItem(`dev${idx}_relays`, dev.numRelays);
+    dev.relayNames.forEach((n, ri) => localStorage.setItem(`dev${idx}_rname_${ri}`, n));
+    dev.relayIcons.forEach((ic, ri) => localStorage.setItem(`dev${idx}_ricon_${ri}`, ic));
+    dev.customVoiceCmds.forEach((c, ri) => localStorage.setItem(`dev${idx}_vcmd_${ri}`, c));
+  });
+  if (selectedDev >= devices.length) selectedDev = Math.max(0, devices.length - 1);
+  buildDeviceSlots();
+  document.getElementById('dev-panel-badge').textContent = `${devices.length}-DEV`;
+  if (devices.length > 0) {
+    selectDevice(selectedDev);
+  } else {
+    document.getElementById('wifi-panel').style.display = 'none';
+    document.getElementById('relay-grid').innerHTML = `
+      <div class="relay-placeholder" style="grid-column:1/-1">
+        <div class="rp-icon">📡</div>
+        <div class="rp-text">NO DEVICES</div>
+        <div class="rp-sub">Add a device to get started</div>
+      </div>`;
+    document.getElementById('rdb-name').textContent = '—';
+    document.getElementById('devices-selected-label').textContent = '— NONE';
+  }
+  updateBLEStatusBar();
+}
+
+// ════════════════════════════════════════════════════
+//  BUILD DEVICE SLOTS
+// ════════════════════════════════════════════════════
+function buildDeviceSlots() {
+  const sec = document.getElementById('devices-section');
+  sec.innerHTML = '';
+
+  devices.forEach((dev, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'device-slot' + (i === selectedDev ? ' selected' : '') + (dev.bleOK ? ' linked' : '');
+    slot.id = `dev-slot-${i}`;
+    slot.onclick = (e) => {
+      if (e.target.closest('.dev-link-btn') || e.target.closest('.dev-name-edit') || e.target.closest('.dev-remove-btn')) return;
+      selectDevice(i);
+    };
+    slot.innerHTML = `
+      <div class="dev-indicator" id="dev-ind-${i}"></div>
+      <div class="dev-info">
+        <input class="dev-name-edit" id="dev-label-${i}"
+               value="${dev.label}" spellcheck="false"
+               onclick="event.stopPropagation()"
+               onblur="saveDevLabel(${i}, this.value)"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">
+        <div class="dev-status-text" id="dev-status-${i}">${dev.bleOK ? (dev.wifiOK ? `BLE + WiFi (${dev.wifiIP})` : 'BLE LINKED') : 'UNLINKED'}</div>
+      </div>
+      <button class="dev-remove-btn" title="Remove device" onclick="removeDevice(${i}, event)">✕</button>
+      <button class="dev-link-btn" id="dev-btn-${i}"
+              onclick="event.stopPropagation();toggleBLE(${i})">${dev.bleOK ? 'UNLINK' : 'LINK'}</button>
+    `;
+    sec.appendChild(slot);
+  });
+
+  // Add device button
+  if (devices.length < MAX_DEVICES) {
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-device-btn';
+    addBtn.onclick = addDevice;
+    addBtn.innerHTML = `<span class="add-icon">＋</span> ADD DEVICE`;
+    sec.appendChild(addBtn);
+  }
+}
+
+function saveDevLabel(i, val) {
+  const clean = val.trim() || `DEVICE ${i + 1}`;
+  devices[i].label = clean;
+  localStorage.setItem(`dev${i}_label`, clean);
+  document.getElementById(`dev-label-${i}`).value = clean;
+  if (i === selectedDev) { updateRelayDevBar(); updateDevicesSelectedLabel(); buildVoiceCmdEditor(); }
+}
+
+let devicesPanelOpen = true;
+function toggleDevicesPanel() {
+  devicesPanelOpen = !devicesPanelOpen;
+  document.getElementById('devices-section').classList.toggle('open', devicesPanelOpen);
+  document.getElementById('devices-toggle-btn').classList.toggle('open', devicesPanelOpen);
+}
+
+function updateDevicesSelectedLabel() {
+  const el = document.getElementById('devices-selected-label');
+  if (devices.length === 0) { el.textContent = '— NONE'; el.className = 'devices-selected-label'; return; }
+  const d = devices[selectedDev];
+  el.textContent = '— ' + d.label;
+  el.className = 'devices-selected-label' + (d.bleOK ? ' linked' : '');
+}
+
+function selectDevice(i) {
+  if (devices.length === 0) return;
+  selectedDev = i;
+  document.querySelectorAll('.device-slot').forEach((s, idx) => {
+    s.classList.toggle('selected', idx === i);
+    if (idx === i) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  document.getElementById('wifi-panel').style.display = 'block';
+  refreshWiFiPanel();
+  buildRelayCards();
+  updateRelayDevBar();
+  updateActiveCount();
+  updateDevicesSelectedLabel();
+  buildVoiceCmdEditor();
+  log(`Viewing ${devices[i].label}`, 'SYS');
+}
+
+function updateRelayDevBar() {
+  if (devices.length === 0) return;
+  const d = devices[selectedDev];
+  document.getElementById('rdb-name').textContent = d.label;
+  document.getElementById('rdb-dot').className = 'rdb-dot' + (d.bleOK ? ' linked' : '');
+}
+
+// ════════════════════════════════════════════════════
+//  RELAY CHANNEL ENABLE / DISABLE
+// ════════════════════════════════════════════════════
+function toggleRelayEnabled(i, e) {
+  e.stopPropagation();
+  const d = devices[selectedDev];
+  d.relayEnabled[i] = !d.relayEnabled[i];
+  localStorage.setItem(`dev${selectedDev}_renabled_${i}`, d.relayEnabled[i]);
+  const card   = document.getElementById(`card-${i}`);
+  const toggle = document.getElementById(`ch-enable-${i}`);
+  if (!card || !toggle) return;
+  const en = d.relayEnabled[i];
+  card.classList.toggle('relay-disabled', !en);
+  toggle.classList.toggle('enabled', en);
+  toggle.querySelector('.ch-enable-label').textContent = en ? 'ENABLED' : 'DISABLED';
+}
+
+// ════════════════════════════════════════════════════
+//  ICON PICKER
+// ════════════════════════════════════════════════════
+let iconPickerTarget = null; // { devIdx, relayIdx }
+
+function openIconPicker(relayIdx, anchorEl) {
+  iconPickerTarget = { devIdx: selectedDev, relayIdx };
+  const d = devices[selectedDev];
+  const grid = document.getElementById('icon-picker-grid');
+  grid.innerHTML = '';
+  ICON_SET.forEach(icon => {
+    const opt = document.createElement('div');
+    opt.className = 'icon-option' + (d.relayIcons[relayIdx] === icon ? ' selected' : '');
+    opt.textContent = icon;
+    opt.onclick = () => selectIcon(icon);
+    grid.appendChild(opt);
+  });
+
+  // Position popup near the clicked icon
+  const popup = document.getElementById('icon-picker-popup');
+  const rect  = anchorEl.getBoundingClientRect();
+  popup.style.left = Math.min(rect.left, window.innerWidth - 210) + 'px';
+  popup.style.top  = (rect.bottom + 6) + 'px';
+
+  document.getElementById('icon-picker-overlay').classList.add('show');
+}
+
+function selectIcon(icon) {
+  if (!iconPickerTarget) return;
+  const { devIdx, relayIdx } = iconPickerTarget;
+  devices[devIdx].relayIcons[relayIdx] = icon;
+  localStorage.setItem(`dev${devIdx}_ricon_${relayIdx}`, icon);
+  // Update the icon in the DOM
+  const wrap = document.getElementById(`icon-${relayIdx}`);
+  if (wrap) wrap.textContent = icon;
+  closeIconPicker();
+}
+
+function closeIconPicker() {
+  document.getElementById('icon-picker-overlay').classList.remove('show');
+  iconPickerTarget = null;
+}
+
+// ════════════════════════════════════════════════════
+//  RELAY CARD BUILDER
+// ════════════════════════════════════════════════════
+function buildRelayCards() {
+  const grid = document.getElementById('relay-grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = '1fr 1fr';
+  if (devices.length === 0) {
+    grid.innerHTML = `<div class="relay-placeholder" style="grid-column:1/-1">
+      <div class="rp-icon">📡</div>
+      <div class="rp-text">NO DEVICE SELECTED</div>
+      <div class="rp-sub">Add a device to get started</div>
+    </div>`;
+    return;
+  }
+  const d = devices[selectedDev];
+
+  for (let i = 0; i < MAX_RELAYS; i++) {
+    const icon = d.relayIcons[i];
+    const name = d.relayNames[i];
+    const on   = d.relayState[i];
+    const en   = d.relayEnabled[i];
+    const card = document.createElement('div');
+    card.className = `relay-card${on ? ' relay-on' : ''}${!en ? ' relay-disabled' : ''}`;
+    card.id = `card-${i}`;
+    // Tap anywhere on card (except editable areas) toggles relay
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.relay-toggle') || e.target.closest('.relay-name') ||
+          e.target.closest('.relay-icon-wrap') || e.target.closest('.ch-enable-toggle')) return;
+      if (!devices[selectedDev].relayEnabled[i]) return;
+      toggleRelay(i);
+    });
+    card.innerHTML = `
+      <div class="relay-card-top">
+        <div class="relay-icon-wrap" id="icon-${i}" title="Tap to change icon"
+             onclick="openIconPicker(${i}, this)">${icon}</div>
+        <div style="text-align:right">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-bottom:3px">
+            <span class="relay-status-dot" id="dot-${i}"></span>
+          </div>
+          <span class="relay-state-text" id="state-text-${i}">${on ? 'ON' : 'OFF'}</span>
+          <div class="relay-ch-label">CH ${i + 1}</div>
+          <div class="ch-enable-toggle${en ? ' enabled' : ''}" id="ch-enable-${i}"
+               onclick="toggleRelayEnabled(${i}, event)" title="${en ? 'Disable channel' : 'Enable channel'}">
+            <div class="ch-toggle-dot"></div>
+            <span class="ch-enable-label">${en ? 'ENABLED' : 'DISABLED'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="relay-card-mid">
+        <div class="relay-name" id="name-${i}"
+             contenteditable="true" spellcheck="false"
+             onblur="saveName(${i}, this.textContent)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+             title="Tap to rename">${name}</div>
+        <div class="relay-last-action" id="last-${i}">// no actions yet</div>
+      </div>
+      <button class="relay-toggle" id="btn-${i}" onclick="toggleRelay(${i})">
+        <span id="btn-text-${i}">${on ? 'TURN OFF' : 'TURN ON'}</span>
+      </button>`;
+    grid.appendChild(card);
+  }
+}
+
+function saveName(i, txt) {
+  const clean = txt.trim() || RELAY_DEFAULTS[i].name;
+  devices[selectedDev].relayNames[i] = clean;
+  localStorage.setItem(`dev${selectedDev}_rname_${i}`, clean);
+  document.getElementById(`name-${i}`).textContent = clean;
+  buildVoiceCmdEditor();
+}
+
+function updateCardUI(devIdx, i, on) {
+  devices[devIdx].relayState[i] = on;
+  if (devIdx !== selectedDev) return;
+  const card      = document.getElementById(`card-${i}`);
+  const btnText   = document.getElementById(`btn-text-${i}`);
+  const stateText = document.getElementById(`state-text-${i}`);
+  const lastEl    = document.getElementById(`last-${i}`);
+  if (!card) return;
+  if (on) {
+    card.classList.add('relay-on');
+    btnText.textContent = 'TURN OFF'; stateText.textContent = 'ON';
+  } else {
+    card.classList.remove('relay-on');
+    btnText.textContent = 'TURN ON'; stateText.textContent = 'OFF';
+  }
+  const now = new Date();
+  lastEl.textContent = `// ${on ? 'ON' : 'OFF'} · just now`;
+  lastEl.dataset.ts = now.getTime();
+  lastEl.dataset.state = on ? 'ON' : 'OFF';
+  updateActiveCount();
+}
+
+function updateActiveCount() {
+  if (devices.length === 0) return;
+  const d = devices[selectedDev];
+  const enabled = d.relayEnabled.filter(Boolean).length;
+  const active  = d.relayState.filter((on, i) => on && d.relayEnabled[i]).length;
+  document.getElementById('stat-active').textContent = `${active}/${MAX_RELAYS}`;
+  document.getElementById('stat-active').closest('.stat-cell').className = 'stat-cell ' + (active > 0 ? 'good' : 'ok');
+}
+
+function refreshWiFiPanel() {
+  if (devices.length === 0) return;
+  const d = devices[selectedDev];
+  const wifiStatusVal = document.getElementById('wifi-status-val');
+  const wifiStatusBox = document.getElementById('wifi-status-box');
+  const wifiBadge     = document.getElementById('wifi-badge');
+  const wifiDot       = document.getElementById('wifi-dot');
+  const statWifi      = document.getElementById('stat-wifi');
+  const statIp        = document.getElementById('stat-ip');
+
+  if (!d.bleOK) {
+    wifiStatusVal.textContent = 'Link this device via BLE first.';
+    wifiStatusBox.classList.remove('connected-box');
+    wifiBadge.textContent = 'CONFIGURE'; wifiBadge.classList.remove('badge-live');
+  } else if (d.wifiOK) {
+    wifiStatusVal.textContent = `Connected — ${d.wifiIP}`;
+    wifiStatusBox.classList.add('connected-box');
+    wifiBadge.textContent = 'CONNECTED'; wifiBadge.classList.add('badge-live');
+  } else {
+    wifiStatusVal.textContent = 'BLE linked. Enter WiFi credentials.';
+    wifiStatusBox.classList.remove('connected-box');
+    wifiBadge.textContent = 'CONFIGURE'; wifiBadge.classList.remove('badge-live');
+  }
+  wifiDot.className = d.wifiOK ? 'pulse-dot good' : 'pulse-dot off';
+  statWifi.textContent = d.wifiOK ? 'ONLINE' : 'OFF';
+  statIp.textContent   = d.wifiOK ? d.wifiIP : '--';
+  document.getElementById('cell-wifi').className = d.wifiOK ? 'stat-cell good' : 'stat-cell ok';
+}
+
+function updateBLEStatusBar() {
+  const linked = devices.filter(d => d.bleOK).length;
+  const total  = devices.length;
+  document.getElementById('ble-dot').className = linked > 0 ? 'pulse-dot good' : 'pulse-dot off';
+  document.getElementById('stat-ble').textContent = `${linked}/${total}`;
+  document.getElementById('cell-ble').className = linked > 0 ? 'stat-cell good' : 'stat-cell ok';
+  const bleCard = document.getElementById('mode-ble');
+  bleCard.querySelector('.mc-val').textContent = linked > 0 ? `${linked} ONLINE` : 'OFFLINE';
+  bleCard.classList.toggle('active-mode', linked > 0);
+  if (devices.length > 0) {
+    const d = devices[selectedDev];
+    document.getElementById('mode-badge').textContent = linked > 0 ? (d.wifiOK ? 'DUAL' : 'BLE') : 'STANDBY';
+  }
+  updateDevicesSelectedLabel();
+}
+
+// ════════════════════════════════════════════════════
+//  COMMAND SENDER
+// ════════════════════════════════════════════════════
+async function sendCommand(devIdx, cmd) {
+  const d = devices[devIdx];
+  let sent = false, source = 'BLE';
+  if (d.wifiOK && d.wifiIP) {
+    try {
+      let url = '';
+      if (cmd.startsWith('R') && cmd.length === 4) url = `http://${d.wifiIP}/relay?ch=${cmd[1]}&state=${cmd[3]}`;
+      else if (cmd.startsWith('ALL:')) url = `http://${d.wifiIP}/all?state=${cmd[4]}`;
+      if (url) { const res = await fetch(url, { signal: AbortSignal.timeout(2000) }); if (res.ok) { sent = true; source = 'WiFi'; } }
+    } catch (_) {}
+  }
+  if (!sent && d.bleOK && d.cmdChar) {
+    try { await d.cmdChar.writeValue(new TextEncoder().encode(cmd)); sent = true; source = 'BLE'; }
+    catch (e) { log('SEND ERROR: ' + e.message, 'ERR'); }
+  }
+  if (!sent) log('No connection — command dropped', 'ERR');
+  return { sent, source };
+}
+
+// ════════════════════════════════════════════════════
+//  RELAY ACTIONS
+// ════════════════════════════════════════════════════
+async function toggleRelay(i) {
+  const on = !devices[selectedDev].relayState[i];
+  updateCardUI(selectedDev, i, on);
+  // Haptic-style flash
+  const btn = document.getElementById(`btn-${i}`);
+  if (btn) {
+    btn.classList.remove('flash-on', 'flash-off');
+    void btn.offsetWidth; // reflow to restart animation
+    btn.classList.add(on ? 'flash-on' : 'flash-off');
+    btn.addEventListener('animationend', () => btn.classList.remove('flash-on', 'flash-off'), { once: true });
+  }
+  const { sent, source } = await sendCommand(selectedDev, `R${i + 1}:${on ? 1 : 0}`);
+  log(`${devices[selectedDev].relayNames[i]} → ${on ? 'ON' : 'OFF'} [${devices[selectedDev].label}]`, sent ? 'CMD' : 'ERR', source === 'WiFi');
+}
+
+async function sendAll(on) {
+  if (devices.length === 0) return;
+  const d = devices[selectedDev];
+  for (let i = 0; i < MAX_RELAYS; i++) {
+    if (d.relayEnabled[i]) updateCardUI(selectedDev, i, on);
+  }
+  const { sent, source } = await sendCommand(selectedDev, `ALL:${on ? 1 : 0}`);
+  log(`ALL RELAYS → ${on ? 'ON' : 'OFF'} [${d.label}]`, sent ? 'CMD' : 'ERR', source === 'WiFi');
+}
+
+// ════════════════════════════════════════════════════
+//  BLE
+// ════════════════════════════════════════════════════
+async function toggleBLE(devIdx) {
+  const d = devices[devIdx];
+  if (d.bleDevice && d.bleDevice.gatt.connected) { d.bleDevice.gatt.disconnect(); return; }
+  try {
+    log(`Scanning for ${d.label}...`, 'BLE');
+    d.bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE_UUID] });
+    const server  = await d.bleDevice.gatt.connect();
+    const service = await server.getPrimaryService(SERVICE_UUID);
+    d.cmdChar     = await service.getCharacteristic(CMD_UUID);
+    d.statusChar  = await service.getCharacteristic(STATUS_UUID);
+    await d.statusChar.startNotifications();
+    d.statusChar.addEventListener('characteristicvaluechanged', (e) => onBLEStatus(devIdx, e));
+    d.bleDevice.addEventListener('gattserverdisconnected', () => onBLEDisconnect(devIdx));
+    setBLEConnected(devIdx, true);
+    log(`BLE link established — ${d.label}`, 'BLE');
+    await d.cmdChar.writeValue(new TextEncoder().encode('WIFI:STATUS'));
+  } catch (e) {
+    if (e.name !== 'NotFoundError') log(`BLE error [${d.label}]: ` + e.message, 'ERR');
+  }
+}
+
+function onBLEDisconnect(devIdx) { setBLEConnected(devIdx, false); log(`BLE disconnected — ${devices[devIdx].label}`, 'BLE'); }
+
+function setBLEConnected(devIdx, ok) {
+  const d = devices[devIdx];
+  d.bleOK = ok;
+  if (!ok) { d.cmdChar = null; d.statusChar = null; d.wifiOK = false; d.wifiIP = ''; }
+  const slot     = document.getElementById(`dev-slot-${devIdx}`);
+  const statusEl = document.getElementById(`dev-status-${devIdx}`);
+  const btnEl    = document.getElementById(`dev-btn-${devIdx}`);
+  if (slot) slot.classList.toggle('linked', ok);
+  if (statusEl) statusEl.textContent = ok ? (d.wifiOK ? 'BLE + WiFi' : 'BLE LINKED') : 'UNLINKED';
+  if (btnEl)    btnEl.textContent = ok ? 'UNLINK' : 'LINK';
+  if (devIdx === selectedDev) { refreshWiFiPanel(); updateRelayDevBar(); }
+  updateBLEStatusBar();
+}
+
+function onBLEStatus(devIdx, event) { handleStatusMessage(devIdx, new TextDecoder().decode(event.target.value)); }
+
+function handleStatusMessage(devIdx, raw) {
+  const d = devices[devIdx];
+  if (raw.startsWith('STATE:')) {
+    const parts = raw.substring(6).split(',');
+    if (parts.length >= 6) {
+      for (let i = 0; i < MAX_RELAYS; i++) updateCardUI(devIdx, i, parts[i] === '1');
+      const wOk = parts[4] === '1', ip = parts[5];
+      if (wOk && ip !== '0.0.0.0') setWiFiConnected(devIdx, true, ip);
+    }
+    return;
+  }
+  if (raw.startsWith('WIFI_SAVED:')) { if (devIdx === selectedDev) setWiFiStatus(`Credentials saved: ${raw.substring(11)}`); log(`WiFi creds saved [${d.label}]`, 'WiFi'); return; }
+  if (raw === 'WIFI_CONNECTING') { if (devIdx === selectedDev) setWiFiStatus('Connecting to WiFi...'); log(`${d.label} connecting...`, 'WiFi'); return; }
+  if (raw.startsWith('WIFI_OK:')) { setWiFiConnected(devIdx, true, raw.substring(8)); log(`WiFi connected — ${raw.substring(8)} [${d.label}]`, 'WiFi'); return; }
+  if (raw === 'WIFI_FAIL') { if (devIdx === selectedDev) setWiFiStatus('Connection failed. Check credentials.'); log(`WiFi failed [${d.label}]`, 'ERR'); return; }
+}
+
+// ════════════════════════════════════════════════════
+//  WIFI
+// ════════════════════════════════════════════════════
+async function saveWiFiCreds() {
+  const ssid = document.getElementById('wifi-ssid').value.trim();
+  const pass = document.getElementById('wifi-pass').value;
+  const d = devices[selectedDev];
+  if (!ssid) { setWiFiStatus('Enter a network name.'); return; }
+  if (!d.bleOK) { setWiFiStatus('Link the device via BLE first.'); return; }
+  try { await d.cmdChar.writeValue(new TextEncoder().encode(`WIFI:${ssid},${pass}`)); setWiFiStatus(`Saving credentials for "${ssid}"...`); clearCredFields(); }
+  catch (e) { setWiFiStatus('Error: ' + e.message); }
+}
+
+async function connectWiFi() {
+  const ssid = document.getElementById('wifi-ssid').value.trim();
+  const pass = document.getElementById('wifi-pass').value;
+  const d = devices[selectedDev];
+  if (!d.bleOK) { setWiFiStatus('Link the device via BLE first.'); return; }
+  if (ssid) {
+    try { await d.cmdChar.writeValue(new TextEncoder().encode(`WIFI:${ssid},${pass}`)); await new Promise(r => setTimeout(r, 200)); clearCredFields(); }
+    catch (e) { setWiFiStatus('Error: ' + e.message); return; }
+  }
+  try { await d.cmdChar.writeValue(new TextEncoder().encode('WIFI:CONNECT')); setWiFiStatus('Connecting... (up to 12 seconds)'); }
+  catch (e) { setWiFiStatus('Error: ' + e.message); }
+}
+
+function clearCredFields() {
+  document.getElementById('wifi-ssid').value = '';
+  document.getElementById('wifi-pass').value = '';
+  document.getElementById('wifi-pass').type = 'password';
+}
+function togglePassVis() {
+  const inp = document.getElementById('wifi-pass');
+  const btn = document.getElementById('eye-btn');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  const isText = inp.type === 'text';
+  btn.innerHTML = isText
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+}
+function setWiFiConnected(devIdx, ok, ip = '') {
+  const d = devices[devIdx];
+  d.wifiOK = ok; d.wifiIP = ip;
+  const statusEl = document.getElementById(`dev-status-${devIdx}`);
+  if (statusEl && d.bleOK) statusEl.textContent = ok ? `BLE + WiFi (${ip})` : 'BLE LINKED';
+  if (devIdx === selectedDev) {
+    const wifiCard = document.getElementById('mode-wifi');
+    wifiCard.querySelector('.mc-val').textContent = ok ? 'ONLINE' : 'OFFLINE';
+    document.getElementById('mode-wifi-ip').textContent = ok ? ip : '—';
+    wifiCard.classList.toggle('active-mode', ok);
+    refreshWiFiPanel();
+  }
+  updateBLEStatusBar();
+}
+function setWiFiStatus(msg) { document.getElementById('wifi-status-val').textContent = msg; }
+
+// ════════════════════════════════════════════════════
+//  VOICE COMMAND EDITOR
+// ════════════════════════════════════════════════════
+function buildVoiceCmdEditor() {
+  if (devices.length === 0) return;
+  const d = devices[selectedDev];
+  const container = document.getElementById('vce-rows');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < d.numRelays; i++) {
+    const row = document.createElement('div');
+    row.className = 'vce-row';
+    row.innerHTML = `
+      <span class="vce-label">CH${i + 1} · ${d.relayNames[i]}</span>
+      <input class="vce-input" id="vce-input-${i}" type="text"
+             value="${d.customVoiceCmds[i]}" placeholder="e.g. bedroom light"
+             spellcheck="false"
+             onblur="saveVoiceCmd(${i}, this.value)"
+             oninput="saveVoiceCmd(${i}, this.value)"
+             onkeydown="if(event.key==='Enter'){this.blur()}">
+    `;
+    container.appendChild(row);
+  }
+}
+
+function saveVoiceCmd(i, val) {
+  const clean = val.trim().toLowerCase();
+  devices[selectedDev].customVoiceCmds[i] = clean;
+  localStorage.setItem(`dev${selectedDev}_vcmd_${i}`, clean);
+}
+
+// ════════════════════════════════════════════════════
+//  VOICE CONTROL
+// ════════════════════════════════════════════════════
+let recognition = null, voiceActive = false;
+
+function startVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { document.getElementById('v-text').textContent = 'NOT SUPPORTED'; return; }
+  if (voiceActive) return;
+  recognition = new SR();
+  recognition.lang = 'en-US'; recognition.continuous = true; recognition.interimResults = false;
+  document.getElementById('voice-btn').style.display = 'none';
+  const stopBtn = document.getElementById('stop-voice-btn');
+  stopBtn.style.display = 'flex'; stopBtn.classList.add('listening');
+  voiceActive = true;
+  document.getElementById('v-text').textContent = 'LISTENING...';
+  document.getElementById('v-cmd').textContent  = 'Continuous mode active';
+  recognition.onresult = e => {
+    const text = e.results[e.results.length - 1][0].transcript.toLowerCase().trim();
+    document.getElementById('v-text').textContent = text.toUpperCase();
+    processVoiceCommand(text);
+  };
+  recognition.onerror = e => { if (e.error !== 'no-speech') document.getElementById('v-text').textContent = 'ERROR: ' + e.error.toUpperCase(); };
+  recognition.onend = () => { if (voiceActive) try { recognition.start(); } catch (_) {} };
+  recognition.start();
+}
+
+function stopVoice() {
+  voiceActive = false;
+  if (recognition) { recognition.stop(); recognition = null; }
+  document.getElementById('voice-btn').style.display = 'flex';
+  const stopBtn = document.getElementById('stop-voice-btn');
+  stopBtn.style.display = 'none'; stopBtn.classList.remove('listening');
+  document.getElementById('v-text').textContent = 'READY';
+  document.getElementById('v-cmd').textContent = 'Tap mic to begin voice control';
+}
+
+function processVoiceCommand(text) {
+  const NUMS = { one:0, two:1, three:2, four:3, '1':0, '2':1, '3':2, '4':3 };
+  const isOn = /\bon\b/.test(text), isOff = /\boff\b/.test(text);
+  if (!isOn && !isOff) { document.getElementById('v-cmd').textContent = '✗ Say: [name/channel] [on/off]'; return; }
+  if (/\ball\b/.test(text)) { sendAll(isOn); document.getElementById('v-cmd').textContent = `→ ALL ${isOn ? 'ON' : 'OFF'}`; return; }
+  const d = devices[selectedDev];
+  for (let i = 0; i < d.numRelays; i++) {
+    const custom = d.customVoiceCmds[i];
+    if (custom && text.includes(custom)) { toggleRelayVoice(i, isOn); document.getElementById('v-cmd').textContent = `→ ${d.relayNames[i]} ${isOn ? 'ON' : 'OFF'} (custom)`; return; }
+  }
+  for (let i = 0; i < d.numRelays; i++) {
+    if (text.includes(d.relayNames[i].toLowerCase())) { toggleRelayVoice(i, isOn); document.getElementById('v-cmd').textContent = `→ ${d.relayNames[i]} ${isOn ? 'ON' : 'OFF'}`; return; }
+  }
+  for (const [word, idx] of Object.entries(NUMS)) {
+    if (idx < d.numRelays && text.includes(word)) { toggleRelayVoice(idx, isOn); document.getElementById('v-cmd').textContent = `→ CH${idx + 1} ${isOn ? 'ON' : 'OFF'}`; return; }
+  }
+  document.getElementById('v-cmd').textContent = '✗ Unrecognized — try a custom phrase or "relay one on"';
+}
+
+function toggleRelayVoice(i, on) {
+  updateCardUI(selectedDev, i, on);
+  sendCommand(selectedDev, `R${i + 1}:${on ? 1 : 0}`).then(({ sent, source }) => {
+    log(`${devices[selectedDev].relayNames[i]} → ${on ? 'ON' : 'OFF'} (voice)`, sent ? 'CMD' : 'ERR', source === 'WiFi');
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  LOG
+// ════════════════════════════════════════════════════
+function log(msg, source = 'SYS', viaWifi = false) {
+  const feed = document.getElementById('log-feed');
+  const now  = new Date();
+  const ts   = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<span class="ts">${ts}</span><span class="${(source === 'WiFi' || viaWifi) ? 'src wifi-src' : 'src'}">[${source}]</span><span class="msg">${msg}</span>`;
+  feed.appendChild(item);
+  feed.scrollTop = feed.scrollHeight;
+  while (feed.children.length > 40) feed.removeChild(feed.firstChild);
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+// ── Relative time ticker ──────────────────────────────
+function relativeTime(ms) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 5)  return 'just now';
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ago`;
+}
+setInterval(() => {
+  document.querySelectorAll('.relay-last-action[data-ts]').forEach(el => {
+    el.textContent = `// ${el.dataset.state} · ${relativeTime(+el.dataset.ts)}`;
+  });
+}, 10000);
+
+// ════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════
+buildDeviceSlots();
+document.getElementById('dev-panel-badge').textContent = `${devices.length}-DEV`;
+document.getElementById('relay-panel-badge').textContent = '4CH';
+if (devices.length > 0) {
+  selectDevice(0);
+} else {
+  updateDevicesSelectedLabel();
+  buildVoiceCmdEditor();
+  buildRelayCards();
+}
+</script>
+</body>
+</html>

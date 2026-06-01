@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT & AI Basics | Aawiskar e-Siksha</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{--accent:#ec4899;--dark:#030712;--dark2:#0a0f1e;--card-bg:rgba(13,21,41,0.9);--border:rgba(236,72,153,0.2);--text:#e2eaff;--text-dim:#7a9acc;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--dark);color:var(--text);font-family:'Rajdhani',sans-serif;overflow-x:hidden;}
+  nav{position:fixed;top:0;width:100%;z-index:500;padding:14px 40px;display:flex;align-items:center;justify-content:space-between;background:rgba(3,7,18,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+  .nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}.nav-logo img{width:34px;}
+  .nav-brand{font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;color:var(--text);}.nav-brand span{color:var(--accent);}
+  .nav-back{font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--text-dim);text-decoration:none;transition:color 0.2s;}.nav-back:hover{color:var(--accent);}
+  .course-hero{min-height:36vh;display:flex;align-items:flex-end;padding:110px 60px 50px;position:relative;overflow:hidden;}
+  .hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 35% 50%,rgba(236,72,153,0.07) 0%,transparent 60%);}
+  .course-hero h1{font-family:'Orbitron',monospace;font-size:clamp(2rem,5vw,3.5rem);font-weight:900;position:relative;z-index:1;}
+  .course-hero h1 span{color:var(--accent);}
+  .hero-meta{display:flex;gap:16px;margin-top:14px;position:relative;z-index:1;flex-wrap:wrap;}
+  .hero-tag{font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--accent);letter-spacing:0.12em;padding:5px 12px;border:1px solid rgba(236,72,153,0.3);border-radius:100px;}
+  .course-body{display:grid;grid-template-columns:250px 1fr;}
+  .sidebar{position:sticky;top:64px;height:calc(100vh - 64px);overflow-y:auto;background:var(--dark2);border-right:1px solid var(--border);padding:28px 0;}
+  .sidebar-label{font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--text-dim);letter-spacing:0.2em;padding:0 20px;margin-bottom:10px;}
+  .sidebar-group{margin-bottom:22px;}
+  .sidebar-item{display:block;padding:9px 20px;color:var(--text-dim);font-size:0.875rem;font-weight:500;transition:all 0.2s;cursor:pointer;border:none;background:none;width:100%;text-align:left;}
+  .sidebar-item:hover,.sidebar-item.active{color:var(--accent);background:rgba(236,72,153,0.07);border-left:2px solid var(--accent);}
+  .content{padding:50px 60px;max-width:920px;}.content-section{display:none;}.content-section.active{display:block;}
+  h2.section-title{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:700;margin-bottom:8px;}
+  h2.section-title span{color:var(--accent);}
+  .section-intro{color:var(--text-dim);font-size:1rem;line-height:1.7;margin-bottom:36px;}
+  .lesson-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:24px;}
+  .lesson-card h3{font-family:'Orbitron',monospace;font-size:0.85rem;color:var(--text-dim);letter-spacing:0.1em;margin-bottom:14px;}
+  .code-block{background:#080d1a;border:1px solid rgba(236,72,153,0.2);border-radius:8px;padding:20px 24px;margin:14px 0;font-family:'Share Tech Mono',monospace;font-size:0.82rem;line-height:1.9;overflow-x:auto;}
+  .kw{color:#ff79c6;}.fn{color:var(--accent);}.str{color:#50fa7b;}.cm{color:#4a6494;font-style:italic;}.num{color:#bd93f9;}
+  .tip-box{padding:14px 18px;background:rgba(236,72,153,0.05);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:0.875rem;color:var(--text-dim);margin:14px 0;}
+  .tip-box strong{color:var(--accent);}
+  .specs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px;}
+  .spec{background:rgba(236,72,153,0.05);border:1px solid rgba(236,72,153,0.15);border-radius:8px;padding:12px;text-align:center;}
+  .spec-val{font-family:'Orbitron',monospace;font-size:0.85rem;font-weight:700;color:var(--accent);}
+  .spec-label{font-size:0.7rem;color:var(--text-dim);margin-top:3px;}
+  .iot-vis{width:100%;background:rgba(236,72,153,0.03);border:1px solid var(--border);border-radius:8px;padding:20px;margin:16px 0;display:flex;justify-content:center;}
+  .step-list{list-style:none;}
+  .step-list li{display:flex;gap:14px;margin-bottom:14px;align-items:flex-start;}
+  .step-n{width:26px;height:26px;border-radius:50%;background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.3);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:0.65rem;color:var(--accent);flex-shrink:0;}
+  .step-list p{color:var(--text-dim);font-size:0.9rem;line-height:1.6;padding-top:3px;}
+  ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(236,72,153,0.25);}
+  @media(max-width:900px){.course-body{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.content{padding:28px}.specs-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html"><img src="favicon.png" alt=""><span class="nav-brand">AAWISKAR <span>e-Siksha</span></span></a>
+  <a class="nav-back" href="index.html">← Back to Courses</a>
+</nav>
+<div class="course-hero">
+  <div class="hero-bg"></div>
+  <div style="position:relative;z-index:1">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--accent);letter-spacing:0.2em;margin-bottom:10px;">MODULE 06</div>
+    <h1>IoT & <span>AI Basics</span></h1>
+    <p style="color:var(--text-dim);margin-top:8px;">Connect the physical world to the internet & intelligence</p>
+    <div class="hero-meta">
+      <span class="hero-tag">MQTT Protocol</span><span class="hero-tag">Cloud Dashboards</span><span class="hero-tag">Smart Home</span><span class="hero-tag">ML with Python</span>
+    </div>
+  </div>
+</div>
+<div class="course-body">
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-label">IoT FUNDAMENTALS</div>
+      <button class="sidebar-item active" onclick="show('iot-intro',this)">🌐 What is IoT?</button>
+      <button class="sidebar-item" onclick="show('iot-mqtt',this)">📡 MQTT Protocol</button>
+      <button class="sidebar-item" onclick="show('iot-thingspeak',this)">📊 ThingSpeak Dashboard</button>
+      <button class="sidebar-item" onclick="show('iot-blynk',this)">📱 Blynk App Control</button>
+    </div>
+    <div class="sidebar-group" style="border-top:1px solid var(--border);padding-top:20px;">
+      <div class="sidebar-label">IOT PROJECTS</div>
+      <button class="sidebar-item" onclick="show('proj-weather',this)">🌡️ WiFi Weather Station</button>
+      <button class="sidebar-item" onclick="show('proj-smarthome',this)">🏠 Smart Home System</button>
+      <button class="sidebar-item" onclick="show('proj-gps',this)">📍 GPS Tracker</button>
+    </div>
+    <div class="sidebar-group" style="border-top:1px solid var(--border);padding-top:20px;">
+      <div class="sidebar-label">AI & MACHINE LEARNING</div>
+      <button class="sidebar-item" onclick="show('ml-intro',this)">🧠 What is ML?</button>
+      <button class="sidebar-item" onclick="show('ml-sklearn',this)">🐍 Scikit-Learn Basics</button>
+      <button class="sidebar-item" onclick="show('ml-tflite',this)">📱 TensorFlow Lite</button>
+    </div>
+  </aside>
+  <main class="content">
+
+    <div id="iot-intro" class="content-section active">
+      <h2 class="section-title">What is <span>IoT?</span></h2>
+      <p class="section-intro">The Internet of Things (IoT) connects everyday physical devices to the internet, allowing them to send data, be monitored remotely, and respond to commands from anywhere in the world.</p>
+      <div class="lesson-card">
+        <div class="iot-vis">
+          <svg viewBox="0 0 520 200" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <!-- Physical devices -->
+            <rect x="10" y="30" width="100" height="140" rx="6" fill="rgba(236,72,153,0.07)" stroke="#ec4899" stroke-width="1.5"/>
+            <text x="60" y="55" text-anchor="middle" fill="#ec4899" font-size="9" font-family="Orbitron,monospace">DEVICES</text>
+            <text x="60" y="78" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">ESP32 Sensor</text>
+            <text x="60" y="96" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Smart Light</text>
+            <text x="60" y="114" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Thermostat</text>
+            <text x="60" y="132" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Door Lock</text>
+            <text x="60" y="150" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Water Meter</text>
+            <!-- Arrow -->
+            <path d="M110 100 L155 100" stroke="#ec4899" stroke-width="2" marker-end="url(#arr)"/>
+            <defs><marker id="arr" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6Z" fill="#ec4899"/></marker></defs>
+            <text x="132" y="92" text-anchor="middle" fill="#ec4899" font-size="7" font-family="Share Tech Mono,monospace">WiFi</text>
+            <!-- Gateway/Cloud -->
+            <ellipse cx="250" cy="100" rx="70" ry="50" fill="rgba(0,212,255,0.06)" stroke="#00d4ff" stroke-width="1.5"/>
+            <text x="250" y="88" text-anchor="middle" fill="#00d4ff" font-size="10" font-family="Orbitron,monospace">CLOUD</text>
+            <text x="250" y="106" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">MQTT Broker</text>
+            <text x="250" y="122" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Database</text>
+            <text x="250" y="138" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">ThingSpeak</text>
+            <!-- Arrow 2 -->
+            <path d="M320 100 L365 100" stroke="#ec4899" stroke-width="2" marker-end="url(#arr)"/>
+            <text x="342" y="92" text-anchor="middle" fill="#ec4899" font-size="7" font-family="Share Tech Mono,monospace">API</text>
+            <!-- User -->
+            <rect x="365" y="30" width="140" height="140" rx="6" fill="rgba(236,72,153,0.07)" stroke="#ec4899" stroke-width="1.5"/>
+            <text x="435" y="55" text-anchor="middle" fill="#ec4899" font-size="9" font-family="Orbitron,monospace">USER</text>
+            <text x="435" y="78" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Phone App</text>
+            <text x="435" y="96" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Dashboard</text>
+            <text x="435" y="114" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Email Alerts</text>
+            <text x="435" y="132" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Voice Control</text>
+          </svg>
+        </div>
+        <div class="specs-grid">
+          <div class="spec"><div class="spec-val">15.9B</div><div class="spec-label">IoT Devices in 2025</div></div>
+          <div class="spec"><div class="spec-val">MQTT</div><div class="spec-label">Most Common Protocol</div></div>
+          <div class="spec"><div class="spec-val">ESP32</div><div class="spec-label">Best Beginner Board</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="iot-mqtt" class="content-section">
+      <h2 class="section-title">MQTT <span>Protocol</span></h2>
+      <p class="section-intro">MQTT (Message Queue Telemetry Transport) is a lightweight publish-subscribe protocol designed for IoT devices with limited bandwidth. Devices publish messages to "topics" and others subscribe to receive them.</p>
+      <div class="lesson-card">
+        <h3>HOW MQTT WORKS</h3>
+        <div class="iot-vis">
+          <svg viewBox="0 0 500 130" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <!-- Publisher -->
+            <rect x="10" y="30" width="110" height="70" rx="6" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" stroke-width="1.5"/>
+            <text x="65" y="58" text-anchor="middle" fill="#f59e0b" font-size="9" font-family="Orbitron,monospace">PUBLISHER</text>
+            <text x="65" y="76" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">ESP32 Sensor</text>
+            <text x="65" y="92" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">publish("temp", 27)</text>
+            <!-- Broker -->
+            <rect x="185" y="20" width="130" height="90" rx="6" fill="rgba(0,212,255,0.08)" stroke="#00d4ff" stroke-width="2"/>
+            <text x="250" y="48" text-anchor="middle" fill="#00d4ff" font-size="10" font-family="Orbitron,monospace">BROKER</text>
+            <text x="250" y="66" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">broker.hivemq.com</text>
+            <text x="250" y="82" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Routes messages</text>
+            <text x="250" y="98" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Port 1883</text>
+            <!-- Subscribers -->
+            <rect x="380" y="10" width="110" height="50" rx="6" fill="rgba(236,72,153,0.08)" stroke="#ec4899" stroke-width="1.5"/>
+            <text x="435" y="30" text-anchor="middle" fill="#ec4899" font-size="9" font-family="Orbitron,monospace">SUBSCRIBER</text>
+            <text x="435" y="48" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Phone App</text>
+            <rect x="380" y="70" width="110" height="50" rx="6" fill="rgba(236,72,153,0.08)" stroke="#ec4899" stroke-width="1.5"/>
+            <text x="435" y="90" text-anchor="middle" fill="#ec4899" font-size="9" font-family="Orbitron,monospace">SUBSCRIBER</text>
+            <text x="435" y="108" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Dashboard</text>
+            <!-- arrows -->
+            <path d="M120 65 L185 65" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arr)"/>
+            <path d="M315 40 L380 35" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#arr)"/>
+            <path d="M315 90 L380 95" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#arr)"/>
+          </svg>
+        </div>
+        <div class="code-block">
+<span class="cm">// ESP32 MQTT Publisher
+// Install: PubSubClient library in Arduino IDE</span>
+<span class="kw">#include</span> &lt;<span class="str">WiFi.h</span>&gt;
+<span class="kw">#include</span> &lt;<span class="str">PubSubClient.h</span>&gt;
+
+<span class="kw">const char*</span> ssid     = <span class="str">"Your_WiFi"</span>;
+<span class="kw">const char*</span> password = <span class="str">"password"</span>;
+<span class="kw">const char*</span> mqtt_server = <span class="str">"broker.hivemq.com"</span>;
+
+<span class="fn">WiFiClient</span> espClient;
+<span class="fn">PubSubClient</span> client(espClient);
+
+<span class="kw">void</span> <span class="fn">setup</span>() {
+  <span class="fn">WiFi</span>.<span class="fn">begin</span>(ssid, password);
+  <span class="kw">while</span> (<span class="fn">WiFi</span>.<span class="fn">status</span>() != WL_CONNECTED) <span class="fn">delay</span>(<span class="num">500</span>);
+  client.<span class="fn">setServer</span>(mqtt_server, <span class="num">1883</span>);
+}
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="kw">if</span> (!client.<span class="fn">connected</span>()) {
+    client.<span class="fn">connect</span>(<span class="str">"ESP32Client"</span>);
+  }
+  client.<span class="fn">loop</span>();
+  
+  <span class="kw">float</span> temp = <span class="num">27.5</span>; <span class="cm">// read from DHT11</span>
+  <span class="kw">char</span> msg[<span class="num">10</span>];
+  <span class="fn">sprintf</span>(msg, <span class="str">"%.1f"</span>, temp);
+  client.<span class="fn">publish</span>(<span class="str">"aawiskar/temperature"</span>, msg);
+  <span class="fn">delay</span>(<span class="num">5000</span>);
+}
+        </div>
+      </div>
+    </div>
+
+    <div id="iot-thingspeak" class="content-section">
+      <h2 class="section-title">ThingSpeak <span>Dashboard</span></h2>
+      <p class="section-intro">ThingSpeak is a free IoT cloud platform that lets you store sensor data and create beautiful charts without any server setup. It's perfect for beginners.</p>
+      <div class="lesson-card">
+        <ul class="step-list">
+          <li><div class="step-n">1</div><p>Sign up free at <strong style="color:var(--accent)">thingspeak.com</strong> (MathWorks account). Create a new "Channel" and add fields like "Temperature", "Humidity".</p></li>
+          <li><div class="step-n">2</div><p>Copy your Channel's <strong style="color:var(--accent)">Write API Key</strong> — this is what the ESP32 will use to send data.</p></li>
+          <li><div class="step-n">3</div><p>Upload the code below to your ESP32. It will send sensor readings to ThingSpeak every 15 seconds.</p></li>
+          <li><div class="step-n">4</div><p>In ThingSpeak, go to your channel and click "Private View" — you'll see live charts updating in real time!</p></li>
+        </ul>
+        <div class="code-block">
+<span class="kw">#include</span> &lt;<span class="str">WiFi.h</span>&gt;
+<span class="kw">#include</span> &lt;<span class="str">ThingSpeak.h</span>&gt;
+<span class="kw">#include</span> &lt;<span class="str">DHT.h</span>&gt;
+
+<span class="fn">DHT</span> dht(<span class="num">4</span>, DHT11);
+<span class="fn">WiFiClient</span> client;
+
+<span class="kw">unsigned long</span> channelID = <span class="num">YOUR_CHANNEL_ID</span>;
+<span class="kw">const char*</span> apiKey = <span class="str">"YOUR_WRITE_API_KEY"</span>;
+
+<span class="kw">void</span> <span class="fn">setup</span>() {
+  dht.<span class="fn">begin</span>();
+  <span class="fn">WiFi</span>.<span class="fn">begin</span>(<span class="str">"SSID"</span>, <span class="str">"password"</span>);
+  <span class="kw">while</span>(<span class="fn">WiFi</span>.<span class="fn">status</span>() != WL_CONNECTED) <span class="fn">delay</span>(<span class="num">500</span>);
+  <span class="fn">ThingSpeak</span>.<span class="fn">begin</span>(client);
+}
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="kw">float</span> temp = dht.<span class="fn">readTemperature</span>();
+  <span class="kw">float</span> hum  = dht.<span class="fn">readHumidity</span>();
+  
+  <span class="fn">ThingSpeak</span>.<span class="fn">setField</span>(<span class="num">1</span>, temp);
+  <span class="fn">ThingSpeak</span>.<span class="fn">setField</span>(<span class="num">2</span>, hum);
+  <span class="fn">ThingSpeak</span>.<span class="fn">writeFields</span>(channelID, apiKey);
+  
+  <span class="fn">delay</span>(<span class="num">15000</span>); <span class="cm">// ThingSpeak free: min 15s between updates</span>
+}
+        </div>
+      </div>
+    </div>
+
+    <div id="iot-blynk" class="content-section">
+      <h2 class="section-title">Blynk <span>App Control</span></h2>
+      <p class="section-intro">Blynk lets you build a custom phone dashboard to control hardware in real time. Toggle relays, read sensors, and create gauges — all from a drag-and-drop interface.</p>
+      <div class="lesson-card">
+        <div class="code-block">
+<span class="cm">// Blynk IoT — Control LED from phone
+// Install Blynk library, create project at blynk.cloud</span>
+<span class="kw">#define</span> BLYNK_TEMPLATE_ID   <span class="str">"YOUR_TEMPLATE_ID"</span>
+<span class="kw">#define</span> BLYNK_AUTH_TOKEN    <span class="str">"YOUR_AUTH_TOKEN"</span>
+
+<span class="kw">#include</span> &lt;<span class="str">BlynkSimpleEsp32.h</span>&gt;
+
+<span class="kw">char</span> auth[] = BLYNK_AUTH_TOKEN;
+<span class="kw">char</span> ssid[] = <span class="str">"Your_WiFi"</span>;
+<span class="kw">char</span> pass[] = <span class="str">"password"</span>;
+
+<span class="cm">// Called when Virtual Pin V1 changes in app</span>
+<span class="fn">BLYNK_WRITE</span>(V1) {
+  <span class="kw">int</span> pinValue = <span class="fn">param</span>.<span class="fn">asInt</span>();
+  <span class="fn">digitalWrite</span>(<span class="num">2</span>, pinValue);  <span class="cm">// control LED/relay</span>
+}
+
+<span class="cm">// Send sensor data to app every 2 seconds</span>
+<span class="fn">BlynkTimer</span> timer;
+<span class="kw">void</span> <span class="fn">sendSensor</span>() {
+  <span class="kw">float</span> temp = <span class="num">26.8</span>; <span class="cm">// read from sensor</span>
+  <span class="fn">Blynk</span>.<span class="fn">virtualWrite</span>(V2, temp);
+}
+
+<span class="kw">void</span> <span class="fn">setup</span>() {
+  <span class="fn">Blynk</span>.<span class="fn">begin</span>(auth, ssid, pass);
+  timer.<span class="fn">setInterval</span>(<span class="num">2000L</span>, sendSensor);
+}
+<span class="kw">void</span> <span class="fn">loop</span>() { <span class="fn">Blynk</span>.<span class="fn">run</span>(); timer.<span class="fn">run</span>(); }
+        </div>
+      </div>
+    </div>
+
+    <div id="proj-weather" class="content-section">
+      <h2 class="section-title">🌡️ WiFi Weather <span>Station</span></h2>
+      <p class="section-intro">Build a complete weather monitoring station that displays temperature, humidity, and pressure on an OLED and uploads data to the cloud every minute.</p>
+      <div class="lesson-card">
+        <h3>HARDWARE SETUP</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
+          <span style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--text-dim);border:1px solid var(--border);border-radius:4px;padding:4px 10px;">ESP32 DevKit</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--text-dim);border:1px solid var(--border);border-radius:4px;padding:4px 10px;">DHT22 (Temp+Humidity)</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--text-dim);border:1px solid var(--border);border-radius:4px;padding:4px 10px;">BMP280 (Pressure)</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--text-dim);border:1px solid var(--border);border-radius:4px;padding:4px 10px;">SSD1306 OLED 128x64</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--text-dim);border:1px solid var(--border);border-radius:4px;padding:4px 10px;">3D Printed Enclosure</span>
+        </div>
+        <div class="code-block">
+<span class="kw">#include</span> &lt;<span class="str">WiFi.h</span>&gt;
+<span class="kw">#include</span> &lt;<span class="str">DHT.h</span>&gt;
+<span class="kw">#include</span> &lt;<span class="str">Adafruit_BMP280.h</span>&gt;
+<span class="kw">#include</span> &lt;<span class="str">Adafruit_SSD1306.h</span>&gt;
+
+<span class="fn">DHT</span> dht(<span class="num">4</span>, DHT22);
+<span class="fn">Adafruit_BMP280</span> bmp;
+<span class="fn">Adafruit_SSD1306</span> display(<span class="num">128</span>, <span class="num">64</span>, &Wire);
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="kw">float</span> t   = dht.<span class="fn">readTemperature</span>();
+  <span class="kw">float</span> h   = dht.<span class="fn">readHumidity</span>();
+  <span class="kw">float</span> p   = bmp.<span class="fn">readPressure</span>() / <span class="num">100.0F</span>; <span class="cm">// hPa</span>
+  <span class="kw">float</span> alt = bmp.<span class="fn">readAltitude</span>(<span class="num">1013.25</span>);    <span class="cm">// sea level pressure</span>
+  
+  display.<span class="fn">clearDisplay</span>();
+  display.<span class="fn">setTextSize</span>(<span class="num">1</span>); display.<span class="fn">setCursor</span>(<span class="num">0</span>, <span class="num">0</span>);
+  display.<span class="fn">printf</span>(<span class="str">"Temp: %.1f C\nHum:  %.1f%%\nPress:%.0f hPa\nAlt:  %.0f m"</span>, t, h, p, alt);
+  display.<span class="fn">display</span>();
+  
+  <span class="cm">// Upload to ThingSpeak every 15s...</span>
+  <span class="fn">delay</span>(<span class="num">15000</span>);
+}
+        </div>
+      </div>
+    </div>
+
+    <div id="proj-smarthome" class="content-section">
+      <h2 class="section-title">🏠 Smart Home <span>System</span></h2>
+      <p class="section-intro">Control multiple home devices (lights, fans, door locks) from your phone using ESP32 + MQTT. A mini home automation system using just a few relays!</p>
+      <div class="lesson-card">
+        <div class="code-block">
+<span class="cm">// Smart Home — control 4 relays via MQTT
+// Topics: home/light1, home/light2, home/fan, home/lock</span>
+<span class="kw">#include</span> &lt;<span class="str">WiFi.h</span>&gt;
+<span class="kw">#include</span> &lt;<span class="str">PubSubClient.h</span>&gt;
+
+<span class="kw">const int</span> relays[] = {<span class="num">26</span>, <span class="num">27</span>, <span class="num">28</span>, <span class="num">29</span>}; <span class="cm">// relay pins</span>
+<span class="kw">const char*</span> topics[] = {
+  <span class="str">"home/light1"</span>, <span class="str">"home/light2"</span>,
+  <span class="str">"home/fan"</span>,    <span class="str">"home/lock"</span>
+};
+
+<span class="kw">void</span> <span class="fn">callback</span>(<span class="kw">char*</span> topic, <span class="kw">byte*</span> payload, <span class="kw">unsigned int</span> length) {
+  <span class="kw">String</span> msg = <span class="str">""</span>;
+  <span class="kw">for</span> (<span class="kw">int</span> i=<span class="num">0</span>; i&lt;length; i++) msg += (<span class="kw">char</span>)payload[i];
+  
+  <span class="kw">for</span> (<span class="kw">int</span> i=<span class="num">0</span>; i&lt;<span class="num">4</span>; i++) {
+    <span class="kw">if</span> (<span class="fn">String</span>(topic) == topics[i]) {
+      <span class="fn">digitalWrite</span>(relays[i], msg == <span class="str">"ON"</span> ? LOW : HIGH);
+      <span class="cm">// LOW = ON for most relay modules (active low)</span>
+    }
+  }
+}
+        </div>
+        <div class="tip-box"><strong>📱 Control from Anywhere:</strong> Use <strong style="color:var(--accent)">MQTT Dash</strong> or <strong style="color:var(--accent)">IoT MQTT Panel</strong> app on your phone. Create buttons that publish "ON"/"OFF" to your topics. As long as both the ESP32 and your phone are connected to the internet, it works from anywhere on Earth!</div>
+      </div>
+    </div>
+
+    <div id="proj-gps" class="content-section">
+      <h2 class="section-title">📍 GPS <span>Location Tracker</span></h2>
+      <p class="section-intro">Track the real-time location of anything — a vehicle, a pet, or a package — using a GPS module and ESP32, viewable on Google Maps.</p>
+      <div class="lesson-card">
+        <div class="code-block">
+<span class="cm">// GPS Tracker with ESP32 + Neo-6M GPS Module
+// GPS TX → ESP32 RX2 (pin 16)</span>
+<span class="kw">#include</span> &lt;<span class="str">TinyGPS++.h</span>&gt;
+
+<span class="fn">TinyGPSPlus</span> gps;
+<span class="fn">HardwareSerial</span> gpsSerial(<span class="num">2</span>);
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="kw">while</span> (gpsSerial.<span class="fn">available</span>()) gps.<span class="fn">encode</span>(gpsSerial.<span class="fn">read</span>());
+  
+  <span class="kw">if</span> (gps.location.<span class="fn">isUpdated</span>()) {
+    <span class="kw">float</span> lat = gps.location.<span class="fn">lat</span>();
+    <span class="kw">float</span> lng = gps.location.<span class="fn">lng</span>();
+    <span class="kw">float</span> speed = gps.speed.<span class="fn">kmph</span>();
+    
+    <span class="fn">Serial</span>.<span class="fn">printf</span>(<span class="str">"Lat: %.6f, Lng: %.6f, Speed: %.1f km/h\n"</span>, lat, lng, speed);
+    
+    <span class="cm">// Send to server:</span>
+    <span class="cm">// POST https://yourserver/location?lat=27.7&lng=85.3</span>
+  }
+}
+        </div>
+        <div class="tip-box"><strong>🗺️ View on Maps:</strong> Send coordinates to a Google Sheets via Apps Script (free!), or use Traccar (open source tracking server). You can also open this URL on your phone: <code style="color:var(--accent)">maps.google.com/?q=LAT,LNG</code> and bookmark it.</div>
+      </div>
+    </div>
+
+    <div id="ml-intro" class="content-section">
+      <h2 class="section-title">What is <span>Machine Learning?</span></h2>
+      <p class="section-intro">Traditional programming: you write rules → computer follows them. Machine learning: you show examples → computer learns the rules itself. ML enables computers to improve with experience.</p>
+      <div class="lesson-card">
+        <div class="iot-vis">
+          <svg viewBox="0 0 500 160" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <!-- Traditional -->
+            <rect x="10" y="15" width="220" height="130" rx="6" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" stroke-width="1.5"/>
+            <text x="120" y="38" text-anchor="middle" fill="#f59e0b" font-size="9" font-family="Orbitron,monospace">TRADITIONAL</text>
+            <text x="40" y="62" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Data → </text>
+            <rect x="80" y="52" width="60" height="20" rx="3" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1"/>
+            <text x="110" y="65" text-anchor="middle" fill="#f59e0b" font-size="8" font-family="Share Tech Mono,monospace">RULES</text>
+            <text x="145" y="62" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace"> → Answer</text>
+            <text x="120" y="95" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">You write every rule</text>
+            <text x="120" y="112" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Brittle, hard to maintain</text>
+            <text x="120" y="130" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">if temp &gt; 30: turn_on_AC()</text>
+            <!-- ML -->
+            <rect x="265" y="15" width="220" height="130" rx="6" fill="rgba(236,72,153,0.05)" stroke="#ec4899" stroke-width="1.5"/>
+            <text x="375" y="38" text-anchor="middle" fill="#ec4899" font-size="9" font-family="Orbitron,monospace">MACHINE LEARNING</text>
+            <text x="275" y="62" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Data + </text>
+            <rect x="315" y="52" width="70" height="20" rx="3" fill="rgba(236,72,153,0.15)" stroke="#ec4899" stroke-width="1"/>
+            <text x="350" y="65" text-anchor="middle" fill="#ec4899" font-size="8" font-family="Share Tech Mono,monospace">ANSWERS</text>
+            <text x="392" y="62" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace"> → Rules</text>
+            <text x="375" y="95" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Computer learns patterns</text>
+            <text x="375" y="112" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">Adapts to new data</text>
+            <text x="375" y="130" text-anchor="middle" fill="#7a9acc" font-size="8" font-family="Share Tech Mono,monospace">model.predict(new_data)</text>
+          </svg>
+        </div>
+        <div class="tip-box"><strong>🧠 3 Types of ML:</strong><br>
+        <strong style="color:var(--accent)">Supervised</strong> — learns from labeled examples (spam detection, image classification)<br>
+        <strong style="color:var(--accent)">Unsupervised</strong> — finds hidden patterns in unlabeled data (clustering, anomaly detection)<br>
+        <strong style="color:var(--accent)">Reinforcement</strong> — learns by trial and error (game AI, robot navigation)</div>
+      </div>
+    </div>
+
+    <div id="ml-sklearn" class="content-section">
+      <h2 class="section-title">Scikit-Learn <span>Basics</span></h2>
+      <p class="section-intro">Scikit-learn is Python's most popular machine learning library. It makes training models as simple as calling .fit() and .predict() — just three lines for a working classifier!</p>
+      <div class="lesson-card">
+        <div class="code-block">
+<span class="cm"># pip install scikit-learn pandas matplotlib numpy</span>
+<span class="kw">from</span> sklearn.datasets <span class="kw">import</span> load_iris
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+<span class="kw">from</span> sklearn.neighbors <span class="kw">import</span> KNeighborsClassifier
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> accuracy_score
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+<span class="cm"># 1. Load data</span>
+iris = <span class="fn">load_iris</span>()
+X, y = iris.data, iris.target       <span class="cm"># features, labels</span>
+labels = iris.target_names           <span class="cm"># ['setosa','versicolor','virginica']</span>
+
+<span class="cm"># 2. Split: 80% train, 20% test</span>
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
+    X, y, test_size=<span class="num">0.2</span>, random_state=<span class="num">42</span>
+)
+
+<span class="cm"># 3. Train model</span>
+model = <span class="fn">KNeighborsClassifier</span>(n_neighbors=<span class="num">3</span>)
+model.<span class="fn">fit</span>(X_train, y_train)
+
+<span class="cm"># 4. Evaluate</span>
+predictions = model.<span class="fn">predict</span>(X_test)
+accuracy = <span class="fn">accuracy_score</span>(y_test, predictions)
+<span class="fn">print</span>(<span class="str">f"Accuracy: {accuracy * 100:.1f}%"</span>)  <span class="cm"># ~97%</span>
+
+<span class="cm"># 5. Predict new flower</span>
+new_flower = [[<span class="num">5.1</span>, <span class="num">3.5</span>, <span class="num">1.4</span>, <span class="num">0.2</span>]]  <span class="cm"># sepal_l, sepal_w, petal_l, petal_w</span>
+pred = model.<span class="fn">predict</span>(new_flower)
+<span class="fn">print</span>(<span class="str">f"Predicted: {labels[pred[0]]}"</span>)  <span class="cm"># setosa</span>
+        </div>
+        <div class="tip-box"><strong>📊 Other Popular Algorithms:</strong> Decision Trees (interpretable), Random Forest (accurate), SVM (good for small data), Linear Regression (predicting numbers), Neural Networks (complex patterns). Start with KNN or Decision Trees — they're easiest to understand!</div>
+      </div>
+    </div>
+
+    <div id="ml-tflite" class="content-section">
+      <h2 class="section-title">TensorFlow Lite on <span>Microcontrollers</span></h2>
+      <p class="section-intro">TensorFlow Lite Micro (TFLM) lets you run trained ML models directly on Arduino and ESP32 — enabling gesture recognition, voice commands, and anomaly detection at the edge, with no cloud required!</p>
+      <div class="lesson-card">
+        <h3>WORKFLOW: FROM PYTHON MODEL TO ARDUINO</h3>
+        <div class="code-block">
+<span class="cm"># STEP 1: Train a model in Python</span>
+<span class="kw">import</span> tensorflow <span class="kw">as</span> tf
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># Simple gesture classifier (3 gestures)</span>
+model = tf.keras.<span class="fn">Sequential</span>([
+    tf.keras.layers.<span class="fn">Dense</span>(<span class="num">16</span>, activation=<span class="str">'relu'</span>, input_shape=(<span class="num">6</span>,)),
+    tf.keras.layers.<span class="fn">Dense</span>(<span class="num">16</span>, activation=<span class="str">'relu'</span>),
+    tf.keras.layers.<span class="fn">Dense</span>(<span class="num">3</span>,  activation=<span class="str">'softmax'</span>)
+])
+model.<span class="fn">compile</span>(optimizer=<span class="str">'adam'</span>, loss=<span class="str">'categorical_crossentropy'</span>)
+model.<span class="fn">fit</span>(X_train, y_train, epochs=<span class="num">50</span>)
+
+<span class="cm"># STEP 2: Convert to TFLite</span>
+converter = tf.lite.<span class="fn">TFLiteConverter</span>.<span class="fn">from_keras_model</span>(model)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]  <span class="cm"># quantize!</span>
+tflite_model = converter.<span class="fn">convert</span>()
+
+<span class="cm"># STEP 3: Export as C array for Arduino</span>
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">'model.tflite'</span>, <span class="str">'wb'</span>) <span class="kw">as</span> f:
+    f.<span class="fn">write</span>(tflite_model)
+<span class="cm"># Run: xxd -i model.tflite > model_data.h</span>
+<span class="cm"># Then include model_data.h in Arduino sketch</span>
+        </div>
+        <div class="tip-box"><strong>🚀 Getting Started:</strong> The easiest way to experience ML on microcontrollers is the Arduino Nano 33 BLE Sense — it has an IMU, microphone, and color sensor, and Tiny ML tutorials at <strong style="color:var(--accent)">tinyml.org</strong>. You can train a wake-word model ("Aawiskar!") and deploy it in an afternoon.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script>
+function show(id,btn){
+  document.querySelectorAll('.content-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Studio — Aawiskar Playground</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<style>
+html,body{height:100%;overflow:hidden}
+#app{height:100%;overflow:hidden}
+.cv-layout{display:grid;grid-template-columns:268px 1fr;flex:1;min-height:0;overflow:hidden}
+.cv-sidebar{background:var(--bg-card);border-right:1px solid var(--border-subtle);overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin}
+.cv-main{display:flex;flex-direction:column;overflow:hidden}
+.act-item{display:flex;align-items:center;gap:.7rem;padding:.6rem .95rem;cursor:pointer;transition:var(--transition);border-left:3px solid transparent;font-family:var(--font-body);font-size:.85rem;color:var(--text-dim)}
+.act-item:hover{background:rgba(255,255,255,.04);color:var(--text-primary)}
+.act-item.active{background:rgba(0,245,255,.07);border-left-color:var(--neon-cyan);color:var(--neon-cyan)}
+.act-item.upload-type.active{background:rgba(191,95,255,.07);border-left-color:var(--neon-purple);color:var(--neon-purple)}
+.act-cat{font-family:var(--font-mono);font-size:.61rem;color:var(--text-dim);letter-spacing:.15em;padding:.7rem .95rem .2rem;text-transform:uppercase;border-top:1px solid rgba(255,255,255,.04);margin-top:.25rem}
+.camera-area{position:relative;background:#000;flex:1;overflow:hidden;min-height:0;display:flex;align-items:center;justify-content:center}
+.camera-area video{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:contain;display:none;transform:scaleX(-1)}
+.camera-area canvas{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:contain;z-index:2}
+.cam-placeholder{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;pointer-events:none}
+.det-panel{padding:.7rem 1rem;background:var(--bg-card);border-top:1px solid var(--border-subtle);max-height:150px;overflow-y:auto;min-height:68px;flex-shrink:0;scrollbar-width:thin}
+.det-row{font-family:var(--font-mono);font-size:.75rem;color:var(--text-dim);display:flex;align-items:center;gap:.5rem;padding:.18rem 0;flex-wrap:wrap}
+.det-lbl{color:var(--neon-cyan);min-width:130px;flex-shrink:0}
+.det-lbl.purple{color:var(--neon-purple)}
+.det-conf{color:var(--neon-green);white-space:nowrap}
+.conf-bar{height:4px;background:var(--bg-panel);border-radius:2px;flex:1;min-width:50px;overflow:hidden}
+.conf-fill{height:100%;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green));border-radius:2px;transition:width .3s}
+.act-desc{padding:.55rem 1.25rem;background:var(--bg-panel);border-bottom:1px solid var(--border-subtle);font-size:.82rem;color:var(--text-dim);font-family:var(--font-body);display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;flex-shrink:0}
+.tag-fps{background:rgba(57,255,20,.08);border:1px solid rgba(57,255,20,.3);color:var(--neon-green);padding:.1rem .45rem;border-radius:4px;font-family:var(--font-mono);font-size:.68rem}
+input[type=range]{-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.14);border-radius:3px;height:4px;outline:none;cursor:pointer;border:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#00f5ff;cursor:pointer;box-shadow:0 0 7px #00f5ff;border:none}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#00f5ff;border:none;cursor:pointer}
+.status-loading{color:var(--neon-yellow);font-family:var(--font-mono);font-size:.72rem;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+@media(max-width:900px){.cv-layout{grid-template-columns:1fr}.cv-sidebar{max-height:200px;overflow-x:auto;flex-direction:row;flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div id="app">
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="favicon.png" alt="Aawiskar Logo">
+    </div>
+    <div>
+      <div class="nav-logo-text">AAWISKAR <span>PLAYGROUND</span></div>
+      <div class="nav-logo-sub">A product of Aawiskar RoboLabs Pvt. Ltd.</div>
+    </div>
+  </a>
+  <button class="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-module-strip">
+  <a href="index.html" class="module-pill">🏠 Home</a>
+  <div class="module-pill-sep"></div>
+  <a href="python.html" class="module-pill">🐍 Python IDE</a>
+  <a href="ml.html" class="module-pill">🧠 ML Studio</a>
+  <a href="block.html" class="module-pill">🎮 Block Coder</a>
+  <a href="arduino.html" class="module-pill">⚡ Arduino Gen</a>
+  <div class="module-pill-sep"></div>
+  <a href="cv.html" class="module-pill active">👁️ CV Studio</a>
+  <a href="webide.html" class="module-pill">🌐 Web IDE</a>
+  <a href="physics.html" class="module-pill">🔬 Physics Lab</a>
+  <a href="maths.html" class="module-pill">📐 Maths Lab</a>
+  <a href="astronomy.html" class="module-pill">🪐 Astronomy</a>
+</div>
+<div id="mobile-menu" class="mobile-menu">
+  <button class="mobile-menu-close">✕</button>
+  <a href="index.html">🏠 Home</a>
+  <a href="python.html">🐍 Python IDE</a>
+  <a href="ml.html">🧠 ML Studio</a>
+  <a href="block.html">🎮 Block Coder</a>
+  <a href="arduino.html">⚡ Arduino Gen</a>
+  <a href="cv.html">👁️ CV Studio</a>
+  <a href="webide.html">🌐 Web IDE</a>
+  <a href="physics.html">🔬 Physics Lab</a>
+  <a href="maths.html">📐 Maths Lab</a>
+  <a href="astronomy.html">🪐 Astronomy</a>
+</div>
+
+<div class="page-header">
+  <div class="page-header-info">
+    <h1>👁️ CV STUDIO <span class="tag tag-cyan" style="font-size:.6rem;vertical-align:middle">MediaPipe + TF.js</span></h1>
+    <p>Real-time computer vision — live camera &amp; uploaded image analysis</p>
+  </div>
+  <div class="page-header-actions">
+    <button class="btn btn-cyan" id="startCam">📷 Start Camera</button>
+    <button class="btn btn-ghost" id="stopCam" disabled>⏹ Stop</button>
+    <label class="btn btn-purple" style="cursor:pointer">📁 Upload Image<input type="file" id="imgFile" accept="image/*" style="display:none"></label>
+    <button class="btn btn-outline" id="shotBtn">📸 Screenshot</button>
+  </div>
+</div>
+
+<div class="cv-layout">
+  <div class="cv-sidebar">
+    <div class="panel-label"><div class="status-dot" id="camDot" style="background:var(--text-dim);box-shadow:none;animation:none"></div>VISION ACTIVITIES</div>
+
+    <div class="act-cat">📷 Live Camera</div>
+    <div class="act-item active" data-act="object" onclick="pickAct(this)">
+      <span>🎯</span><div><div>Object Detection</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">COCO-SSD · 80 classes</div></div>
+    </div>
+    <div class="act-item" data-act="classify" onclick="pickAct(this)">
+      <span>🖼️</span><div><div>Image Classification</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MobileNet · 1000 classes</div></div>
+    </div>
+    <div class="act-item" data-act="face" onclick="pickAct(this)">
+      <span>😊</span><div><div>Face Detection</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe · bounding box</div></div>
+    </div>
+    <div class="act-item" data-act="facemesh" onclick="pickAct(this)">
+      <span>🕸️</span><div><div>Face Mesh</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe · 478 landmarks</div></div>
+    </div>
+    <div class="act-item" data-act="pose" onclick="pickAct(this)">
+      <span>🤸</span><div><div>Pose Landmark</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe · 33 keypoints</div></div>
+    </div>
+    <div class="act-item" data-act="hand" onclick="pickAct(this)">
+      <span>✋</span><div><div>Hand Landmark</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe · 21 pts / 2 hands</div></div>
+    </div>
+    <div class="act-item" data-act="gesture" onclick="pickAct(this)">
+      <span>🤞</span><div><div>Gesture Recognition</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe Gesture API</div></div>
+    </div>
+
+    <div class="act-cat">📁 Upload Image</div>
+    <div class="act-item upload-type" data-act="up_obj" onclick="pickAct(this)">
+      <span>🎯</span><div><div>Detect Objects</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">COCO-SSD on photo</div></div>
+    </div>
+    <div class="act-item upload-type" data-act="up_cls" onclick="pickAct(this)">
+      <span>🔍</span><div><div>Classify Image</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MobileNet top-5</div></div>
+    </div>
+    <div class="act-item upload-type" data-act="up_hand" onclick="pickAct(this)">
+      <span>✋</span><div><div>Hand Landmark</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe on photo</div></div>
+    </div>
+    <div class="act-item upload-type" data-act="up_face" onclick="pickAct(this)">
+      <span>😊</span><div><div>Face Mesh on Image</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe 478pts on photo</div></div>
+    </div>
+    <div class="act-item upload-type" data-act="up_pose" onclick="pickAct(this)">
+      <span>🤸</span><div><div>Pose in Image</div><div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim)">MediaPipe on photo</div></div>
+    </div>
+  </div>
+
+  <div class="cv-main">
+    <div class="act-desc">
+      <span id="actDesc">🎯 <strong style="color:var(--text-bright)">Object Detection</strong> — COCO-SSD detects 80 object categories with bounding boxes and confidence scores.</span>
+      <div style="display:flex;gap:.4rem;align-items:center;flex-shrink:0">
+        <span class="tag tag-cyan" id="modelTag">COCO-SSD</span>
+        <span class="tag-fps" id="fpsTag">— FPS</span>
+      </div>
+    </div>
+    <div class="camera-area" id="camArea">
+      <video id="vid" autoplay muted playsinline></video>
+      <canvas id="cvs"></canvas>
+      <div class="cam-placeholder" id="placeholder">
+        <div style="text-align:center;padding:2rem">
+          <div style="font-size:3.5rem;margin-bottom:1rem;filter:drop-shadow(0 0 20px var(--neon-cyan))">👁️</div>
+          <div style="font-family:var(--font-display);font-size:1.05rem;color:var(--text-bright);letter-spacing:.05em;margin-bottom:.5rem">CV STUDIO READY</div>
+          <div style="font-family:var(--font-mono);font-size:.78rem;color:var(--text-dim);margin-bottom:1rem;line-height:1.8">
+            Click <strong style="color:var(--neon-cyan)">Start Camera</strong> for live detection<br>
+            or <strong style="color:var(--neon-purple)">Upload Image</strong> to analyse a photo
+          </div>
+          <div style="font-family:var(--font-mono);font-size:.68rem;color:rgba(0,245,255,.3)">MediaPipe Tasks + TensorFlow.js — fully in-browser</div>
+        </div>
+      </div>
+    </div>
+    <div class="det-panel" id="detPanel">
+      <div style="font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;padding:.35rem">// Start camera or upload an image to see results</div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="toast-container"></div>
+
+<!-- TF.js for Object Detection + Classification -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+<script src="script.js"></script>
+<script type="module">
+'use strict';
+
+// ── MediaPipe Tasks Vision (new stable API — replaces broken @mediapipe/hands etc.) ──
+const WASM_PATH = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
+const MODELS = {
+  hand:    'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+  gesture: 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
+  face:    'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.task',
+  mesh:    'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+  pose:    'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+};
+
+// Lazy-load MediaPipe module only when needed
+let mpVision = null;
+let mpFileSet = null;
+async function getMPVision() {
+  if (mpVision) return mpVision;
+  const mod = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs');
+  mpFileSet = await mod.FilesetResolver.forVisionTasks(WASM_PATH);
+  mpVision  = mod;
+  return mpVision;
+}
+
+// ── Hand connections (21 pts) ──
+const HAND_CONN = [
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],
+  [13,17],[0,17],[17,18],[18,19],[19,20]
+];
+// Pose connections (33 pts)
+const POSE_CONN = [
+  [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],
+  [9,10],[11,12],[11,13],[13,15],[15,17],[15,19],[15,21],[17,19],
+  [12,14],[14,16],[16,18],[16,20],[16,22],[18,20],
+  [11,23],[12,24],[23,24],[23,25],[25,27],[27,29],[29,31],[27,31],
+  [24,26],[26,28],[28,30],[30,32],[28,32]
+];
+
+// ── STATE ──
+let curAct = 'object';
+let camStream = null, rafId = null, liveRunning = false;
+let uploadedImg = null;
+let fpsCount = 0, fpsLast = Date.now();
+let tfModels  = {};   // cached TF.js models
+let mpModels  = {};   // cached MediaPipe models
+
+const vid = document.getElementById('vid');
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+
+const ACTS = {
+  object:   {d:'🎯 <b style="color:var(--text-bright)">Object Detection</b> — COCO-SSD detects 80 everyday objects with bounding boxes.',             m:'COCO-SSD',     live:true},
+  classify: {d:'🖼️ <b style="color:var(--text-bright)">Image Classification</b> — MobileNet classifies the full frame into 1000 categories.',          m:'MobileNet',    live:true},
+  face:     {d:'😊 <b style="color:var(--text-bright)">Face Detection</b> — MediaPipe BlazeFace finds faces with bounding boxes.',                       m:'MP BlazeFace', live:true},
+  facemesh: {d:'🕸️ <b style="color:var(--text-bright)">Face Mesh</b> — MediaPipe maps 478 facial landmarks in real time.',                              m:'MP FaceMesh',  live:true},
+  pose:     {d:'🤸 <b style="color:var(--text-bright)">Pose Landmark</b> — MediaPipe tracks 33 body keypoints.',                                         m:'MP PoseLite',  live:true},
+  hand:     {d:'✋ <b style="color:var(--text-bright)">Hand Landmark</b> — MediaPipe tracks 21 3D keypoints per hand, up to 2 hands.',                    m:'MP HandLandmarker', live:true},
+  gesture:  {d:'🤞 <b style="color:var(--text-bright)">Gesture Recognition</b> — MediaPipe classifies: ✊ ✋ ☝️ ✌️ 👍 🤙 and more.',                      m:'MP GestureRecognizer', live:true},
+  up_obj:   {d:'🎯 <b style="color:var(--text-bright)">Detect Objects in Image</b> — COCO-SSD on uploaded photo.',                                        m:'COCO-SSD',     live:false},
+  up_cls:   {d:'🔍 <b style="color:var(--text-bright)">Classify Uploaded Image</b> — MobileNet top-5 labels.',                                            m:'MobileNet',    live:false},
+  up_hand:  {d:'✋ <b style="color:var(--text-bright)">Hand Landmarks in Image</b> — MediaPipe finds hand keypoints in your photo.',                       m:'MP HandLandmarker', live:false},
+  up_face:  {d:'🕸️ <b style="color:var(--text-bright)">Face Mesh on Image</b> — MediaPipe 478-point face mesh on photo.',                                m:'MP FaceLandmarker', live:false},
+  up_pose:  {d:'🤸 <b style="color:var(--text-bright)">Pose in Image</b> — MediaPipe pose skeleton on photo.',                                            m:'MP PoseLite',  live:false},
+};
+
+// ── UI helpers ──
+function setRes(html) { document.getElementById('detPanel').innerHTML = html; }
+function noRes(msg) { return `<div style="font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;padding:.4rem">// ${msg}</div>`; }
+function detRow(lbl, conf, purple) {
+  return `<div class="det-row"><span class="det-lbl${purple?' purple':''}">${lbl}</span><div class="conf-bar"><div class="conf-fill" style="width:${(conf*100).toFixed(0)}%"></div></div><span class="det-conf">${(conf*100).toFixed(1)}%</span></div>`;
+}
+function loading(msg) { return `<div class="status-loading">⏳ ${msg}</div>`; }
+function tickFPS() {
+  fpsCount++;
+  if (Date.now() - fpsLast > 1000) {
+    document.getElementById('fpsTag').textContent = fpsCount + ' FPS';
+    fpsCount = 0; fpsLast = Date.now();
+  }
+}
+
+// ── Activity switch ──
+window.pickAct = function(el) {
+  document.querySelectorAll('.act-item').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  curAct = el.dataset.act;
+  const a = ACTS[curAct];
+  document.getElementById('actDesc').innerHTML = a.d;
+  document.getElementById('modelTag').textContent = a.m;
+  stopLive();
+  if (!a.live) {
+    if (uploadedImg) runUpload();
+    else showToast('Click "Upload Image" to load a photo first', 'info');
+    return;
+  }
+  if (liveRunning) runLive();
+};
+
+// ── Camera ──
+async function startCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({video:{width:1280,height:720,facingMode:'user'}});
+    vid.srcObject = camStream;
+    await vid.play();
+    cvs.width  = vid.videoWidth  || 1280;
+    cvs.height = vid.videoHeight || 720;
+    vid.style.display = 'block';
+    document.getElementById('placeholder').style.display = 'none';
+    liveRunning = true;
+    document.getElementById('startCam').disabled = true;
+    document.getElementById('stopCam').disabled  = false;
+    document.getElementById('camDot').style.cssText = '';
+    showToast('Camera started!', 'success');
+    if (ACTS[curAct].live) runLive();
+  } catch(e) { showToast('Camera error: ' + e.message, 'error'); }
+}
+function stopCamera() {
+  liveRunning = false; stopLive();
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  vid.style.display = 'none';
+  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('startCam').disabled = false;
+  document.getElementById('stopCam').disabled  = true;
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+  document.getElementById('camDot').style.cssText = 'background:var(--text-dim);box-shadow:none;animation:none';
+}
+function stopLive() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
+function runLive() {
+  stopLive();
+  ({object:runObj, classify:runCls, face:runFaceLive, facemesh:runMeshLive,
+    pose:runPoseLive, hand:runHandLive, gesture:runGestureLive}[curAct] || (() => {}))();
+}
+
+// ── Draw video (mirrored) onto canvas ──
+function drawFrame() {
+  ctx.save();
+  ctx.translate(cvs.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(vid, 0, 0, cvs.width, cvs.height);
+  ctx.restore();
+}
+// Landmarks from MediaPipe Tasks are in [0,1] normalized coords
+// Video is mirrored (CSS transform:scaleX(-1)), so x is already flipped
+// But canvas is NOT CSS-mirrored, so we mirror manually in drawFrame
+// Landmark x is 0=left of video (right of mirrored), so mirror: (1-x)*W
+function lx(x) { return (1 - x) * cvs.width; }
+function ly(y) { return y * cvs.height; }
+
+// ─── TF.js: OBJECT DETECTION ─────────────────
+async function runObj() {
+  if (!tfModels.cocoSsd) {
+    setRes(loading('Loading COCO-SSD…'));
+    tfModels.cocoSsd = await cocoSsd.load();
+    showToast('COCO-SSD ready!', 'success');
+  }
+  const m = tfModels.cocoSsd;
+  const loop = async () => {
+    if (!liveRunning || curAct !== 'object') return;
+    ctx.drawImage(vid, 0, 0, cvs.width, cvs.height); // object detection: no mirror needed
+    const preds = await m.detect(vid);
+    preds.forEach(p => {
+      const [x,y,w,h] = p.bbox;
+      ctx.strokeStyle='#00f5ff'; ctx.lineWidth=2; ctx.shadowBlur=8; ctx.shadowColor='#00f5ff';
+      ctx.strokeRect(x,y,w,h); ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(0,245,255,.85)'; ctx.fillRect(x,y-22,Math.max(w,140),22);
+      ctx.fillStyle='#000'; ctx.font='bold 12px monospace';
+      ctx.fillText(`${p.class} ${(p.score*100).toFixed(0)}%`, x+4, y-6);
+    });
+    tickFPS();
+    setRes(preds.length ? preds.slice(0,6).map(p => detRow(p.class, p.score)).join('') : noRes('No objects detected'));
+    rafId = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+// ─── TF.js: CLASSIFY ─────────────────────────
+async function runCls() {
+  if (!tfModels.mobilenet) {
+    setRes(loading('Loading MobileNet…'));
+    tfModels.mobilenet = await mobilenet.load();
+    showToast('MobileNet ready!', 'success');
+  }
+  const m = tfModels.mobilenet;
+  const drawLoop = () => {
+    if (!liveRunning || curAct !== 'classify') return;
+    ctx.drawImage(vid, 0, 0, cvs.width, cvs.height);
+    tickFPS(); rafId = requestAnimationFrame(drawLoop);
+  };
+  drawLoop();
+  const clsLoop = async () => {
+    if (!liveRunning || curAct !== 'classify') return;
+    const r = await m.classify(vid, 5);
+    setRes(r.map(p => detRow(p.className.split(',')[0], p.probability)).join(''));
+    setTimeout(clsLoop, 700);
+  };
+  clsLoop();
+}
+
+// ─── MediaPipe: FACE DETECTION ───────────────
+async function runFaceLive() {
+  if (!mpModels.faceDetector) {
+    setRes(loading('Loading MediaPipe Face Detector…'));
+    const mp = await getMPVision();
+    mpModels.faceDetector = await mp.FaceDetector.createFromOptions(mpFileSet, {
+      baseOptions: { modelAssetPath: MODELS.face, delegate: 'GPU' },
+      runningMode: 'VIDEO',
+      minDetectionConfidence: 0.5
+    });
+    showToast('Face Detector ready!', 'success');
+  }
+  const det = mpModels.faceDetector;
+  const loop = () => {
+    if (!liveRunning || curAct !== 'face') return;
+    drawFrame();
+    const r = det.detectForVideo(vid, performance.now());
+    r.detections.forEach(d => {
+      const bb = d.boundingBox;
+      const x = lx(bb.originX / vid.videoWidth + bb.width / vid.videoWidth);
+      const y = ly(bb.originY / vid.videoHeight);
+      const w = (bb.width  / vid.videoWidth)  * cvs.width;
+      const h = (bb.height / vid.videoHeight) * cvs.height;
+      const bx = (1 - bb.originX/vid.videoWidth - bb.width/vid.videoWidth) * cvs.width;
+      ctx.strokeStyle='#ff006e'; ctx.lineWidth=3; ctx.shadowBlur=12; ctx.shadowColor='#ff006e';
+      ctx.strokeRect(bx, y, w, h); ctx.shadowBlur=0;
+      d.keypoints.forEach(kp => {
+        ctx.beginPath(); ctx.arc(lx(kp.x), ly(kp.y), 4, 0, 6.28);
+        ctx.fillStyle='#ffe000'; ctx.shadowBlur=6; ctx.shadowColor='#ffe000';
+        ctx.fill(); ctx.shadowBlur=0;
+      });
+    });
+    tickFPS();
+    setRes(r.detections.length
+      ? r.detections.map((_,i)=>`<div class="det-row"><span class="det-lbl">Face ${i+1}</span><span class="det-conf">score: ${(r.detections[i].categories[0]?.score*100||0).toFixed(0)}%</span></div>`).join('')
+      : noRes('No faces — face the camera'));
+    rafId = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+// ─── MediaPipe: FACE MESH ────────────────────
+async function runMeshLive() {
+  if (!mpModels.faceLandmarker) {
+    setRes(loading('Loading MediaPipe Face Mesh (478 landmarks)…'));
+    const mp = await getMPVision();
+    mpModels.faceLandmarker = await mp.FaceLandmarker.createFromOptions(mpFileSet, {
+      baseOptions: { modelAssetPath: MODELS.mesh, delegate: 'GPU' },
+      runningMode: 'VIDEO',
+      numFaces: 2,
+      minFaceDetectionConfidence: 0.5,
+      minFacePresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+      outputFaceBlendshapes: false,
+      outputFacialTransformationMatrixes: false
+    });
+    showToast('Face Mesh ready! 😊', 'success');
+  }
+  const landmarker = mpModels.faceLandmarker;
+  const mp = await getMPVision();
+  const TESSEL = mp.FaceLandmarker.FACE_LANDMARKS_TESSELATION;
+  const CONTOUR = mp.FaceLandmarker.FACE_LANDMARKS_FACE_OVAL;
+  const L_EYE   = mp.FaceLandmarker.FACE_LANDMARKS_LEFT_EYE;
+  const R_EYE   = mp.FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE;
+  const L_BROW  = mp.FaceLandmarker.FACE_LANDMARKS_LEFT_EYEBROW;
+  const R_BROW  = mp.FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW;
+  const LIPS    = mp.FaceLandmarker.FACE_LANDMARKS_LIPS;
+  const NOSE    = mp.FaceLandmarker.FACE_LANDMARKS_NOSE_BRIDGE || [];
+
+  function drawConnectors(lms, conns, color, width) {
+    if (!conns) return;
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    conns.forEach(c => {
+      const a = lms[c.start], b = lms[c.end];
+      if (!a || !b) return;
+      ctx.beginPath();
+      ctx.moveTo(lx(a.x), ly(a.y));
+      ctx.lineTo(lx(b.x), ly(b.y));
+      ctx.stroke();
+    });
+  }
+
+  const loop = () => {
+    if (!liveRunning || curAct !== 'facemesh') return;
+    drawFrame();
+    const r = landmarker.detectForVideo(vid, performance.now());
+    r.faceLandmarks.forEach((lms, fi) => {
+      // Tesselation mesh (faint)
+      ctx.strokeStyle = 'rgba(0,245,255,0.08)'; ctx.lineWidth = 0.5;
+      TESSEL.forEach(c => {
+        const a = lms[c.start], b = lms[c.end];
+        if (!a || !b) return;
+        ctx.beginPath(); ctx.moveTo(lx(a.x),ly(a.y)); ctx.lineTo(lx(b.x),ly(b.y)); ctx.stroke();
+      });
+      // Key contours (brighter)
+      drawConnectors(lms, CONTOUR, 'rgba(0,245,255,0.5)', 1.5);
+      drawConnectors(lms, L_EYE,   'rgba(0,245,255,0.7)', 1.5);
+      drawConnectors(lms, R_EYE,   'rgba(0,245,255,0.7)', 1.5);
+      drawConnectors(lms, L_BROW,  'rgba(255,200,0,0.6)', 1.5);
+      drawConnectors(lms, R_BROW,  'rgba(255,200,0,0.6)', 1.5);
+      drawConnectors(lms, LIPS,    'rgba(255,0,110,0.7)',  1.5);
+      drawConnectors(lms, NOSE,    'rgba(200,200,255,0.5)', 1.2);
+      // Landmark dots (coloured by position)
+      lms.forEach((lm, i) => {
+        const hue = Math.floor((i / 478) * 280);
+        ctx.beginPath(); ctx.arc(lx(lm.x), ly(lm.y), 1.2, 0, 6.28);
+        ctx.fillStyle = `hsl(${hue},100%,65%)`; ctx.fill();
+      });
+    });
+    tickFPS();
+    setRes(r.faceLandmarks.length
+      ? r.faceLandmarks.map((_,i)=>`<div class="det-row"><span class="det-lbl">Face ${i+1}</span><span class="det-conf">478 landmarks active</span></div>`).join('')
+      : noRes('No face — look directly at camera'));
+    rafId = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+// ─── MediaPipe: POSE ─────────────────────────
+async function runPoseLive() {
+  if (!mpModels.poseLandmarker) {
+    setRes(loading('Loading MediaPipe Pose Landmark…'));
+    const mp = await getMPVision();
+    mpModels.poseLandmarker = await mp.PoseLandmarker.createFromOptions(mpFileSet, {
+      baseOptions: { modelAssetPath: MODELS.pose, delegate: 'GPU' },
+      runningMode: 'VIDEO',
+      numPoses: 2,
+      minPoseDetectionConfidence: 0.5,
+      minPosePresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    showToast('PoseLandmarker ready!', 'success');
+  }
+  const landmarker = mpModels.poseLandmarker;
+  const loop = () => {
+    if (!liveRunning || curAct !== 'pose') return;
+    drawFrame();
+    const r = landmarker.detectForVideo(vid, performance.now());
+    r.landmarks.forEach(lms => {
+      // Draw connections
+      POSE_CONN.forEach(([a,b]) => {
+        const la = lms[a], lb = lms[b];
+        if (!la || !lb || la.visibility < 0.4 || lb.visibility < 0.4) return;
+        ctx.beginPath();
+        ctx.moveTo(lx(la.x), ly(la.y));
+        ctx.lineTo(lx(lb.x), ly(lb.y));
+        ctx.strokeStyle = 'rgba(57,255,20,0.8)'; ctx.lineWidth = 3;
+        ctx.shadowBlur = 8; ctx.shadowColor = '#39ff14'; ctx.stroke(); ctx.shadowBlur = 0;
+      });
+      // Draw keypoints
+      lms.forEach(lm => {
+        if (lm.visibility < 0.4) return;
+        ctx.beginPath(); ctx.arc(lx(lm.x), ly(lm.y), 5, 0, 6.28);
+        ctx.fillStyle = '#39ff14'; ctx.shadowBlur = 10; ctx.shadowColor = '#39ff14';
+        ctx.fill(); ctx.shadowBlur = 0;
+      });
+    });
+    tickFPS();
+    const visible = r.landmarks[0]?.filter(k => k.visibility > 0.4).length || 0;
+    setRes(r.landmarks.length
+      ? `<div class="det-row"><span class="det-lbl">Person Detected</span><span class="det-conf">${visible}/33 keypoints visible</span></div>`
+      : noRes('Stand in front of camera'));
+    rafId = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+// ─── MediaPipe: HAND LANDMARK ────────────────
+async function runHandLive() {
+  if (!mpModels.handLandmarker) {
+    setRes(loading('Loading MediaPipe Hand Landmarker…'));
+    const mp = await getMPVision();
+    mpModels.handLandmarker = await mp.HandLandmarker.createFromOptions(mpFileSet, {
+      baseOptions: { modelAssetPath: MODELS.hand, delegate: 'GPU' },
+      runningMode: 'VIDEO',
+      numHands: 2,
+      minHandDetectionConfidence: 0.5,
+      minHandPresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    showToast('Hand Landmarker ready! ✋', 'success');
+  }
+  const landmarker = mpModels.handLandmarker;
+  const loop = () => {
+    if (!liveRunning || (curAct !== 'hand' && curAct !== 'gesture')) return;
+    // Note: for hand landmarks we don't use our drawFrame mirror
+    // because MediaPipe provides already-mirrored coords when using selfie mode
+    ctx.save(); ctx.translate(cvs.width,0); ctx.scale(-1,1);
+    ctx.drawImage(vid, 0, 0, cvs.width, cvs.height); ctx.restore();
+
+    const r = landmarker.detectForVideo(vid, performance.now());
+    r.landmarks.forEach((lms, hi) => {
+      const color = hi === 0 ? '#00f5ff' : '#ff006e';
+      const colorA = hi === 0 ? 'rgba(0,245,255,.75)' : 'rgba(255,0,110,.75)';
+      // Draw skeleton
+      HAND_CONN.forEach(([a,b]) => {
+        ctx.beginPath();
+        ctx.moveTo(lx(lms[a].x), ly(lms[a].y));
+        ctx.lineTo(lx(lms[b].x), ly(lms[b].y));
+        ctx.strokeStyle = colorA; ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 4; ctx.shadowColor = color; ctx.stroke(); ctx.shadowBlur = 0;
+      });
+      // Draw dots
+      lms.forEach((lm, i) => {
+        ctx.beginPath(); ctx.arc(lx(lm.x), ly(lm.y), i === 0 ? 7 : 4.5, 0, 6.28);
+        ctx.fillStyle = i === 0 ? '#ff6b00' : color;
+        ctx.shadowBlur = 8; ctx.shadowColor = color; ctx.fill(); ctx.shadowBlur = 0;
+      });
+    });
+    tickFPS();
+    setRes(r.landmarks.length
+      ? r.landmarks.map((lms,i) => {
+          const hand = r.handedness[i]?.[0]?.displayName || `Hand ${i+1}`;
+          return `<div class="det-row"><span class="det-lbl">${hand} (${i===0?'cyan':'pink'})</span><span class="det-conf">21 landmarks · ${(r.handedness[i]?.[0]?.score*100||0).toFixed(0)}%</span></div>`;
+        }).join('')
+      : noRes('Show your hand to the camera'));
+    rafId = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+// ─── MediaPipe: GESTURE RECOGNITION ─────────
+async function runGestureLive() {
+  if (!mpModels.gestureRecognizer) {
+    setRes(loading('Loading MediaPipe Gesture Recognizer…'));
+    const mp = await getMPVision();
+    mpModels.gestureRecognizer = await mp.GestureRecognizer.createFromOptions(mpFileSet, {
+      baseOptions: { modelAssetPath: MODELS.gesture, delegate: 'GPU' },
+      runningMode: 'VIDEO',
+      numHands: 2,
+      minHandDetectionConfidence: 0.5,
+      minHandPresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    showToast('Gesture Recognizer ready! 🤞', 'success');
+  }
+  const recognizer = mpModels.gestureRecognizer;
+
+  // Emoji map for MediaPipe gesture names
+  const GESTURE_EMOJI = {
+    'Closed_Fist': '✊', 'Open_Palm': '✋', 'Pointing_Up': '☝️',
+    'Victory': '✌️', 'Thumb_Up': '👍', 'Thumb_Down': '👎',
+    'ILoveYou': '🤙', 'None': '—'
+  };
+
+  const loop = () => {
+    if (!liveRunning || curAct !== 'gesture') return;
+    ctx.save(); ctx.translate(cvs.width,0); ctx.scale(-1,1);
+    ctx.drawImage(vid, 0, 0, cvs.width, cvs.height); ctx.restore();
+
+    const r = recognizer.recognizeForVideo(vid, performance.now());
+    r.landmarks.forEach((lms, hi) => {
+      const color = hi === 0 ? '#00f5ff' : '#ff006e';
+      const colorA = hi === 0 ? 'rgba(0,245,255,.75)' : 'rgba(255,0,110,.75)';
+      HAND_CONN.forEach(([a,b]) => {
+        ctx.beginPath();
+        ctx.moveTo(lx(lms[a].x), ly(lms[a].y));
+        ctx.lineTo(lx(lms[b].x), ly(lms[b].y));
+        ctx.strokeStyle = colorA; ctx.lineWidth = 2.5; ctx.stroke();
+      });
+      lms.forEach((lm, i) => {
+        ctx.beginPath(); ctx.arc(lx(lm.x), ly(lm.y), i===0?7:4.5, 0, 6.28);
+        ctx.fillStyle = i===0?'#ff6b00':color; ctx.fill();
+      });
+      // Gesture label
+      const gesture = r.gestures[hi]?.[0];
+      if (gesture) {
+        const emoji = GESTURE_EMOJI[gesture.categoryName] || gesture.categoryName;
+        const wx = lx(lms[0].x), wy = ly(lms[0].y) - 55;
+        ctx.font = 'bold 36px Arial'; ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.lineWidth = 4;
+        ctx.strokeText(emoji, wx, wy); ctx.fillStyle = '#fff'; ctx.fillText(emoji, wx, wy);
+        ctx.font = 'bold 14px monospace'; ctx.fillStyle = color;
+        ctx.fillText(gesture.categoryName.replace(/_/g,' '), wx, wy+24);
+      }
+    });
+    tickFPS();
+    setRes(r.gestures.length
+      ? r.gestures.map((g,i) => {
+          const top = g[0];
+          const emoji = GESTURE_EMOJI[top?.categoryName] || '—';
+          return `<div class="det-row"><span class="det-lbl">Hand ${i+1}</span><span class="det-conf">${emoji} ${top?.categoryName.replace(/_/g,' ')} · ${(top?.score*100||0).toFixed(0)}%</span></div>`;
+        }).join('')
+      : noRes('Show your hand to the camera'));
+    rafId = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+// ─── IMAGE UPLOAD ─────────────────────────────
+document.getElementById('imgFile').onchange = function(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    uploadedImg = img;
+    stopLive(); liveRunning = false; vid.style.display = 'none';
+    document.getElementById('placeholder').style.display = 'none';
+    cvs.width = img.naturalWidth; cvs.height = img.naturalHeight;
+    ctx.drawImage(img, 0, 0);
+    showToast('Image loaded — choose an Upload activity', 'success');
+    if (ACTS[curAct] && !ACTS[curAct].live) runUpload();
+  };
+  img.src = URL.createObjectURL(f); e.target.value = '';
+};
+
+async function runUpload() {
+  if (!uploadedImg) { showToast('Upload an image first', 'error'); return; }
+  cvs.width = uploadedImg.naturalWidth; cvs.height = uploadedImg.naturalHeight;
+  ctx.drawImage(uploadedImg, 0, 0);
+  document.getElementById('placeholder').style.display = 'none';
+
+  if (curAct === 'up_obj') {
+    setRes(loading('Detecting objects…'));
+    if (!tfModels.cocoSsd) tfModels.cocoSsd = await cocoSsd.load();
+    const preds = await tfModels.cocoSsd.detect(uploadedImg);
+    ctx.drawImage(uploadedImg, 0, 0);
+    preds.forEach(p => {
+      const [x,y,w,h] = p.bbox;
+      ctx.strokeStyle='#00f5ff'; ctx.lineWidth=3; ctx.shadowBlur=10; ctx.shadowColor='#00f5ff';
+      ctx.strokeRect(x,y,w,h); ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(0,245,255,.9)'; ctx.fillRect(x,y-24,Math.max(w,140),24);
+      ctx.fillStyle='#000'; ctx.font='bold 14px monospace';
+      ctx.fillText(`${p.class} ${(p.score*100).toFixed(0)}%`, x+5, y-7);
+    });
+    setRes(preds.length ? preds.map(p=>detRow(p.class,p.score)).join('') : noRes('No objects found'));
+    showToast(preds.length + ' object(s) detected', 'success');
+
+  } else if (curAct === 'up_cls') {
+    setRes(loading('Classifying image…'));
+    if (!tfModels.mobilenet) tfModels.mobilenet = await mobilenet.load();
+    const preds = await tfModels.mobilenet.classify(uploadedImg, 5);
+    setRes(preds.map(p => detRow(p.className.split(',')[0], p.probability)).join(''));
+    showToast('Classification complete!', 'success');
+
+  } else if (curAct === 'up_hand') {
+    setRes(loading('Running hand landmark detection…'));
+    const mp = await getMPVision();
+    if (!mpModels.handImg) {
+      mpModels.handImg = await mp.HandLandmarker.createFromOptions(mpFileSet, {
+        baseOptions: { modelAssetPath: MODELS.hand, delegate: 'GPU' },
+        runningMode: 'IMAGE', numHands: 4
+      });
+    }
+    const r = mpModels.handImg.detect(uploadedImg);
+    ctx.drawImage(uploadedImg, 0, 0);
+    r.landmarks.forEach((lms, hi) => {
+      const color = hi===0?'#00f5ff':'#ff006e';
+      const W = cvs.width, H = cvs.height;
+      HAND_CONN.forEach(([a,b]) => {
+        ctx.beginPath(); ctx.moveTo(lms[a].x*W, lms[a].y*H); ctx.lineTo(lms[b].x*W, lms[b].y*H);
+        ctx.strokeStyle=hi===0?'rgba(0,245,255,.75)':'rgba(255,0,110,.75)'; ctx.lineWidth=2.5; ctx.stroke();
+      });
+      lms.forEach((lm,i) => {
+        ctx.beginPath(); ctx.arc(lm.x*W, lm.y*H, i===0?7:4.5, 0, 6.28);
+        ctx.fillStyle=i===0?'#ff6b00':color; ctx.fill();
+      });
+    });
+    setRes(r.landmarks.length
+      ? r.landmarks.map((_,i)=>`<div class="det-row"><span class="det-lbl">Hand ${i+1}</span><span class="det-conf">21 keypoints mapped</span></div>`).join('')
+      : noRes('No hands found in image'));
+    showToast(r.landmarks.length + ' hand(s) found!', 'success');
+
+  } else if (curAct === 'up_face') {
+    setRes(loading('Running face mesh detection…'));
+    const mp = await getMPVision();
+    if (!mpModels.faceImg) {
+      mpModels.faceImg = await mp.FaceLandmarker.createFromOptions(mpFileSet, {
+        baseOptions: { modelAssetPath: MODELS.mesh, delegate: 'GPU' },
+        runningMode: 'IMAGE', numFaces: 4, minFaceDetectionConfidence: 0.4
+      });
+    }
+    const r = mpModels.faceImg.detect(uploadedImg);
+    ctx.drawImage(uploadedImg, 0, 0);
+    const TESSEL = mp.FaceLandmarker.FACE_LANDMARKS_TESSELATION;
+    r.faceLandmarks.forEach(lms => {
+      const W = cvs.width, H = cvs.height;
+      ctx.strokeStyle='rgba(0,245,255,.12)'; ctx.lineWidth=0.5;
+      TESSEL.forEach(c => {
+        const a=lms[c.start], b=lms[c.end]; if(!a||!b) return;
+        ctx.beginPath(); ctx.moveTo(a.x*W,a.y*H); ctx.lineTo(b.x*W,b.y*H); ctx.stroke();
+      });
+      lms.forEach((lm,i) => {
+        const hue=Math.floor((i/478)*280);
+        ctx.beginPath(); ctx.arc(lm.x*W, lm.y*H, 1.5, 0, 6.28);
+        ctx.fillStyle=`hsl(${hue},100%,65%)`; ctx.fill();
+      });
+    });
+    setRes(r.faceLandmarks.length
+      ? r.faceLandmarks.map((_,i)=>`<div class="det-row"><span class="det-lbl purple">Face ${i+1}</span><span class="det-conf">478 landmarks mapped</span></div>`).join('')
+      : noRes('No faces found'));
+    showToast(r.faceLandmarks.length + ' face(s) found!', 'success');
+
+  } else if (curAct === 'up_pose') {
+    setRes(loading('Running pose detection…'));
+    const mp = await getMPVision();
+    if (!mpModels.poseImg) {
+      mpModels.poseImg = await mp.PoseLandmarker.createFromOptions(mpFileSet, {
+        baseOptions: { modelAssetPath: MODELS.pose, delegate: 'GPU' },
+        runningMode: 'IMAGE', numPoses: 4, minPoseDetectionConfidence: 0.4
+      });
+    }
+    const r = mpModels.poseImg.detect(uploadedImg);
+    ctx.drawImage(uploadedImg, 0, 0);
+    const W = cvs.width, H = cvs.height;
+    r.landmarks.forEach(lms => {
+      POSE_CONN.forEach(([a,b]) => {
+        const la=lms[a], lb=lms[b];
+        if(!la||!lb||la.visibility<0.3||lb.visibility<0.3) return;
+        ctx.beginPath(); ctx.moveTo(la.x*W,la.y*H); ctx.lineTo(lb.x*W,lb.y*H);
+        ctx.strokeStyle='rgba(57,255,20,.85)'; ctx.lineWidth=4;
+        ctx.shadowBlur=8; ctx.shadowColor='#39ff14'; ctx.stroke(); ctx.shadowBlur=0;
+      });
+      lms.forEach(lm => {
+        if(lm.visibility<0.3) return;
+        ctx.beginPath(); ctx.arc(lm.x*W, lm.y*H, 6, 0, 6.28);
+        ctx.fillStyle='#39ff14'; ctx.fill();
+      });
+    });
+    setRes(r.landmarks.length
+      ? `<div class="det-row"><span class="det-lbl">Pose Detected</span><span class="det-conf">${r.landmarks[0].filter(k=>k.visibility>0.3).length}/33 keypoints</span></div>`
+      : noRes('No person found in image'));
+    showToast('Pose detection complete!', 'success');
+  }
+}
+
+// ─── Wiring ──────────────────────────────────
+document.getElementById('shotBtn').onclick = () => {
+  const a = document.createElement('a');
+  a.href = cvs.toDataURL('image/png');
+  a.download = 'cv-studio-' + Date.now() + '.png';
+  a.click(); showToast('Screenshot saved!', 'success');
+};
+document.getElementById('startCam').onclick = startCamera;
+document.getElementById('stopCam').onclick  = stopCamera;
+</script>
+</body>
+</html>
