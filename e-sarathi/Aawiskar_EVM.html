@@ -530,6 +530,9 @@ let sessionId = (() => { try { return localStorage.getItem('evm_session') || gen
 let SERVICE_UUID    = '12345678-1234-1234-1234-1234567890ab';
 let CHAR_VOTES_UUID = '12345678-1234-1234-1234-1234567890ac';
 let CHAR_CMD_UUID   = '12345678-1234-1234-1234-1234567890ad';
+let CHAR_NAMES_UUID = '12345678-1234-1234-1234-1234567890ae'; // candidate names → LCD
+
+let namesChar = null;
 
 function genSessionId() {
   const id = 'EVS-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
@@ -638,6 +641,7 @@ async function toggleConnect() {
     const service = await server.getPrimaryService(SERVICE_UUID);
     const voteChar = await service.getCharacteristic(CHAR_VOTES_UUID);
     cmdChar        = await service.getCharacteristic(CHAR_CMD_UUID);
+    namesChar      = await service.getCharacteristic(CHAR_NAMES_UUID);
     await voteChar.startNotifications();
     voteChar.addEventListener('characteristicvaluechanged', onVoteNotify);
     device.addEventListener('gattserverdisconnected', onDisconnect);
@@ -645,6 +649,7 @@ async function toggleConnect() {
     document.getElementById('t-conn').textContent = connectedAt.toLocaleTimeString();
     setConnected(true);
     log('BLE link established', 'rx');
+    await pushNames();   // send candidate names to ESP32 LCD immediately
     await requestVotes();
   } catch(e) { log('Connect error: ' + e.message, 'err'); }
 }
@@ -665,7 +670,7 @@ function onVoteNotify(e) {
   }
 }
 
-function onDisconnect() { isConnected=false; cmdChar=null; setConnected(false); log('BLE device disconnected','err'); }
+function onDisconnect() { isConnected=false; cmdChar=null; namesChar=null; setConnected(false); log('BLE device disconnected','err'); }
 
 function setConnected(on) {
   const btn = document.getElementById('ble-btn');
@@ -689,6 +694,18 @@ async function requestVotes() {
   if(!cmdChar){log('No BLE link','err');return;}
   try { await cmdChar.writeValue(new TextEncoder().encode('GET')); log('GET sent','tx'); }
   catch(e){log('Error: '+e.message,'err');}
+}
+
+// Push candidate names to ESP32 so the LCD can show them on vote confirmation.
+// Format sent: "Alice,Bob,Charlie,Dana,Eve,Frank,Grace,Hank"
+async function pushNames() {
+  if(!namesChar){ log('Names characteristic unavailable','err'); return; }
+  try {
+    const count = parseInt(cfg.count) || NUM;
+    const nameList = candidates.slice(0, count).map(c => c.name).join(',');
+    await namesChar.writeValue(new TextEncoder().encode(nameList));
+    log('Candidate names pushed to device: ' + nameList, 'tx');
+  } catch(e) { log('Names push error: ' + e.message, 'err'); }
 }
 
 async function doReset() {
@@ -861,6 +878,7 @@ function saveCandidates() {
   localStorage.setItem('evm_candidates', JSON.stringify(candidates));
   render();
   log('Candidate registry saved','rx');
+  if(isConnected) pushNames(); // sync updated names to device if connected
 }
 
 function resetCandidates() {
