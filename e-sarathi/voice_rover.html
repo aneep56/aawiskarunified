@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Rover Command | e-Sarathi · Aawiskar</title>
+ <link rel="shortcut icon" href="./favicon.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --neon-blue: #00d4ff;
+    --blue-bright: #00f0ff;
+    --blue-dim: #0090b3;
+    --blue-glow: rgba(0,212,255,0.18);
+    --cyan: #00ffea;
+    --amber: #ffb300;
+    --red: #ff3b5c;
+    --bg: #020a0f;
+    --panel: rgba(0,212,255,0.04);
+    --border: rgba(0,212,255,0.22);
+    --text: #b0f0ff;
+    --text-dim: #4a8fa8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+  body {
+    background: var(--bg);
+    color: var(--neon-blue);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none; z-index: 1;
+  }
+
+  .app { 
+    position: relative; 
+    z-index: 2; 
+    max-width: 1400px; 
+    margin: 0 auto; 
+    padding: 12px; 
+  }
+
+  @media (min-width: 768px) {
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 20px;
+    }
+    
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .header {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* ════════════════════════════════
+     HEADER — mobile-first, two-row
+  ════════════════════════════════ */
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+    animation: scanH 3s linear infinite;
+  }
+  @keyframes scanH { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+  /* ── Row 1: back + brand (left) / meta (right) ── */
+  .header-row1 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .brand-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .back-link {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    transition: color 0.2s;
+    padding: 4px 8px;
+    border: 1px solid rgba(0,212,255,0.12);
+    border-radius: 3px;
+  }
+  .back-link:hover  { color: var(--neon-blue); border-color: var(--border); }
+  .back-link:active { color: var(--neon-blue); }
+
+  .brand-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .brand-wordmark {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 1px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .brand-e    { color: #fff; }
+  .brand-dash { color: var(--text-dim); }
+  .brand-sarathi {
+    background: linear-gradient(90deg, var(--neon-blue), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .brand-dot     { color: var(--text-dim); font-size: 14px; line-height: 1; }
+  .brand-aawiskar {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .header-meta {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .header-meta .unit-id { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; font-family: 'Orbitron', monospace; }
+  .header-meta .freq    { font-size: 9px; color: var(--amber); letter-spacing: 1px; }
+
+  /* ── Row 2: app name centred ── */
+  .app-identity {
+    text-align: center;
+    border-top: 1px solid rgba(0,212,255,0.08);
+    padding-top: 6px;
+  }
+
+  .app-id-name {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: clamp(13px, 4vw, 19px);
+    letter-spacing: clamp(1px, 1vw, 4px);
+    color: var(--neon-blue);
+    text-shadow: 0 0 16px var(--neon-blue);
+    white-space: nowrap;
+  }
+  .id-sep { color: var(--text-dim); font-weight: 400; margin: 0 4px; }
+
+  .app-id-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ── Desktop: collapse into single row ── */
+  @media (min-width: 640px) {
+    .header {
+      flex-direction: row;
+      align-items: center;
+      gap: 0;
+    }
+    .header-row1 {
+      flex: 0 0 auto;
+    }
+    .app-identity {
+      flex: 1;
+      border-top: none;
+      padding-top: 0;
+    }
+    .header-meta { margin-left: auto; }
+  }
+
+  /* ── BRAND WATERMARK ── */
+  .brand-watermark {
+    position: fixed;
+    bottom: 12px;
+    right: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: rgba(0,212,255,0.12);
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 10;
+    user-select: none;
+  }
+
+  .status-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-bottom: 10px;
+  }
+  .stat-cell {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 4px;
+    padding: 8px 10px;
+    position: relative; overflow: hidden;
+  }
+  .stat-cell .label { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; }
+  .stat-cell .value { font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .stat-cell.ok .value  { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+  .stat-cell.warn .value { color: var(--amber); text-shadow: 0 0 10px var(--amber); }
+  .stat-cell.err .value  { color: var(--red);   text-shadow: 0 0 10px var(--red); }
+
+  .pulse-dot {
+    display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--neon-blue);
+    box-shadow: 0 0 8px var(--neon-blue);
+    animation: blink 1.2s ease-in-out infinite;
+    vertical-align: middle; margin-right: 5px;
+  }
+  .pulse-dot.off { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+  .pulse-dot.warn { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .connect-btn {
+    width: 100%; padding: 12px;
+    font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: 3px;
+    background: transparent; color: var(--neon-blue);
+    border: 1px solid var(--neon-blue);
+    border-radius: 4px; cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 0 12px rgba(0,212,255,0.1), inset 0 0 12px rgba(0,212,255,0.04);
+    margin-bottom: 10px;
+    position: relative; overflow: hidden;
+  }
+  .connect-btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(0,212,255,0.08), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.4s;
+  }
+  .connect-btn:hover::after { transform: translateX(100%); }
+  .connect-btn:hover, .connect-btn:active {
+    background: rgba(0,212,255,0.12);
+    box-shadow: 0 0 24px rgba(0,212,255,0.25);
+  }
+  .connect-btn.connected {
+    border-color: var(--blue-dim); color: var(--text-dim);
+    box-shadow: none;
+  }
+
+  .panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,212,255,0.06);
+  }
+  .panel-header .title {
+    font-family: 'Orbitron', monospace; font-size: 10px;
+    letter-spacing: 3px; font-weight: 600; color: var(--neon-blue);
+  }
+  .panel-header .badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; color: var(--text-dim);
+    border: 1px solid var(--border); padding: 2px 6px; border-radius: 2px;
+  }
+
+  .dpad-section { padding: 16px 14px; }
+
+  .rover-state {
+    display: flex; align-items: center; justify-content: center;
+    gap: 20px; margin-bottom: 16px;
+  }
+  .rover-icon {
+    width: 54px; height: 36px; position: relative;
+    border: 2px solid var(--neon-blue);
+    border-radius: 6px;
+    box-shadow: 0 0 14px var(--blue-glow);
+    background: rgba(0,212,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+    transition: box-shadow 0.15s;
+  }
+  .rover-icon.moving { box-shadow: 0 0 24px rgba(0,212,255,0.5); }
+  .rover-icon::before, .rover-icon::after {
+    content: ''; position: absolute;
+    width: 10px; height: 10px; border-radius: 2px;
+    background: rgba(0,212,255,0.3); border: 1px solid var(--neon-blue);
+  }
+  .rover-icon::before { left: -7px; }
+  .rover-icon::after  { right: -7px; }
+  .rover-body { font-size: 18px; }
+
+  .direction-indicator { text-align: center; }
+  .dir-label { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); letter-spacing: 2px; }
+  .dir-sub   { font-size: 10px; color: var(--text-dim); letter-spacing: 2px; margin-top: 2px; }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 8px;
+    max-width: 220px; margin: 0 auto;
+  }
+  .dpad-btn {
+    aspect-ratio: 1;
+    background: rgba(0,212,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--neon-blue);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.1s;
+    position: relative; overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+  .dpad-btn:active, .dpad-btn.pressed {
+    background: rgba(0,212,255,0.2);
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 16px rgba(0,212,255,0.35), inset 0 0 16px rgba(0,212,255,0.1);
+    transform: scale(0.95);
+  }
+  .dpad-btn.stop-btn {
+    background: rgba(255,59,92,0.08);
+    border-color: rgba(255,59,92,0.3);
+    color: var(--red);
+    font-size: 16px;
+  }
+  .dpad-btn.stop-btn:active {
+    background: rgba(255,59,92,0.2);
+    border-color: var(--red);
+    box-shadow: 0 0 16px rgba(255,59,92,0.35);
+  }
+  .dpad-btn.empty { pointer-events: none; background: transparent; border-color: transparent; }
+
+  .voice-section { padding: 14px; }
+  .voice-row { display: flex; gap: 10px; align-items: center; }
+  .voice-btn {
+    flex-shrink: 0; width: 60px; height: 60px;
+    border-radius: 50%;
+    background: rgba(0,212,255,0.06);
+    border: 2px solid var(--border);
+    color: var(--neon-blue); font-size: 24px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .voice-btn:hover, .voice-btn:active {
+    background: rgba(0,212,255,0.12);
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 16px rgba(0,212,255,0.25);
+  }
+  .voice-btn.listening {
+    animation: pulse 1.5s ease-in-out infinite;
+    border-color: var(--cyan);
+    box-shadow: 0 0 24px var(--cyan);
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+  .voice-btn.stop-voice-btn {
+    background: rgba(255,59,92,0.08);
+    border-color: rgba(255,59,92,0.3);
+    color: var(--red);
+    font-size: 20px;
+  }
+  .voice-btn.stop-voice-btn:hover {
+    background: rgba(255,59,92,0.15);
+    border-color: var(--red);
+    box-shadow: 0 0 16px rgba(255,59,92,0.35);
+  }
+
+  .voice-display {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: rgba(0,212,255,0.03);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .voice-display .v-text {
+    font-family: 'Orbitron', monospace; font-size: 11px;
+    letter-spacing: 2px; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .voice-display .v-cmd {
+    font-size: 10px; color: var(--text-dim); letter-spacing: 1px;
+  }
+
+  /* Telemetry section */
+  .telemetry-section { padding: 14px; }
+  .telemetry-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .telemetry-box {
+    border: 1px solid var(--border);
+    background: rgba(0,212,255,0.03);
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+  .telemetry-box .label {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .telemetry-box .value {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--neon-blue);
+    margin-top: 2px;
+  }
+
+  /* Command history */
+  .history-section { padding: 14px; }
+  .history-feed {
+    max-height: 120px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    background: rgba(0,212,255,0.02);
+    border-radius: 4px;
+    padding: 8px;
+  }
+  .history-item {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0,212,255,0.05);
+  }
+  .history-item:last-child {
+    border-bottom: none;
+  }
+  .history-item .timestamp {
+    color: var(--amber);
+    margin-right: 8px;
+  }
+  .history-item .cmd {
+    color: var(--neon-blue);
+    font-weight: 600;
+  }
+
+  .map-section { padding: 14px; }
+  .canvas-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto 12px;
+    aspect-ratio: 1;
+  }
+  #map {
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(0,212,255,0.02);
+    cursor: crosshair;
+    box-shadow: inset 0 0 20px rgba(0,212,255,0.05);
+  }
+
+  .map-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .map-btn {
+    padding: 10px;
+    font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px;
+    background: rgba(0,212,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .map-btn:hover, .map-btn:active {
+    background: rgba(0,212,255,0.12);
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+  .map-btn.active {
+    background: rgba(0,212,255,0.15);
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+    box-shadow: 0 0 8px rgba(0,212,255,0.3);
+  }
+
+  .metric-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-bottom: 8px;
+  }
+  .metric-box {
+    border: 1px solid var(--border);
+    background: rgba(0,212,255,0.03);
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+  .metric-box .label {
+    font-size: 9px; color: var(--text-dim);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .metric-box .value {
+    font-family: 'Orbitron', monospace; font-size: 13px;
+    font-weight: 600; color: var(--neon-blue); margin-top: 2px;
+  }
+
+  .path-actions {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .path-btn {
+    padding: 10px;
+    font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px;
+    background: rgba(0,212,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .path-btn:hover {
+    background: rgba(0,212,255,0.12);
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+  .path-btn.start-btn {
+    background: rgba(0,255,234,0.08);
+    border-color: rgba(0,255,234,0.3);
+    color: var(--cyan);
+  }
+  .path-btn.start-btn:hover {
+    background: rgba(0,255,234,0.15);
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0,255,234,0.3);
+  }
+  .path-btn.clear-btn {
+    background: rgba(255,59,92,0.08);
+    border-color: rgba(255,59,92,0.3);
+    color: var(--red);
+  }
+  .path-btn.clear-btn:hover {
+    background: rgba(255,59,92,0.15);
+    border-color: var(--red);
+    box-shadow: 0 0 12px rgba(255,59,92,0.3);
+  }
+
+  .rover-position-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .pos-box {
+    border: 1px solid var(--border);
+    background: rgba(0,212,255,0.03);
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+  .pos-box .label {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .pos-box .value {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--neon-blue);
+    margin-top: 2px;
+  }
+
+  /* Scrollbar styling */
+  .history-feed::-webkit-scrollbar {
+    width: 4px;
+  }
+  .history-feed::-webkit-scrollbar-track {
+    background: rgba(0,212,255,0.05);
+  }
+  .history-feed::-webkit-scrollbar-thumb {
+    background: rgba(0,212,255,0.3);
+    border-radius: 2px;
+  }
+
+  /* ── Mobile brand header adjustments ── */
+  @media (max-width: 600px) {
+    .brand-aawiskar { display: none; }
+    .brand-dot      { display: none; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <!-- Row 1: back + brand (left) | meta (right) -->
+    <div class="header-row1">
+      <div class="brand-strip">
+        <a href="./index.html" class="back-link">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          BACK
+        </a>
+        <div class="brand-divider"></div>
+        <div class="brand-wordmark">
+          <span class="brand-e">e</span><span class="brand-dash">-</span><span class="brand-sarathi">SARATHI</span>
+        </div>
+        <div class="brand-dot">·</div>
+        <div class="brand-aawiskar">AAWISKAR</div>
+      </div>
+      <div class="header-meta">
+        <div class="unit-id">XIAO-ESP32C3</div>
+        <div class="freq">BLE: 2.4GHz</div>
+      </div>
+    </div>
+    <!-- Row 2: app identity centred -->
+    <div class="app-identity">
+      <div class="app-id-name">ROVER<span class="id-sep">//</span>COMMAND</div>
+      <div class="app-id-sub">IoT CONTROL — APP 01</div>
+    </div>
+  </div>
+
+  <div class="left-column">
+    <div class="status-bar">
+      <div class="stat-cell ok">
+        <div class="label">LINK</div>
+        <div class="value"><span class="pulse-dot off" id="link-dot"></span><span id="stat-link">OFF</span></div>
+      </div>
+      <div class="stat-cell ok">
+        <div class="label">MODE</div>
+        <div class="value" id="stat-mode">MANUAL</div>
+      </div>
+      <div class="stat-cell ok" id="timeout-cell">
+        <div class="label">TIMEOUT</div>
+        <div class="value" id="stat-timeout">--</div>
+      </div>
+      <div class="stat-cell ok">
+        <div class="label">CMDS</div>
+        <div class="value" id="stat-cmds">0</div>
+      </div>
+    </div>
+
+    <button id="connect-btn" class="connect-btn" onclick="toggleConnect()">ESTABLISH LINK</button>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">MANUAL CONTROL</div>
+        <div class="badge">DPAD</div>
+      </div>
+      <div class="dpad-section">
+        <div class="rover-state">
+          <div class="rover-icon" id="rover-icon">
+            <div class="rover-body">⬢</div>
+          </div>
+          <div class="direction-indicator">
+            <div class="dir-label" id="dir-label">IDLE</div>
+            <div class="dir-sub" id="dir-sub">STANDBY</div>
+          </div>
+        </div>
+
+        <div class="dpad">
+          <div class="dpad-btn empty"></div>
+          <div class="dpad-btn" onmousedown="padDown('F')" onmouseup="padUp()" ontouchstart="touchStart(event,'F')" ontouchend="touchEnd(event)">▲</div>
+          <div class="dpad-btn empty"></div>
+          <div class="dpad-btn" onmousedown="padDown('L')" onmouseup="padUp()" ontouchstart="touchStart(event,'L')" ontouchend="touchEnd(event)">◄</div>
+          <div class="dpad-btn stop-btn" onclick="emergencyStop()">⏹</div>
+          <div class="dpad-btn" onmousedown="padDown('R')" onmouseup="padUp()" ontouchstart="touchStart(event,'R')" ontouchend="touchEnd(event)">►</div>
+          <div class="dpad-btn empty"></div>
+          <div class="dpad-btn" onmousedown="padDown('B')" onmouseup="padUp()" ontouchstart="touchStart(event,'B')" ontouchend="touchEnd(event)">▼</div>
+          <div class="dpad-btn empty"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">VOICE CONTROL</div>
+        <div class="badge">SPEECH</div>
+      </div>
+      <div class="voice-section">
+        <div class="voice-row">
+          <button class="voice-btn" id="voice-btn" onclick="startVoice()">🎤</button>
+          <button class="voice-btn stop-voice-btn" id="stop-voice-btn" onclick="stopVoice()" style="display: none;">⏹</button>
+          <div class="voice-display">
+            <div class="v-text" id="v-text">READY</div>
+            <div class="v-cmd" id="v-cmd">SAY: FORWARD / BACK / LEFT / RIGHT / STOP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">TELEMETRY</div>
+        <div class="badge">LIVE</div>
+      </div>
+      <div class="telemetry-section">
+        <div class="telemetry-grid">
+          <div class="telemetry-box">
+            <div class="label">TOTAL DIST</div>
+            <div class="value" id="telem-dist">0.00 cm</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="label">MOVE TIME</div>
+            <div class="value" id="telem-time">0.0 s</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="label">AVG SPEED</div>
+            <div class="value" id="telem-speed">0.0 cm/s</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="label">SESSION</div>
+            <div class="value" id="telem-session">00:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">COMMAND HISTORY</div>
+        <div class="badge">LOG</div>
+      </div>
+      <div class="history-section">
+        <div class="history-feed" id="history-feed">
+          <div class="history-item">
+            <span class="timestamp">--:--:--</span>
+            <span class="cmd">READY</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-column">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="title">PATH MAPPING</div>
+        <div class="badge">NAV</div>
+      </div>
+      <div class="map-section">
+        <div class="canvas-wrapper">
+          <canvas id="map" width="500" height="500"></canvas>
+        </div>
+
+        <div class="map-controls">
+          <button class="map-btn active" id="btn-line" onclick="setMode('line')">LINE MODE</button>
+          <button class="map-btn" id="btn-curve" onclick="setMode('curve')">FREE DRAW</button>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-box">
+            <div class="label">DISTANCE</div>
+            <div class="value" id="m-length">0.00 cm</div>
+          </div>
+          <div class="metric-box">
+            <div class="label">EST. TIME</div>
+            <div class="value" id="m-time">0.00 s</div>
+          </div>
+        </div>
+
+        <div class="rover-position-info">
+          <div class="pos-box">
+            <div class="label">ROVER X</div>
+            <div class="value" id="rover-x">25.00 cm</div>
+          </div>
+          <div class="pos-box">
+            <div class="label">ROVER Y</div>
+            <div class="value" id="rover-y">25.00 cm</div>
+          </div>
+        </div>
+
+        <div class="path-actions">
+          <button class="path-btn start-btn" onclick="startPath()">START</button>
+          <button class="path-btn" onclick="stopPath()">STOP</button>
+          <button class="path-btn clear-btn" onclick="clearPath()">CLEAR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== BLE CONFIG =====
+const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
+const CHAR_CMD_UUID = 'abcd1234-5678-1234-5678-1234567890ab';
+const CHAR_TELEMETRY_UUID = 'abcd1234-5678-1234-5678-1234567890ac';
+
+let bleDevice = null;
+let cmdCharacteristic = null;
+let telemetryCharacteristic = null;
+let sessionStartTime = null;
+
+const DIR_META = {
+  F: {label:'FORWARD', sub:'DRIVE FWD'},
+  B: {label:'BACK',    sub:'REVERSE'},
+  L: {label:'LEFT',    sub:'TURN CCW'},
+  R: {label:'RIGHT',   sub:'TURN CW'},
+  S: {label:'IDLE',    sub:'STANDBY'}
+};
+
+// Session stats
+let sessionStats = {
+  commands: 0,
+  lastTimeout: 0
+};
+
+async function toggleConnect() {
+  if (bleDevice && bleDevice.gatt.connected) {
+    bleDevice.gatt.disconnect();
+    bleDevice = null; 
+    cmdCharacteristic = null;
+    telemetryCharacteristic = null;
+    updateUI(false);
+  } else {
+    try {
+      bleDevice = await navigator.bluetooth.requestDevice({
+        filters: [{services: [SERVICE_UUID]}]
+      });
+      const server = await bleDevice.gatt.connect();
+      const service = await server.getPrimaryService(SERVICE_UUID);
+      
+      cmdCharacteristic = await service.getCharacteristic(CHAR_CMD_UUID);
+      telemetryCharacteristic = await service.getCharacteristic(CHAR_TELEMETRY_UUID);
+      
+      // Subscribe to telemetry notifications
+      await telemetryCharacteristic.startNotifications();
+      telemetryCharacteristic.addEventListener('characteristicvaluechanged', handleTelemetry);
+      
+      updateUI(true);
+      sessionStartTime = Date.now();
+      updateSessionTime();
+      
+      bleDevice.addEventListener('gattserverdisconnected', () => {
+        cmdCharacteristic = null;
+        telemetryCharacteristic = null;
+        updateUI(false);
+      });
+      
+      addHistoryItem('BLE CONNECTED');
+    } catch(e) {
+      console.error('BLE error:', e);
+      addHistoryItem('CONNECTION FAILED');
+    }
+  }
+}
+
+function updateUI(connected) {
+  const btn = document.getElementById('connect-btn');
+  const statLink = document.getElementById('stat-link');
+  const dot = document.getElementById('link-dot');
+  
+  if (connected) {
+    btn.textContent = 'LINK ACTIVE';
+    btn.classList.add('connected');
+    statLink.textContent = 'ONLINE';
+    dot.classList.remove('off');
+  } else {
+    btn.textContent = 'ESTABLISH LINK';
+    btn.classList.remove('connected');
+    statLink.textContent = 'OFF';
+    dot.classList.add('off');
+    sessionStartTime = null;
+  }
+}
+
+// Handle telemetry data from rover
+function handleTelemetry(event) {
+  const value = new TextDecoder().decode(event.target.value);
+  const parts = value.split(',');
+  
+  if (parts.length >= 5) {
+    const [cmd, distStr, timeStr, countStr, timeoutStr] = parts;
+    
+    // Update telemetry displays
+    const dist = parseFloat(distStr);
+    const moveTime = parseInt(timeStr);
+    const count = parseInt(countStr);
+    const timeout = parseInt(timeoutStr);
+    
+    document.getElementById('telem-dist').textContent = dist.toFixed(2) + ' cm';
+    document.getElementById('telem-time').textContent = (moveTime / 1000).toFixed(1) + ' s';
+    
+    // Calculate average speed
+    const avgSpeed = moveTime > 0 ? (dist / (moveTime / 1000)) : 0;
+    document.getElementById('telem-speed').textContent = avgSpeed.toFixed(1) + ' cm/s';
+    
+    document.getElementById('stat-cmds').textContent = count;
+    
+    // Update timeout indicator
+    const timeoutCell = document.getElementById('timeout-cell');
+    const timeoutDisplay = document.getElementById('stat-timeout');
+    const timeoutRemaining = 2000 - timeout;
+    
+    if (cmd !== 'S' && timeout < 2000) {
+      timeoutDisplay.textContent = (timeoutRemaining / 1000).toFixed(1) + 's';
+      
+      if (timeout > 1500) {
+        timeoutCell.classList.remove('ok');
+        timeoutCell.classList.add('warn');
+        document.getElementById('link-dot').classList.add('warn');
+      } else {
+        timeoutCell.classList.add('ok');
+        timeoutCell.classList.remove('warn');
+        document.getElementById('link-dot').classList.remove('warn');
+      }
+    } else {
+      timeoutDisplay.textContent = '--';
+      timeoutCell.classList.add('ok');
+      timeoutCell.classList.remove('warn');
+      document.getElementById('link-dot').classList.remove('warn');
+    }
+  }
+}
+
+function send(cmd) {
+  if (!cmdCharacteristic) return;
+  try {
+    const encoder = new TextEncoder();
+    cmdCharacteristic.writeValue(encoder.encode(cmd));
+    updateDirection(cmd);
+    sessionStats.commands++;
+    addHistoryItem(DIR_META[cmd].label);
+  } catch(e) {
+    console.error('Send error:', e);
+  }
+}
+
+function updateDirection(cmd) {
+  const label = document.getElementById('dir-label');
+  const sub = document.getElementById('dir-sub');
+  const icon = document.getElementById('rover-icon');
+  if (DIR_META[cmd]) {
+    label.textContent = DIR_META[cmd].label;
+    sub.textContent = DIR_META[cmd].sub;
+  }
+  if (cmd !== 'S') {
+    icon.classList.add('moving');
+    updateRoverPosition(cmd);
+  } else {
+    icon.classList.remove('moving');
+  }
+}
+
+// Update session time
+function updateSessionTime() {
+  if (!sessionStartTime) return;
+  
+  const elapsed = Date.now() - sessionStartTime;
+  const minutes = Math.floor(elapsed / 60000);
+  const seconds = Math.floor((elapsed % 60000) / 1000);
+  
+  document.getElementById('telem-session').textContent = 
+    String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+  
+  setTimeout(updateSessionTime, 1000);
+}
+
+// Add item to command history
+function addHistoryItem(cmdText) {
+  const feed = document.getElementById('history-feed');
+  const now = new Date();
+  const timestamp = String(now.getHours()).padStart(2, '0') + ':' + 
+                   String(now.getMinutes()).padStart(2, '0') + ':' + 
+                   String(now.getSeconds()).padStart(2, '0');
+  
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  item.innerHTML = `<span class="timestamp">${timestamp}</span><span class="cmd">${cmdText}</span>`;
+  
+  feed.appendChild(item);
+  feed.scrollTop = feed.scrollHeight;
+  
+  // Keep only last 20 items
+  while (feed.children.length > 20) {
+    feed.removeChild(feed.firstChild);
+  }
+}
+
+// ===== D-PAD =====
+let currentPad = null;
+
+function padDown(cmd) {
+  currentPad = cmd;
+  send(cmd);
+}
+function padUp() {
+  if (currentPad) { send('S'); currentPad = null; }
+}
+
+function touchStart(e, cmd) {
+  e.preventDefault();
+  padDown(cmd);
+}
+function touchEnd(e) {
+  e.preventDefault();
+  padUp();
+}
+
+function emergencyStop() {
+  currentPad = null;
+  currentKey = null;
+  send('S');
+}
+
+// ===== KEYBOARD =====
+let currentKey = null;
+document.addEventListener('keydown', e => {
+  if (currentKey === e.key) return;
+  currentKey = e.key;
+  if      (e.key==='w'||e.key==='ArrowUp')    send('F');
+  else if (e.key==='s'||e.key==='ArrowDown')  send('B');
+  else if (e.key==='a'||e.key==='ArrowLeft')  send('L');
+  else if (e.key==='d'||e.key==='ArrowRight') send('R');
+});
+document.addEventListener('keyup', e => {
+  if (e.key === currentKey) { currentKey = null; send('S'); }
+});
+window.addEventListener('blur', () => { currentKey = null; send('S'); });
+
+// ===== VOICE =====
+let recognition = null;
+let isVoiceActive = false;
+
+function startVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    document.getElementById('v-text').textContent = 'NOT SUPPORTED';
+    return;
+  }
+  
+  if (isVoiceActive) return;
+  
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  const btn = document.getElementById('voice-btn');
+  const stopBtn = document.getElementById('stop-voice-btn');
+  
+  btn.style.display = 'none';
+  stopBtn.style.display = 'flex';
+  stopBtn.classList.add('listening');
+  
+  isVoiceActive = true;
+  document.getElementById('v-text').textContent = 'LISTENING...';
+  document.getElementById('v-cmd').textContent = 'CONTINUOUS MODE ACTIVE';
+
+  recognition.onresult = e => {
+    const last = e.results.length - 1;
+    const text = e.results[last][0].transcript.toLowerCase();
+    document.getElementById('v-text').textContent = text.toUpperCase();
+    
+    let cmd = null;
+    if      (text.includes('forward')) { cmd='F'; }
+    else if (text.includes('back'))    { cmd='B'; }
+    else if (text.includes('left'))    { cmd='L'; }
+    else if (text.includes('right'))   { cmd='R'; }
+    else if (text.includes('stop'))    { cmd='S'; }
+    
+    if (cmd) {
+      document.getElementById('v-cmd').textContent = '→ CMD: ' + DIR_META[cmd].label;
+      send(cmd);
+      if (cmd !== 'S') {
+        setTimeout(()=>{ send('S'); }, 800);
+      }
+    } else {
+      document.getElementById('v-cmd').textContent = '✗ UNRECOGNIZED';
+    }
+  };
+
+  recognition.onerror = (e) => {
+    console.error('Speech recognition error:', e.error);
+    if (e.error === 'no-speech') return;
+    document.getElementById('v-text').textContent = 'ERROR: ' + e.error;
+  };
+
+  recognition.onend = () => {
+    if (isVoiceActive) {
+      try { recognition.start(); } catch(e) {}
+    }
+  };
+
+  recognition.start();
+}
+
+function stopVoice() {
+  if (recognition) {
+    isVoiceActive = false;
+    recognition.stop();
+    recognition = null;
+  }
+  
+  const btn = document.getElementById('voice-btn');
+  const stopBtn = document.getElementById('stop-voice-btn');
+  
+  btn.style.display = 'flex';
+  stopBtn.style.display = 'none';
+  stopBtn.classList.remove('listening');
+  
+  document.getElementById('v-text').textContent = 'READY';
+  document.getElementById('v-cmd').textContent = 'SAY: FORWARD / BACK / LEFT / RIGHT / STOP';
+}
+
+// ===== CANVAS =====
+const canvas = document.getElementById('map');
+const ctx = canvas.getContext('2d');
+const CANVAS_SIZE = 500;
+const SCALE = 50 / CANVAS_SIZE;
+const SPEED = 41.9;
+
+const ROVER_WIDTH = 13;
+const ROVER_LENGTH = 8;
+
+const START_POS = {
+  x: CANVAS_SIZE / 2,
+  y: CANVAS_SIZE / 2
+};
+
+let roverPos = {
+  x: START_POS.x,
+  y: START_POS.y,
+  angle: 0
+};
+
+let drawMode = 'line';
+let path = [];
+let movementTrail = [];
+let running = false;
+let isDrawing = false;
+
+function updateRoverPosition(cmd) {
+  const MOVE_DELTA = 5;
+  
+  switch(cmd) {
+    case 'F': roverPos.y -= MOVE_DELTA; break;
+    case 'B': roverPos.y += MOVE_DELTA; break;
+    case 'L': roverPos.x -= MOVE_DELTA; break;
+    case 'R': roverPos.x += MOVE_DELTA; break;
+  }
+  
+  roverPos.x = Math.max(0, Math.min(CANVAS_SIZE, roverPos.x));
+  roverPos.y = Math.max(0, Math.min(CANVAS_SIZE, roverPos.y));
+  
+  // Add to movement trail
+  movementTrail.push({x: roverPos.x, y: roverPos.y});
+  if (movementTrail.length > 100) movementTrail.shift();
+  
+  updateRoverPositionDisplay();
+  redrawPath();
+}
+
+function updateRoverPositionDisplay() {
+  const xCm = (roverPos.x * SCALE).toFixed(2);
+  const yCm = (roverPos.y * SCALE).toFixed(2);
+  document.getElementById('rover-x').textContent = xCm + ' cm';
+  document.getElementById('rover-y').textContent = yCm + ' cm';
+}
+
+function drawGrid() {
+  ctx.clearRect(0,0,CANVAS_SIZE,CANVAS_SIZE);
+  ctx.strokeStyle = 'rgba(0,212,255,0.07)';
+  ctx.lineWidth = 0.5;
+  const step = CANVAS_SIZE / 10;
+  for (let i=0;i<=10;i++) {
+    ctx.beginPath(); ctx.moveTo(i*step,0); ctx.lineTo(i*step,CANVAS_SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,i*step); ctx.lineTo(CANVAS_SIZE,i*step); ctx.stroke();
+  }
+  
+  // Start position
+  ctx.fillStyle = '#00ff88';
+  ctx.shadowColor = '#00ff88';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(START_POS.x, START_POS.y, 6, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  ctx.fillStyle = '#00ff88';
+  ctx.font = '10px Orbitron,monospace';
+  ctx.fillText('START', START_POS.x - 18, START_POS.y - 10);
+  
+  // Draw movement trail
+  if (movementTrail.length > 1) {
+    ctx.strokeStyle = 'rgba(0,255,136,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(movementTrail[0].x, movementTrail[0].y);
+    for (let i = 1; i < movementTrail.length; i++) {
+      ctx.lineTo(movementTrail[i].x, movementTrail[i].y);
+    }
+    ctx.stroke();
+  }
+  
+  drawRover();
+  
+  ctx.fillStyle = 'rgba(0,212,255,0.3)';
+  ctx.font = '10px Orbitron,monospace';
+  for (let i=0;i<=10;i++) {
+    ctx.fillText(i*5, i*step+2, CANVAS_SIZE-3);
+  }
+}
+
+function drawRover() {
+  ctx.save();
+  
+  const roverWidthPx = ROVER_WIDTH / SCALE;
+  const roverLengthPx = ROVER_LENGTH / SCALE;
+  
+  ctx.translate(roverPos.x, roverPos.y);
+  ctx.rotate(roverPos.angle * Math.PI / 180);
+  
+  ctx.fillStyle = 'rgba(0,212,255,0.3)';
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#00d4ff';
+  ctx.shadowBlur = 10;
+  
+  ctx.fillRect(-roverWidthPx/2, -roverLengthPx/2, roverWidthPx, roverLengthPx);
+  ctx.strokeRect(-roverWidthPx/2, -roverLengthPx/2, roverWidthPx, roverLengthPx);
+  
+  ctx.fillStyle = '#00ffea';
+  ctx.beginPath();
+  ctx.moveTo(0, -roverLengthPx/2 - 5);
+  ctx.lineTo(-5, -roverLengthPx/2);
+  ctx.lineTo(5, -roverLengthPx/2);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function redrawPath() {
+  drawGrid();
+  if (path.length < 1) return;
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#00d4ff';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  ctx.moveTo(path[0].x, path[0].y);
+  for (let i=1;i<path.length;i++) ctx.lineTo(path[i].x, path[i].y);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  
+  ctx.fillStyle = '#00d4ff';
+  ctx.beginPath(); ctx.arc(path[0].x,path[0].y,5,0,Math.PI*2); ctx.fill();
+  
+  if (path.length > 1) {
+    ctx.fillStyle = '#ffb300';
+    ctx.beginPath(); ctx.arc(path[path.length-1].x,path[path.length-1].y,5,0,Math.PI*2); ctx.fill();
+  }
+}
+
+drawGrid();
+updateRoverPositionDisplay();
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = CANVAS_SIZE / rect.width;
+  const scaleY = CANVAS_SIZE / rect.height;
+  const src = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - rect.left) * scaleX,
+    y: (src.clientY - rect.top)  * scaleY
+  };
+}
+
+canvas.addEventListener('mousedown', onDown);
+canvas.addEventListener('touchstart', onDown, {passive:false});
+canvas.addEventListener('mouseup',   onUp);
+canvas.addEventListener('touchend',  onUp, {passive:false});
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('touchmove', onMove, {passive:false});
+
+function onDown(e) {
+  e.preventDefault();
+  isDrawing = true;
+  const p = getPos(e);
+  if (drawMode === 'line') path = [p];
+  else { path = [p]; }
+  redrawPath();
+}
+function onUp(e) {
+  e.preventDefault();
+  if (!isDrawing) return;
+  isDrawing = false;
+  const p = getPos(e);
+  if (drawMode === 'line' && path.length === 1) path.push(p);
+  redrawPath();
+  calculateMetrics();
+}
+function onMove(e) {
+  e.preventDefault();
+  if (!isDrawing) return;
+  const p = getPos(e);
+  if (drawMode === 'line') {
+    path = [path[0], p];
+    redrawPath();
+  } else {
+    path.push(p);
+    redrawPath();
+  }
+}
+
+function setMode(m) {
+  drawMode = m;
+  document.getElementById('btn-line').classList.toggle('active',  m==='line');
+  document.getElementById('btn-curve').classList.toggle('active', m==='curve');
+  document.getElementById('stat-mode').textContent = m==='line' ? 'PATH/LINE' : 'PATH/FREE';
+}
+
+function clearPath() {
+  path = [];
+  movementTrail = [];
+  roverPos.x = START_POS.x;
+  roverPos.y = START_POS.y;
+  roverPos.angle = 0;
+  updateRoverPositionDisplay();
+  drawGrid();
+  updateMetrics(0, 0);
+}
+
+function calculateMetrics() {
+  let len = 0;
+  for (let i=1;i<path.length;i++) {
+    const dx=path[i].x-path[i-1].x, dy=path[i].y-path[i-1].y;
+    len += Math.sqrt(dx*dx+dy*dy);
+  }
+  updateMetrics(len*SCALE, (len*SCALE)/SPEED);
+}
+function updateMetrics(cm, sec) {
+  document.getElementById('m-length').textContent = cm.toFixed(2)+' cm';
+  document.getElementById('m-time').textContent   = sec.toFixed(2)+' s';
+}
+
+async function startPath() {
+  if (path.length < 2) return;
+  running = true;
+  document.getElementById('stat-mode').textContent = 'EXECUTING';
+
+  for (let i=1;i<path.length;i++) {
+    if (!running) break;
+    const dx=path[i].x-path[i-1].x, dy=path[i].y-path[i-1].y;
+    const distCm = Math.sqrt(dx*dx+dy*dy)*SCALE;
+    const duration = (distCm/SPEED)*1000;
+    let cmd;
+    if (Math.abs(dx)>Math.abs(dy)) cmd = dx>0?'R':'L';
+    else cmd = dy>0?'B':'F';
+    send(cmd);
+    await new Promise(r=>setTimeout(r,duration));
+  }
+
+  send('S');
+  running = false;
+  document.getElementById('stat-mode').textContent = 'MANUAL';
+}
+
+function stopPath() {
+  running = false;
+  send('S');
+  document.getElementById('stat-mode').textContent = 'MANUAL';
+}
+</script>
+<div class="brand-watermark">e-Sarathi · Aawiskar IoT</div>
+
+</body>
+</html>

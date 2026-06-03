@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Aawiskar EVM | e-Sarathi</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --neon:   #00d4ff;
+  --cyan:   #00ffea;
+  --green:  #00ff88;
+  --amber:  #ffb300;
+  --red:    #ff3b5c;
+  --purple: #a855f7;
+  --bg:     #020a0f;
+  --panel:  rgba(0,212,255,0.04);
+  --border: rgba(0,212,255,0.18);
+  --text:   #b0f0ff;
+  --dim:    #4a8fa8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;}
+body{background:var(--bg);color:var(--neon);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:1;}
+.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:12px;}
+
+/* ── HEADER ── */
+.header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border:1px solid var(--border);background:rgba(0,0,0,0.5);border-radius:6px;margin-bottom:10px;position:sticky;top:0;z-index:100;backdrop-filter:blur(16px);overflow:hidden;}
+.header::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),transparent);animation:scan 3s linear infinite;}
+@keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.hd-left{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.back-link{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid rgba(0,212,255,0.12);border-radius:3px;transition:color .2s,border-color .2s;}
+.back-link:hover{color:var(--neon);border-color:var(--border);}
+.brand{font-family:'Orbitron',monospace;font-weight:900;font-size:14px;letter-spacing:1px;white-space:nowrap;}
+.brand span{background:linear-gradient(90deg,var(--neon),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hdivider{width:1px;height:20px;background:var(--border);}
+.hd-center{flex:1;text-align:center;}
+.app-title{font-family:'Orbitron',monospace;font-weight:900;font-size:clamp(12px,3.5vw,18px);letter-spacing:clamp(1px,1vw,4px);color:var(--neon);text-shadow:0 0 16px var(--neon);}
+.app-sub{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:3px;color:var(--dim);margin-top:2px;}
+.hd-right{text-align:right;flex-shrink:0;}
+.unit-id{font-family:'Orbitron',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;}
+.freq{font-size:9px;color:var(--amber);letter-spacing:1px;font-family:'Share Tech Mono',monospace;}
+@media(max-width:600px){.hd-center,.hd-right{display:none;}}
+
+/* ── BLE CONNECT ── */
+.ble-connect{width:100%;padding:11px;font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;background:transparent;color:var(--neon);border:1px solid var(--neon);border-radius:4px;cursor:pointer;transition:all .2s;box-shadow:0 0 12px rgba(0,212,255,0.08),inset 0 0 12px rgba(0,212,255,0.03);margin-bottom:10px;position:relative;overflow:hidden;}
+.ble-connect::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.07),transparent);transform:translateX(-100%);transition:transform .5s;}
+.ble-connect:hover::before{transform:translateX(100%);}
+.ble-connect:hover{background:rgba(0,212,255,0.1);}
+.ble-connect.connected{border-color:var(--green);color:var(--green);box-shadow:0 0 14px rgba(0,255,136,0.12);}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
+@media(max-width:560px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+.stat-cell{border:1px solid var(--border);background:var(--panel);border-radius:4px;padding:8px 10px;}
+.stat-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:2px;}
+.stat-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:600;margin-top:2px;color:var(--neon);text-shadow:0 0 8px var(--neon);}
+.pdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--neon);box-shadow:0 0 8px var(--neon);animation:blink 1.2s ease-in-out infinite;vertical-align:middle;margin-right:5px;}
+.pdot.off{background:var(--red);box-shadow:0 0 8px var(--red);animation:none;}
+.pdot.good{background:var(--green);box-shadow:0 0 8px var(--green);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:6px;margin-bottom:10px;}
+.tab{flex:1;padding:8px 10px;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);background:var(--panel);border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all .2s;text-align:center;}
+.tab.active{color:var(--neon);border-color:var(--neon);background:rgba(0,212,255,0.08);box-shadow:0 0 10px rgba(0,212,255,0.08);}
+.pane{display:none;}
+.pane.active{display:block;}
+
+/* ── PANEL ── */
+.panel{border:1px solid var(--border);background:var(--panel);border-radius:6px;margin-bottom:10px;overflow:hidden;}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(0,212,255,0.05);}
+.ph .title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;font-weight:600;color:var(--neon);}
+.badge{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);border:1px solid var(--border);padding:2px 6px;border-radius:2px;}
+.badge-live{color:var(--green)!important;border-color:rgba(0,255,136,.4)!important;}
+.badge-warn{color:var(--amber)!important;border-color:rgba(255,179,0,.4)!important;}
+.pb{padding:14px;}
+
+/* ── CANDIDATE CARDS (dashboard) ── */
+.cands-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;}
+@media(min-width:640px){.cands-grid{grid-template-columns:repeat(4,1fr);}}
+.ccard{border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:10px 8px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;transition:border-color .2s;}
+.ccard.has-v{border-color:rgba(0,212,255,.35);}
+.ccard.leader{border-color:var(--green)!important;box-shadow:0 0 14px rgba(0,255,136,.1);}
+.ccard-num{position:absolute;top:6px;right:8px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);}
+.ccard-sym{font-size:1.6rem;line-height:1;text-align:center;margin-bottom:2px;}
+.ccard-name{font-family:'Orbitron',monospace;font-size:8px;font-weight:700;color:var(--neon);text-align:center;letter-spacing:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ccard-party{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--dim);text-align:center;letter-spacing:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ccard-votes{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--neon);text-align:center;line-height:1;text-shadow:0 0 10px var(--neon);}
+.ccard-pct{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);text-align:center;}
+.ccard-bar{height:3px;background:rgba(0,0,0,.4);border-radius:2px;overflow:hidden;margin-top:4px;}
+.ccard-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--neon),var(--cyan));border-radius:2px;transition:width .5s ease;}
+.ccard-fill.leader{background:linear-gradient(90deg,var(--green),#00ffea);}
+.crown{position:absolute;top:4px;left:6px;font-size:10px;display:none;}
+.ccard.leader .crown{display:block;}
+/* +/- admin controls */
+.vote-adj{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;}
+.vadj-btn{width:22px;height:22px;border-radius:3px;border:1px solid;background:transparent;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;line-height:1;}
+.vadj-plus{border-color:rgba(0,255,136,.4);color:var(--green);}
+.vadj-plus:hover{background:rgba(0,255,136,.15);border-color:var(--green);}
+.vadj-minus{border-color:rgba(255,59,92,.35);color:var(--red);}
+.vadj-minus:hover{background:rgba(255,59,92,.12);border-color:var(--red);}
+.vadj-label{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--dim);letter-spacing:1px;}
+@keyframes vflash{0%{box-shadow:0 0 0 0 rgba(0,255,136,.5)}50%{box-shadow:0 0 0 12px rgba(0,255,136,0)}100%{box-shadow:0 0 0 0 rgba(0,255,136,0)}}
+.ccard.flash{animation:vflash .4s ease;}
+@keyframes vflash-red{0%{box-shadow:0 0 0 0 rgba(255,59,92,.5)}50%{box-shadow:0 0 0 10px rgba(255,59,92,0)}100%{box-shadow:0 0 0 0 rgba(255,59,92,0)}}
+.ccard.flash-red{animation:vflash-red .4s ease;}
+
+/* ── SUMMARY ── */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.sum-cell{border:1px solid var(--border);background:rgba(0,212,255,.02);border-radius:4px;padding:10px;text-align:center;}
+.sum-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:2px;}
+.sum-val{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;color:var(--neon);text-shadow:0 0 10px var(--neon);margin-top:2px;}
+.sum-val.g{color:var(--green);text-shadow:0 0 10px var(--green);}
+.sum-val.a{color:var(--amber);text-shadow:0 0 10px var(--amber);}
+
+/* ── CHART ── */
+.chart-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;}
+@media(min-width:640px){.chart-wrap{flex-direction:row;align-items:flex-start;gap:20px;}}
+.chart-legend{flex:1;display:flex;flex-direction:column;gap:5px;width:100%;}
+.legend-row{display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text);letter-spacing:1px;padding-bottom:4px;border-bottom:1px solid rgba(0,212,255,.05);}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.leg-name{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.leg-val{color:var(--neon);font-weight:600;min-width:28px;text-align:right;}
+.leg-pct{color:var(--amber);min-width:40px;text-align:right;}
+
+/* ── ACTION BUTTONS ── */
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.btn{padding:9px 12px;font-family:'Orbitron',monospace;font-weight:700;font-size:9px;letter-spacing:2px;color:var(--neon);background:rgba(0,212,255,.06);border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all .2s;text-align:center;width:100%;}
+.btn:hover{background:rgba(0,212,255,.14);border-color:var(--neon);}
+.btn:active{transform:translateY(1px);}
+.btn-g{color:var(--green);border-color:rgba(0,255,136,.35);background:rgba(0,255,136,.05);}
+.btn-g:hover{background:rgba(0,255,136,.12);border-color:var(--green);}
+.btn-r{color:var(--red);border-color:rgba(255,59,92,.35);background:rgba(255,59,92,.05);}
+.btn-r:hover{background:rgba(255,59,92,.12);border-color:var(--red);}
+.btn-a{color:var(--amber);border-color:rgba(255,179,0,.35);background:rgba(255,179,0,.05);}
+.btn-a:hover{background:rgba(255,179,0,.12);border-color:var(--amber);}
+.btn-full{width:100%;margin-top:6px;}
+.btn-sm{padding:6px 10px;font-size:8px;}
+
+/* ── EDITOR (candidates tab) ── */
+.editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;}
+@media(min-width:640px){.editor-grid{grid-template-columns:repeat(4,1fr);}}
+.editor-card{border:1px solid rgba(0,212,255,.14);background:rgba(0,0,0,.2);border-radius:6px;padding:10px 8px;display:flex;flex-direction:column;gap:5px;}
+.ed-num{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--amber);letter-spacing:2px;margin-bottom:2px;}
+.ei{font-family:'Share Tech Mono',monospace;font-size:10px;background:rgba(0,0,0,.4);border:1px solid rgba(0,212,255,.1);color:var(--text);padding:5px 7px;border-radius:3px;outline:none;width:100%;letter-spacing:.5px;user-select:text;}
+.ei:focus{border-color:var(--neon);}
+.ei::placeholder{color:var(--dim);}
+/* Symbol picker */
+.sym-picker{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:2px;}
+.sym-opt{width:26px;height:26px;border:1px solid rgba(0,212,255,.12);border-radius:3px;background:rgba(0,0,0,.3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.sym-opt:hover{border-color:var(--neon);background:rgba(0,212,255,.1);}
+.sym-opt.sel{border-color:var(--green);background:rgba(0,255,136,.1);box-shadow:0 0 6px rgba(0,255,136,.2);}
+.ed-sym-display{font-size:1.4rem;text-align:center;margin-bottom:3px;}
+
+/* ── CONFIG ── */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+@media(max-width:480px){.cfg-grid{grid-template-columns:1fr;}}
+.cfg-field{display:flex;flex-direction:column;gap:5px;}
+.cfg-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;}
+.cfg-inp{font-family:'Share Tech Mono',monospace;font-size:11px;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--neon);padding:8px 10px;border-radius:4px;outline:none;letter-spacing:1px;width:100%;user-select:text;}
+.cfg-inp:focus{border-color:var(--neon);box-shadow:0 0 8px rgba(0,212,255,.12);}
+.cfg-inp::placeholder{color:var(--dim);}
+
+/* ── SEC LABEL ── */
+.sec{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:4px 0 8px;display:flex;align-items:center;gap:8px;}
+.sec::after{content:'';flex:1;height:1px;background:rgba(0,212,255,.1);}
+
+/* ── LOG ── */
+.hfeed{max-height:160px;overflow-y:auto;border:1px solid var(--border);background:rgba(0,0,0,.3);border-radius:4px;padding:8px;}
+.hfeed::-webkit-scrollbar{width:4px;}
+.hfeed::-webkit-scrollbar-thumb{background:rgba(0,212,255,.2);border-radius:2px;}
+.hitem{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.04);}
+.hts{color:var(--amber);margin-right:8px;}
+.htx{color:var(--neon);}
+.hrx{color:var(--green);font-weight:600;}
+.herr{color:var(--red);}
+.hadj{color:var(--amber);}
+
+/* ── TELEMETRY ── */
+.tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.tbox{border:1px solid var(--border);background:rgba(0,212,255,.02);border-radius:4px;padding:8px 10px;}
+.tlbl{font-size:9px;color:var(--dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.tval{font-family:'Orbitron',monospace;font-size:13px;font-weight:600;color:var(--neon);margin-top:2px;}
+
+/* ── MODALS ── */
+.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;}
+.modal.vis{display:flex;}
+.mbox{border-radius:10px;padding:28px 24px;text-align:center;max-width:420px;width:100%;position:relative;overflow:hidden;}
+.mbox::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--neon),transparent);animation:scan 2s linear infinite;}
+.mbox-win{border:1px solid var(--green);background:rgba(2,10,15,.98);}
+.mbox-win::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.mbox-red{border:1px solid var(--red);background:rgba(2,10,15,.98);}
+.mbox-red::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.mbox-lock{border:1px solid var(--amber);background:rgba(2,10,15,.98);}
+.mbox-lock::before{background:linear-gradient(90deg,transparent,var(--amber),transparent);}
+.m-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--dim);margin-bottom:10px;}
+.m-crown{font-size:3rem;margin-bottom:6px;}
+.m-name{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--green);text-shadow:0 0 20px var(--green);letter-spacing:2px;margin-bottom:4px;}
+.m-party{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:2px;margin-bottom:12px;}
+.m-votes{font-family:'Orbitron',monospace;font-size:34px;font-weight:900;color:var(--neon);text-shadow:0 0 20px var(--neon);}
+.m-pct{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--amber);}
+.m-org{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);margin-top:8px;letter-spacing:2px;}
+.m-confirm-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--red);letter-spacing:2px;margin-bottom:8px;}
+.m-confirm-text{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:18px;line-height:1.7;}
+.m-btns{display:flex;gap:10px;}
+.m-btns .btn{flex:1;}
+.m-lock-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--amber);letter-spacing:2px;margin-bottom:10px;}
+.m-lock-text{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:18px;line-height:1.7;}
+
+/* ── LOCK indicator ── */
+.lock-strip{display:none;padding:9px 14px;text-align:center;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:3px;color:var(--amber);border:1px solid rgba(255,179,0,.3);background:rgba(255,179,0,.04);border-radius:4px;margin-bottom:8px;}
+.lock-strip.vis{display:block;}
+
+/* ── WATERMARK ── */
+.wm{position:fixed;bottom:12px;right:16px;font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;color:rgba(0,212,255,.08);pointer-events:none;z-index:10;}
+
+/* ── ELECTION BANNER ── */
+.ebanner{display:none;align-items:center;gap:10px;border:1px solid rgba(0,255,136,.25);background:rgba(0,255,136,.03);border-radius:6px;padding:10px 14px;margin-bottom:8px;}
+.ebanner.vis{display:flex;}
+.eb-icon{font-size:1.3rem;flex-shrink:0;}
+.eb-txt{flex:1;}
+.eb-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--green);}
+.eb-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;letter-spacing:1px;}
+.live-chip{display:inline-flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--green);letter-spacing:2px;border:1px solid rgba(0,255,136,.3);padding:3px 8px;border-radius:20px;}
+
+/* ── ADMIN TOGGLE ── */
+.admin-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border:1px solid rgba(255,179,0,.25);background:rgba(255,179,0,.03);border-radius:4px;margin-bottom:8px;}
+.admin-lbl{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:var(--amber);}
+.toggle{position:relative;width:36px;height:20px;cursor:pointer;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-track{position:absolute;inset:0;background:rgba(255,179,0,.15);border:1px solid rgba(255,179,0,.3);border-radius:10px;transition:.2s;}
+.toggle input:checked ~ .toggle-track{background:rgba(255,179,0,.3);border-color:var(--amber);}
+.toggle-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--dim);transition:.2s;}
+.toggle input:checked ~ .toggle-knob{transform:translateX(16px);background:var(--amber);}
+
+/* ── INTEGRITY ── */
+.integrity-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;}
+.int-cell{border:1px solid var(--border);background:rgba(0,212,255,.02);border-radius:4px;padding:8px 10px;}
+.int-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:2px;}
+.int-val{font-family:'Orbitron',monospace;font-size:11px;font-weight:600;color:var(--neon);margin-top:2px;word-break:break-all;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="hd-left">
+    <a href="./index.html" class="back-link">
+      <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      BACK
+    </a>
+    <div class="hdivider"></div>
+    <div class="brand">e-<span>SARATHI</span> · AAWISKAR</div>
+  </div>
+  <div class="hd-center">
+    <div class="app-title">AAWISKAR // EVM</div>
+    <div class="app-sub">ELECTRONIC VOTING MACHINE — BLE DASHBOARD</div>
+  </div>
+  <div class="hd-right">
+    <div class="unit-id">AAWISKAR-EVM-01</div>
+    <div class="freq">BLE 5.x · ESP32</div>
+  </div>
+</div>
+
+<!-- BLE CONNECT -->
+<button id="ble-btn" class="ble-connect" onclick="toggleConnect()">⬡ ESTABLISH BLE LINK</button>
+
+<!-- ELECTION BANNER -->
+<div class="ebanner" id="ebanner">
+  <div class="eb-icon">🗳️</div>
+  <div class="eb-txt">
+    <div class="eb-title" id="eb-title">ELECTION ACTIVE</div>
+    <div class="eb-sub" id="eb-sub">Votes are being recorded</div>
+  </div>
+  <div class="live-chip"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;animation:blink 1s infinite"></span>LIVE</div>
+</div>
+
+<!-- LOCK STRIP -->
+<div class="lock-strip" id="lock-strip">🔒 ELECTION LOCKED — VOTING SUSPENDED</div>
+
+<!-- STATS ROW -->
+<div class="stats-row">
+  <div class="stat-cell">
+    <div class="stat-lbl">LINK</div>
+    <div class="stat-val"><span class="pdot off" id="link-dot"></span><span id="stat-link">OFF</span></div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-lbl">TOTAL VOTES</div>
+    <div class="stat-val" id="stat-total">0</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-lbl">LEADER</div>
+    <div class="stat-val" id="stat-leader">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-lbl">STATUS</div>
+    <div class="stat-val" id="stat-status">STANDBY</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('dashboard')">📊 DASHBOARD</div>
+  <div class="tab" onclick="switchTab('candidates')">🏷️ CANDIDATES</div>
+  <div class="tab" onclick="switchTab('config')">⚙️ CONFIG</div>
+  <div class="tab" onclick="switchTab('log')">📋 LOG</div>
+</div>
+
+<!-- ══ TAB: DASHBOARD ══ -->
+<div class="pane active" id="tab-dashboard">
+
+  <!-- ADMIN MODE TOGGLE -->
+  <div class="admin-bar">
+    <div class="admin-lbl">⚙ ADMIN MODE — MANUAL VOTE ADJUST</div>
+    <label class="toggle">
+      <input type="checkbox" id="admin-toggle" onchange="toggleAdmin()">
+      <div class="toggle-track"></div>
+      <div class="toggle-knob"></div>
+    </label>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="sum-cell"><div class="sum-lbl">TOTAL VOTES</div><div class="sum-val" id="dash-total">0</div></div>
+    <div class="sum-cell"><div class="sum-lbl">LEADING</div><div class="sum-val g" id="dash-leader-votes">0</div></div>
+    <div class="sum-cell"><div class="sum-lbl">MARGIN</div><div class="sum-val a" id="dash-margin">0</div></div>
+  </div>
+
+  <!-- CANDIDATE CARDS -->
+  <div class="panel">
+    <div class="ph"><div class="title">LIVE VOTE COUNT</div><div class="badge badge-live" id="live-badge">● LIVE</div></div>
+    <div class="pb"><div class="cands-grid" id="cands-grid"></div></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="panel">
+    <div class="ph"><div class="title">VOTE DISTRIBUTION</div><div class="badge" id="chart-badge">WAITING</div></div>
+    <div class="pb">
+      <div class="chart-wrap">
+        <canvas id="donut" width="180" height="180" style="flex-shrink:0"></canvas>
+        <div class="chart-legend" id="chart-legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button class="btn btn-a" onclick="requestVotes()">↺ REFRESH</button>
+    <button class="btn btn-g" onclick="showWinner()">🏆 WINNER</button>
+    <button class="btn btn-r" onclick="showConfirm()">⚠ RESET</button>
+  </div>
+  <button class="btn btn-full btn-a" onclick="toggleLock()" id="lock-btn">🔒 LOCK ELECTION</button>
+  <button class="btn btn-full" onclick="exportCSV()" style="margin-top:6px">⬇ EXPORT CSV</button>
+  <button class="btn btn-full" onclick="exportJSON()" style="margin-top:6px">⬇ EXPORT JSON</button>
+
+</div>
+
+<!-- ══ TAB: CANDIDATES ══ -->
+<div class="pane" id="tab-candidates">
+  <div class="panel">
+    <div class="ph"><div class="title">CANDIDATE REGISTRY</div><div class="badge" id="cand-badge">8 SLOTS</div></div>
+    <div class="pb">
+      <div class="sec">// Edit candidate name, party &amp; symbol</div>
+      <div class="editor-grid" id="editor-grid"></div>
+      <button class="btn btn-full btn-g" onclick="saveCandidates()">✔ SAVE CANDIDATES</button>
+      <button class="btn btn-full" style="margin-top:6px" onclick="resetCandidates()">↺ RESTORE DEFAULTS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: CONFIG ══ -->
+<div class="pane" id="tab-config">
+  <div class="panel">
+    <div class="ph"><div class="title">ELECTION CONFIGURATION</div><div class="badge badge-warn">ADMIN</div></div>
+    <div class="pb">
+      <div class="sec">// Election identity</div>
+      <div class="cfg-grid">
+        <div class="cfg-field"><div class="cfg-lbl">ELECTION TITLE</div><input class="cfg-inp" id="cfg-title" placeholder="General Election 2025"/></div>
+        <div class="cfg-field"><div class="cfg-lbl">ORGANISATION</div><input class="cfg-inp" id="cfg-org" placeholder="Aawiskar Academy"/></div>
+        <div class="cfg-field"><div class="cfg-lbl">DATE</div><input class="cfg-inp" id="cfg-date" type="date"/></div>
+        <div class="cfg-field"><div class="cfg-lbl">POLLING STATION</div><input class="cfg-inp" id="cfg-station" placeholder="Hall A — Room 101"/></div>
+        <div class="cfg-field"><div class="cfg-lbl">ACTIVE CANDIDATES</div><input class="cfg-inp" id="cfg-count" type="number" min="2" max="8" value="8"/></div>
+      </div>
+      <div class="sec">// BLE Device UUIDs</div>
+      <div class="cfg-grid">
+        <div class="cfg-field"><div class="cfg-lbl">SERVICE UUID</div><input class="cfg-inp" id="cfg-svc" value="12345678-1234-1234-1234-1234567890ab"/></div>
+        <div class="cfg-field"><div class="cfg-lbl">VOTES CHAR UUID</div><input class="cfg-inp" id="cfg-votes" value="12345678-1234-1234-1234-1234567890ac"/></div>
+        <div class="cfg-field"><div class="cfg-lbl">CMD CHAR UUID</div><input class="cfg-inp" id="cfg-cmd" value="12345678-1234-1234-1234-1234567890ad"/></div>
+      </div>
+      <button class="btn btn-full btn-g" onclick="saveConfig()">✔ SAVE CONFIG</button>
+    </div>
+  </div>
+
+  <!-- INTEGRITY PANEL -->
+  <div class="panel">
+    <div class="ph"><div class="title">ELECTION INTEGRITY</div><div class="badge badge-warn">AUDIT</div></div>
+    <div class="pb">
+      <div class="sec">// Tamper-evident record</div>
+      <div class="integrity-panel">
+        <div class="int-cell"><div class="int-lbl">SESSION ID</div><div class="int-val" id="int-session">—</div></div>
+        <div class="int-cell"><div class="int-lbl">CHECKSUM</div><div class="int-val" id="int-checksum">—</div></div>
+        <div class="int-cell"><div class="int-lbl">VOTE MUTATIONS</div><div class="int-val" id="int-mutations">0</div></div>
+        <div class="int-cell"><div class="int-lbl">LAST SEALED</div><div class="int-val" id="int-sealed">—</div></div>
+      </div>
+      <button class="btn btn-full btn-a" style="margin-top:10px" onclick="sealRecord()">🔏 SEAL &amp; TIMESTAMP RECORD</button>
+    </div>
+  </div>
+
+  <!-- TELEMETRY -->
+  <div class="panel">
+    <div class="ph"><div class="title">SESSION TELEMETRY</div><div class="badge">READ-ONLY</div></div>
+    <div class="pb">
+      <div class="tgrid">
+        <div class="tbox"><div class="tlbl">CONNECTED AT</div><div class="tval" id="t-conn">—</div></div>
+        <div class="tbox"><div class="tlbl">UPDATES RX</div><div class="tval" id="t-upd">0</div></div>
+        <div class="tbox"><div class="tlbl">LAST UPDATE</div><div class="tval" id="t-last">—</div></div>
+        <div class="tbox"><div class="tlbl">DEVICE NAME</div><div class="tval" id="t-dev">—</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: LOG ══ -->
+<div class="pane" id="tab-log">
+  <div class="panel">
+    <div class="ph"><div class="title">AUDIT LOG</div><div class="badge" id="log-count">0 ENTRIES</div></div>
+    <div class="pb">
+      <div class="hfeed" id="hfeed" style="max-height:360px;"></div>
+      <button class="btn btn-full" style="margin-top:8px" onclick="clearLog()">⊗ CLEAR LOG</button>
+      <button class="btn btn-full btn-g" style="margin-top:6px" onclick="exportLog()">⬇ EXPORT LOG TXT</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .app -->
+
+<!-- ══ WINNER MODAL ══ -->
+<div class="modal" id="modal-win">
+  <div class="mbox mbox-win">
+    <div class="m-label">// ELECTION RESULT //</div>
+    <div class="m-crown">👑</div>
+    <div class="m-name" id="w-name">—</div>
+    <div class="m-party" id="w-party">—</div>
+    <div class="m-votes" id="w-votes">0</div>
+    <div class="m-pct" id="w-pct">0.0%</div>
+    <div class="m-org" id="w-org">—</div>
+    <button class="btn btn-full btn-g" style="margin-top:16px" onclick="closeWinner()">CLOSE</button>
+  </div>
+</div>
+
+<!-- ══ RESET CONFIRM MODAL ══ -->
+<div class="modal" id="modal-confirm">
+  <div class="mbox mbox-red">
+    <div class="m-confirm-title">⚠ CONFIRM RESET</div>
+    <div class="m-confirm-text">This will erase ALL vote counts. This action cannot be undone and will be logged in the audit trail.</div>
+    <div class="m-btns">
+      <button class="btn btn-r" onclick="doReset()">RESET ALL</button>
+      <button class="btn" onclick="closeConfirm()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOCK MODAL ══ -->
+<div class="modal" id="modal-lock">
+  <div class="mbox mbox-lock">
+    <div class="m-lock-title" id="lock-modal-title">🔒 LOCK ELECTION?</div>
+    <div class="m-lock-text" id="lock-modal-text">This will prevent any new votes from being accepted via BLE. Admin manual adjustments remain possible. Confirm?</div>
+    <div class="m-btns">
+      <button class="btn btn-a" id="lock-confirm-btn" onclick="confirmLock()">CONFIRM</button>
+      <button class="btn" onclick="closeLockModal()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<div class="wm">AAWISKAR EVM · e-SARATHI</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════
+const NUM = 8;
+const COLORS = ['#00d4ff','#00ff88','#ffb300','#ff3b5c','#a855f7','#00ffea','#ff6b35','#4af7c4'];
+const ALL_SYMBOLS = ['🌸','⚡','🌿','🔥','🌊','🦅','🌙','⭐','🏔️','🌺','🦁','🐉','☀️','🌹','🎯','🛡️','⚔️','🌻','🦋','🔱','🌈','🌴','🦚','🎖️'];
+
+const DEFAULT_CANDIDATES = [
+  {name:'Candidate 1',party:'Party A',symbol:'🌸'},
+  {name:'Candidate 2',party:'Party B',symbol:'⚡'},
+  {name:'Candidate 3',party:'Party C',symbol:'🌿'},
+  {name:'Candidate 4',party:'Party D',symbol:'🔥'},
+  {name:'Candidate 5',party:'Party E',symbol:'🌊'},
+  {name:'Candidate 6',party:'Party F',symbol:'🦅'},
+  {name:'Candidate 7',party:'Party G',symbol:'🌙'},
+  {name:'Candidate 8',party:'Party H',symbol:'⭐'},
+];
+
+// ══════════════════════════════════════════════════
+//  STATE — persisted to localStorage
+// ══════════════════════════════════════════════════
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('evm_votes') || 'null'); } catch(e){ return null; }
+}
+function saveVotes() {
+  localStorage.setItem('evm_votes', JSON.stringify(votes));
+  updateIntegrity();
+}
+
+let cfg = (() => {
+  try { return JSON.parse(localStorage.getItem('evm_cfg') || 'null'); } catch(e){ return null; }
+})() || { title:'General Election 2025', org:'Aawiskar', date: new Date().toISOString().slice(0,10), station:'Polling Station 1', count:8 };
+
+let candidates = (() => {
+  try { return JSON.parse(localStorage.getItem('evm_candidates') || 'null'); } catch(e){ return null; }
+})() || DEFAULT_CANDIDATES.map(c=>({...c}));
+
+let votes = loadState() || new Array(NUM).fill(0);
+let prevVotes = [...votes];
+let isConnected = false;
+let cmdChar = null;
+let updateCount = 0;
+let connectedAt = null;
+let logEntries = [];
+let isLocked = (() => { try { return JSON.parse(localStorage.getItem('evm_locked') || 'false'); } catch(e){ return false; } })();
+let adminMode = false;
+let mutations = (() => { try { return parseInt(localStorage.getItem('evm_mutations') || '0'); } catch(e){ return 0; } })();
+let sessionId = (() => { try { return localStorage.getItem('evm_session') || genSessionId(); } catch(e){ return genSessionId(); } })();
+
+let SERVICE_UUID    = '12345678-1234-1234-1234-1234567890ab';
+let CHAR_VOTES_UUID = '12345678-1234-1234-1234-1234567890ac';
+let CHAR_CMD_UUID   = '12345678-1234-1234-1234-1234567890ad';
+
+function genSessionId() {
+  const id = 'EVS-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
+  localStorage.setItem('evm_session', id);
+  return id;
+}
+
+// ══════════════════════════════════════════════════
+//  INTEGRITY
+// ══════════════════════════════════════════════════
+function simpleHash(str) {
+  let h = 0x811c9dc5;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+  return h.toString(16).toUpperCase().padStart(8,'0');
+}
+function updateIntegrity() {
+  const payload = votes.join(',') + '|' + candidates.map(c=>c.name).join(',') + '|' + mutations;
+  const cs = simpleHash(payload);
+  document.getElementById('int-session').textContent = sessionId;
+  document.getElementById('int-checksum').textContent = cs;
+  document.getElementById('int-mutations').textContent = mutations;
+}
+function sealRecord() {
+  const ts = new Date().toLocaleString();
+  localStorage.setItem('evm_sealed', ts);
+  document.getElementById('int-sealed').textContent = ts;
+  log('Record sealed at ' + ts, 'rx');
+  updateIntegrity();
+}
+
+// ══════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((b,i)=>{ b.classList.toggle('active',['dashboard','candidates','config','log'][i]===id); });
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='candidates') renderEditor();
+  if(id==='config') { loadConfigUI(); updateIntegrity(); }
+}
+
+// ══════════════════════════════════════════════════
+//  ADMIN MODE
+// ══════════════════════════════════════════════════
+function toggleAdmin() {
+  adminMode = document.getElementById('admin-toggle').checked;
+  render();
+  log('Admin mode: ' + (adminMode ? 'ON — manual adjustments enabled' : 'OFF'), adminMode ? 'hrx' : 'htx');
+}
+
+function adjustVote(i, delta) {
+  if (!adminMode) return;
+  const newVal = Math.max(0, votes[i] + delta);
+  if (newVal === votes[i]) return;
+  votes[i] = newVal;
+  mutations++;
+  localStorage.setItem('evm_mutations', mutations);
+  saveVotes();
+  render();
+  const action = delta > 0 ? 'INCREMENTED' : 'DECREMENTED';
+  log('ADMIN ' + action + ' → ' + candidates[i].name + ' → ' + votes[i] + ' votes', 'hadj');
+  if (delta > 0) flashCard(i, false);
+  else flashCard(i, true);
+}
+
+// ══════════════════════════════════════════════════
+//  LOCK
+// ══════════════════════════════════════════════════
+function toggleLock() {
+  document.getElementById('lock-modal-title').textContent = isLocked ? '🔓 UNLOCK ELECTION?' : '🔒 LOCK ELECTION?';
+  document.getElementById('lock-modal-text').textContent = isLocked
+    ? 'This will re-enable BLE voting. Confirm?'
+    : 'This will prevent any new votes from being accepted via BLE. Admin manual adjustments remain possible. Confirm?';
+  document.getElementById('modal-lock').classList.add('vis');
+}
+function confirmLock() {
+  isLocked = !isLocked;
+  localStorage.setItem('evm_locked', JSON.stringify(isLocked));
+  closeLockModal();
+  updateLockUI();
+  log(isLocked ? 'Election LOCKED by admin' : 'Election UNLOCKED by admin', 'hadj');
+}
+function closeLockModal() { document.getElementById('modal-lock').classList.remove('vis'); }
+function updateLockUI() {
+  document.getElementById('lock-strip').classList.toggle('vis', isLocked);
+  const btn = document.getElementById('lock-btn');
+  btn.textContent = isLocked ? '🔓 UNLOCK ELECTION' : '🔒 LOCK ELECTION';
+  btn.className = 'btn btn-full ' + (isLocked ? 'btn-g' : 'btn-a');
+}
+
+// ══════════════════════════════════════════════════
+//  BLE
+// ══════════════════════════════════════════════════
+async function toggleConnect() {
+  if (isConnected) return;
+  if (!navigator.bluetooth) { log('Web Bluetooth unavailable — use Chrome on Android/Desktop', 'err'); return; }
+  try {
+    SERVICE_UUID    = document.getElementById('cfg-svc').value.trim()   || SERVICE_UUID;
+    CHAR_VOTES_UUID = document.getElementById('cfg-votes').value.trim() || CHAR_VOTES_UUID;
+    CHAR_CMD_UUID   = document.getElementById('cfg-cmd').value.trim()   || CHAR_CMD_UUID;
+    log('Scanning for ESP32 EVM...', 'tx');
+    const device = await navigator.bluetooth.requestDevice({ filters:[{services:[SERVICE_UUID]}] });
+    log('Found: ' + device.name, 'rx');
+    document.getElementById('t-dev').textContent = device.name || '—';
+    const server  = await device.gatt.connect();
+    const service = await server.getPrimaryService(SERVICE_UUID);
+    const voteChar = await service.getCharacteristic(CHAR_VOTES_UUID);
+    cmdChar        = await service.getCharacteristic(CHAR_CMD_UUID);
+    await voteChar.startNotifications();
+    voteChar.addEventListener('characteristicvaluechanged', onVoteNotify);
+    device.addEventListener('gattserverdisconnected', onDisconnect);
+    isConnected = true; connectedAt = new Date();
+    document.getElementById('t-conn').textContent = connectedAt.toLocaleTimeString();
+    setConnected(true);
+    log('BLE link established', 'rx');
+    await requestVotes();
+  } catch(e) { log('Connect error: ' + e.message, 'err'); }
+}
+
+function onVoteNotify(e) {
+  if (isLocked) { log('Vote received but LOCKED — ignored', 'err'); return; }
+  const txt = new TextDecoder().decode(e.target.value);
+  const parsed = txt.split(',').map(Number);
+  if (parsed.length === NUM) {
+    prevVotes = [...votes];
+    votes = parsed;
+    updateCount++;
+    document.getElementById('t-upd').textContent = updateCount;
+    document.getElementById('t-last').textContent = new Date().toLocaleTimeString();
+    for(let i=0;i<NUM;i++) { if(votes[i]>prevVotes[i]) { log('VOTE CAST → '+candidates[i].name+' ('+votes[i]+' total)','rx'); flashCard(i,false); } }
+    saveVotes();
+    render();
+  }
+}
+
+function onDisconnect() { isConnected=false; cmdChar=null; setConnected(false); log('BLE device disconnected','err'); }
+
+function setConnected(on) {
+  const btn = document.getElementById('ble-btn');
+  const dot = document.getElementById('link-dot');
+  if(on) {
+    btn.textContent='✔ BLE LINK ACTIVE — CONNECTED'; btn.classList.add('connected');
+    dot.className='pdot good'; document.getElementById('stat-link').textContent='ON';
+    document.getElementById('stat-status').textContent='ACTIVE';
+    document.getElementById('ebanner').classList.add('vis');
+    document.getElementById('eb-title').textContent=cfg.title.toUpperCase();
+    document.getElementById('eb-sub').textContent=cfg.org+' · '+cfg.station;
+  } else {
+    btn.textContent='⬡ ESTABLISH BLE LINK'; btn.classList.remove('connected');
+    dot.className='pdot off'; document.getElementById('stat-link').textContent='OFF';
+    document.getElementById('stat-status').textContent='STANDBY';
+    document.getElementById('ebanner').classList.remove('vis');
+  }
+}
+
+async function requestVotes() {
+  if(!cmdChar){log('No BLE link','err');return;}
+  try { await cmdChar.writeValue(new TextEncoder().encode('GET')); log('GET sent','tx'); }
+  catch(e){log('Error: '+e.message,'err');}
+}
+
+async function doReset() {
+  closeConfirm();
+  votes = new Array(NUM).fill(0);
+  mutations++; localStorage.setItem('evm_mutations', mutations);
+  saveVotes(); render();
+  log('VOTES RESET by admin — all counts cleared','hadj');
+  if(cmdChar) {
+    try { await cmdChar.writeValue(new TextEncoder().encode('RESET')); log('RESET sent to ESP32','tx'); }
+    catch(e){log('BLE reset error: '+e.message,'err');}
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════
+function render() {
+  const count = parseInt(cfg.count) || NUM;
+  const total = votes.slice(0,count).reduce((a,b)=>a+b,0);
+  const max   = total>0 ? Math.max(...votes.slice(0,count)) : 0;
+  const leaderIdx = votes.indexOf(max);
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('dash-total').textContent = total;
+  document.getElementById('stat-leader').textContent = total>0 ? candidates[leaderIdx].name.split(' ')[0].toUpperCase() : '—';
+  document.getElementById('dash-leader-votes').textContent = max;
+  const sorted = [...votes.slice(0,count)].sort((a,b)=>b-a);
+  document.getElementById('dash-margin').textContent = sorted.length>1 ? sorted[0]-sorted[1] : 0;
+
+  // cards
+  const grid = document.getElementById('cands-grid');
+  grid.innerHTML = '';
+  for(let i=0;i<count;i++) {
+    const c=candidates[i], v=votes[i];
+    const pct = total ? ((v/total)*100).toFixed(1) : '0.0';
+    const isLeader = v===max && v>0;
+    const card = document.createElement('div');
+    card.className = 'ccard'+(v>0?' has-v':'')+(isLeader?' leader':'');
+    card.id = 'ccard-'+i;
+    card.innerHTML = `
+      <div class="crown">👑</div>
+      <div class="ccard-num">B${i+1}</div>
+      <div class="ccard-sym">${c.symbol}</div>
+      <div class="ccard-name">${c.name}</div>
+      <div class="ccard-party">${c.party}</div>
+      <div class="ccard-votes">${v}</div>
+      <div class="ccard-pct">${pct}%</div>
+      <div class="ccard-bar"><div class="ccard-fill ${isLeader?'leader':''}" style="width:${pct}%"></div></div>
+      ${adminMode ? `<div class="vote-adj">
+        <button class="vadj-btn vadj-minus" onclick="adjustVote(${i},-1)">−</button>
+        <span class="vadj-label">ADJ</span>
+        <button class="vadj-btn vadj-plus" onclick="adjustVote(${i},1)">+</button>
+      </div>` : ''}
+    `;
+    grid.appendChild(card);
+  }
+
+  // donut
+  drawDonut(votes.slice(0,count), total);
+
+  // legend
+  const leg = document.getElementById('chart-legend');
+  leg.innerHTML = '';
+  for(let i=0;i<count;i++) {
+    const pct = total ? ((votes[i]/total)*100).toFixed(1) : '0.0';
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = `<div class="leg-dot" style="background:${COLORS[i]}"></div><div class="leg-name">${candidates[i].name}</div><div class="leg-val">${votes[i]}</div><div class="leg-pct">${pct}%</div>`;
+    leg.appendChild(row);
+  }
+  const badge = document.getElementById('chart-badge');
+  badge.textContent = total+' VOTES';
+  badge.className = 'badge'+(total>0?' badge-live':'');
+}
+
+function drawDonut(data, total) {
+  const canvas=document.getElementById('donut');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=72,inner=44;
+  ctx.clearRect(0,0,W,H);
+  if(total===0){
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(0,212,255,0.1)';ctx.lineWidth=r-inner;ctx.stroke();
+    ctx.fillStyle='rgba(0,212,255,0.3)';ctx.font='700 11px Orbitron,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('NO VOTES',cx,cy);
+    return;
+  }
+  let angle=-Math.PI/2;
+  data.forEach((v,i)=>{
+    if(!v) return;
+    const slice=(v/total)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,angle+slice);ctx.closePath();ctx.fillStyle=COLORS[i];ctx.fill();
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r+2,angle+slice-.01,angle+slice+.01);ctx.closePath();ctx.fillStyle='rgba(2,10,15,.8)';ctx.fill();
+    angle+=slice;
+  });
+  ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);ctx.fillStyle='#020a0f';ctx.fill();
+  ctx.fillStyle='#00d4ff';ctx.font='900 18px Orbitron,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(total,cx,cy-6);
+  ctx.fillStyle='rgba(0,212,255,0.5)';ctx.font='10px Share Tech Mono,monospace';ctx.fillText('VOTES',cx,cy+10);
+}
+
+function flashCard(i, isRed) {
+  const el=document.getElementById('ccard-'+i);
+  if(!el) return;
+  el.classList.remove('flash','flash-red');
+  void el.offsetWidth;
+  el.classList.add(isRed ? 'flash-red' : 'flash');
+}
+
+// ══════════════════════════════════════════════════
+//  WINNER
+// ══════════════════════════════════════════════════
+function showWinner() {
+  const count=parseInt(cfg.count)||NUM;
+  const total=votes.slice(0,count).reduce((a,b)=>a+b,0);
+  if(!total){log('No votes recorded','err');return;}
+  const max=Math.max(...votes.slice(0,count));
+  const idx=votes.indexOf(max);
+  const pct=((max/total)*100).toFixed(1);
+  document.getElementById('w-name').textContent=candidates[idx].name.toUpperCase();
+  document.getElementById('w-party').textContent=candidates[idx].party+' · '+candidates[idx].symbol;
+  document.getElementById('w-votes').textContent=max+' VOTES';
+  document.getElementById('w-pct').textContent=pct+'% OF TOTAL';
+  document.getElementById('w-org').textContent=cfg.org+' — '+cfg.title;
+  document.getElementById('modal-win').classList.add('vis');
+  log('Winner declared: '+candidates[idx].name+' ('+max+' votes, '+pct+'%)','rx');
+}
+function closeWinner(){document.getElementById('modal-win').classList.remove('vis');}
+function showConfirm(){document.getElementById('modal-confirm').classList.add('vis');}
+function closeConfirm(){document.getElementById('modal-confirm').classList.remove('vis');}
+
+// ══════════════════════════════════════════════════
+//  CANDIDATE EDITOR
+// ══════════════════════════════════════════════════
+function renderEditor() {
+  const grid=document.getElementById('editor-grid');
+  grid.innerHTML='';
+  const count=parseInt(cfg.count)||NUM;
+  document.getElementById('cand-badge').textContent=count+' SLOTS';
+  for(let i=0;i<count;i++){
+    const c=candidates[i];
+    const card=document.createElement('div');
+    card.className='editor-card';
+    // Build symbol picker (show 16 options)
+    const syms=ALL_SYMBOLS.slice(0,16);
+    const symBtns=syms.map(s=>`<div class="sym-opt${c.symbol===s?' sel':''}" onclick="pickSym(${i},'${s}')" title="${s}">${s}</div>`).join('');
+    card.innerHTML=`
+      <div class="ed-num">BTN ${i+1}</div>
+      <div class="ed-sym-display" id="sym-disp-${i}">${c.symbol}</div>
+      <div class="sym-picker">${symBtns}</div>
+      <input class="ei" id="ed-name-${i}" value="${c.name}" placeholder="Candidate name"/>
+      <input class="ei" id="ed-party-${i}" value="${c.party}" placeholder="Party / Group"/>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+function pickSym(idx, sym) {
+  candidates[idx].symbol=sym;
+  document.getElementById('sym-disp-'+idx).textContent=sym;
+  // update selection
+  const card=document.getElementById('editor-grid').children[idx];
+  card.querySelectorAll('.sym-opt').forEach(el=>{ el.classList.toggle('sel', el.textContent===sym); });
+}
+
+function saveCandidates() {
+  const count=parseInt(cfg.count)||NUM;
+  for(let i=0;i<count;i++){
+    candidates[i].name  = document.getElementById('ed-name-'+i).value.trim()  || candidates[i].name;
+    candidates[i].party = document.getElementById('ed-party-'+i).value.trim() || candidates[i].party;
+  }
+  localStorage.setItem('evm_candidates', JSON.stringify(candidates));
+  render();
+  log('Candidate registry saved','rx');
+}
+
+function resetCandidates() {
+  candidates=DEFAULT_CANDIDATES.map(c=>({...c}));
+  localStorage.removeItem('evm_candidates');
+  renderEditor();
+  render();
+  log('Candidates reset to defaults','tx');
+}
+
+// ══════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════
+function loadConfigUI(){
+  document.getElementById('cfg-title').value   = cfg.title;
+  document.getElementById('cfg-org').value     = cfg.org;
+  document.getElementById('cfg-date').value    = cfg.date;
+  document.getElementById('cfg-station').value = cfg.station;
+  document.getElementById('cfg-count').value   = cfg.count;
+}
+function saveConfig(){
+  cfg.title   = document.getElementById('cfg-title').value.trim()   || cfg.title;
+  cfg.org     = document.getElementById('cfg-org').value.trim()     || cfg.org;
+  cfg.date    = document.getElementById('cfg-date').value           || cfg.date;
+  cfg.station = document.getElementById('cfg-station').value.trim() || cfg.station;
+  cfg.count   = parseInt(document.getElementById('cfg-count').value)||8;
+  SERVICE_UUID    = document.getElementById('cfg-svc').value.trim()   || SERVICE_UUID;
+  CHAR_VOTES_UUID = document.getElementById('cfg-votes').value.trim() || CHAR_VOTES_UUID;
+  CHAR_CMD_UUID   = document.getElementById('cfg-cmd').value.trim()   || CHAR_CMD_UUID;
+  localStorage.setItem('evm_cfg', JSON.stringify(cfg));
+  render();
+  log('Configuration saved: '+cfg.title,'rx');
+}
+
+// ══════════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════════
+function exportCSV(){
+  const count=parseInt(cfg.count)||NUM;
+  const total=votes.slice(0,count).reduce((a,b)=>a+b,0);
+  let csv='Aawiskar EVM — '+cfg.title+'\nOrganisation,'+cfg.org+'\nDate,'+cfg.date+'\nStation,'+cfg.station+'\nSession ID,'+sessionId+'\n\nButton,Candidate,Party,Votes,Percentage\n';
+  votes.slice(0,count).forEach((v,i)=>{ csv+=`B${i+1},${candidates[i].name},${candidates[i].party},${v},${total?((v/total)*100).toFixed(2):0}%\n`; });
+  csv+='\nTotal,,'+total+'\nVote Mutations,'+mutations+'\n';
+  dlFile('evm_results.csv',csv,'text/csv');
+  log('CSV exported','tx');
+}
+function exportJSON(){
+  const count=parseInt(cfg.count)||NUM;
+  const total=votes.slice(0,count).reduce((a,b)=>a+b,0);
+  const max=Math.max(...votes.slice(0,count));
+  const idx=votes.indexOf(max);
+  const data={
+    meta:{...cfg,sessionId,mutations,exported:new Date().toISOString()},
+    results:votes.slice(0,count).map((v,i)=>({button:i+1,...candidates[i],votes:v,percentage:total?parseFloat(((v/total)*100).toFixed(2)):0})),
+    total, winner:total>0?{...candidates[idx],votes:max}:null
+  };
+  dlFile('evm_report.json',JSON.stringify(data,null,2),'application/json');
+  log('JSON exported','tx');
+}
+function exportLog(){
+  dlFile('evm_audit_log.txt',logEntries.join('\n'),'text/plain');
+  log('Audit log exported','tx');
+}
+function dlFile(name,content,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name; a.click();
+}
+
+// ══════════════════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════════════════
+function log(msg, type) {
+  const feed=document.getElementById('hfeed');
+  const ts=new Date().toLocaleTimeString('en-GB',{hour12:false});
+  logEntries.push('['+ts+'] '+msg);
+  const div=document.createElement('div');
+  div.className='hitem';
+  const cls = type==='tx'?'htx':type==='rx'?'hrx':type==='hadj'?'hadj':'herr';
+  div.innerHTML='<span class="hts">'+ts+'</span><span class="'+cls+'">'+msg+'</span>';
+  feed.appendChild(div);
+  feed.scrollTop=feed.scrollHeight;
+  while(feed.children.length>200) feed.removeChild(feed.firstChild);
+  document.getElementById('log-count').textContent=logEntries.length+' ENTRIES';
+}
+function clearLog(){
+  document.getElementById('hfeed').innerHTML='';
+  logEntries=[];
+  document.getElementById('log-count').textContent='0 ENTRIES';
+}
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+loadConfigUI();
+updateLockUI();
+updateIntegrity();
+render();
+const sealed = localStorage.getItem('evm_sealed');
+if(sealed) document.getElementById('int-sealed').textContent = sealed;
+log('Aawiskar EVM ready — session '+sessionId, 'rx');
+log('Votes restored from storage: ['+votes.join(', ')+']', 'rx');
+if(!navigator.bluetooth) log('Web Bluetooth unavailable — use Chrome on Android or desktop','err');
+</script>
+</body>
+</html>
